@@ -50,35 +50,33 @@ to this project's gradle.properties.
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:desugarDebugFileDependencies
-> Task :app:compressDebugAssets
-> Task :app:mergeDebugStartupProfile
-> Task :app:mergeDebugJniLibFolders
-> Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugManifestForPackage
-> Task :app:mergeDebugNativeLibs
-> Task :app:mergeExtDexDebug
-> Task :app:mergeLibDexDebug
-
-> Task :app:stripDebugDebugSymbols
-Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libbarhopper_v3.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so.
-
+> Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
 > Task :app:processDebugResources
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugStartupProfile
+
+> Task :app:kspDebugKotlin
+e: The daemon has terminated unexpectedly on startup attempt #1 with error code: 0. The daemon process output:
+    1. Kotlin compile daemon is ready
+
+> Task :app:mergeExtDexDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeLibDexDebug
+> Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
-> Task :app:kspDebugKotlin
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libbarhopper_v3.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so.
 
 > Task :app:compileDebugKotlin FAILED
 e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/data/local/SeedData.kt:17:20 None of the following candidates is applicable:
 fun <T> listOf(element: T): List<T>
 fun <T> listOf(): List<T>
 fun <T> listOf(vararg elements: T): List<T>
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:355:29 Unresolved reference 'padding'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:370:18 Unresolved reference 'padding'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/CatalogScreen.kt:628:30 None of the following candidates is applicable:
-fun Modifier.background(brush: Brush, shape: Shape = ..., alpha: Float = ...): Modifier
-fun Modifier.background(color: Color, shape: Shape = ...): Modifier
 
 FAILURE: Build failed with an exception.
 
@@ -287,5 +285,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 3m 1s
+BUILD FAILED in 3m 4s
 32 actionable tasks: 31 executed, 1 up-to-date
