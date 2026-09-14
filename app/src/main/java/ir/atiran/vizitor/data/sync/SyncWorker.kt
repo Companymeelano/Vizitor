@@ -52,7 +52,7 @@ class SyncWorker(
         nm.notify(
             1001,
             NotificationCompat.Builder(applicationContext, "sync")
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(android.R.drawable.ic_popup_sync)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))

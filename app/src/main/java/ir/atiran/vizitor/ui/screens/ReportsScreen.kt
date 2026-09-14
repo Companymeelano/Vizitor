@@ -257,8 +257,9 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "سامانه فروش و ویزیت هوشمند متصل به دیتابیس حسابداری آتیران (SQL Server). " +
-                                "معماری آفلاین-اول با همگام‌سازی خودکار و دستیار فروش مبتنی بر هوش مصنوعی.",
+                        "سامانه فروش و ویزیت هوشمند ویژه مجموعه پخش آجیل و خشکبار آتیران، " +
+                                "متصل به دیتابیس حسابداری (SQL Server) با معماری آفلاین-اول، " +
+                                "همگام‌سازی خودکار و دستیار فروش مبتنی بر هوش مصنوعی.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )

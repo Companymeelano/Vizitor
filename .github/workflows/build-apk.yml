@@ -1,0 +1,63 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  Vizitor — آتیران ویزیتور | بیلد خودکار APK نهایی و انتشار ریلیز
+#  Developed by Milano Technical Team, Milad Yaghoobi
+# ═══════════════════════════════════════════════════════════════════════════
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/01a09dd8-vizitor]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Clean & Build Debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew clean assembleDebug --no-daemon --stacktrace
+
+      - name: Prepare distributable APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-v1.0.0.apk"
+          ls -la dist/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vizitor-APK
+          path: dist/Vizitor-v1.0.0.apk
+
+      - name: Publish GitHub Release with downloadable APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: "آتیران ویزیتور — نسخه ۱.۰.۰ (آجیل و خشکبار)"
+          body: |
+            نسخه قابل نصب اپلیکیشن **آتیران ویزیتور** ویژه پخش آجیل و خشکبار.
+
+            📲 برای نصب روی گوشی اندروید، فایل **Vizitor-v1.0.0.apk** را از بخش Assets پایین همین صفحه دانلود و نصب کنید.
+
+            تغییرات مهم این نسخه:
+            - آیکون سه‌بعدی طلایی حرف M با المان پسته، بادام و خشکبار
+            - تم PremiumUX (Dark Slate + Glassmorphism + نئون بنفش/سبز/طلایی)
+            - آفلاین-اول با Room و همگام‌سازی خودکار با SQL Server (پورت 1433)
+            - اسکنر بارکد، امضای دیجیتال، دستیار فروش هوشمند
+          files: dist/Vizitor-v1.0.0.apk
+          target_commitish: arena/01a09dd8-vizitor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
