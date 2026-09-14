@@ -51,6 +51,9 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import ir.atiran.vizitor.ui.components.royalBorder
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import ir.atiran.vizitor.util.parseAmount
@@ -101,11 +104,10 @@ fun CartScreen(viewModel: VizitorViewModel) {
     val gross by viewModel.cartTotal.collectAsState()
     val aiSuggestion by viewModel.aiSuggestion.collectAsState()
     val aiLoading by viewModel.aiLoading.collectAsState()
-    var cashSettlement by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
 
-    val discount = viewModel.computeDiscount(gross, cashSettlement)
-    val finalAmount = gross - discount
+    // نسخه ۱٫۶٫۰ — تخفیفات و کسورات حذف شد؛ مبلغ نهایی = جمع اقلام
+    val finalAmount = gross
 
     // امضای دیجیتال — مسیرهای رسم‌شده
     val signaturePaths = remember { mutableStateListOf<Path>() }
@@ -254,53 +256,23 @@ fun CartScreen(viewModel: VizitorViewModel) {
             }
         }
 
-        // ── محاسبه خودکار کسورات ───────────────────────────────────────────
+        // ── جمع نهایی سفارش (بدون کسورات) ──────────────────────────────────
         item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    SectionTitle(text = "محاسبه کسورات", icon = Icons.Filled.Draw)
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth()) {
-                        Text("جمع اقلام", color = TextSecondary)
-                        Spacer(Modifier.weight(1f))
-                        Text(gross.toFaPrice(), color = MaterialTheme.colorScheme.onBackground)
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Row(Modifier.fillMaxWidth()) {
-                        Text("کسورات و تخفیف", color = TextSecondary)
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            "(${discount.toFaPrice()})",
-                            color = if (discount > 0) DangerColor else TextSecondary
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = cashSettlement,
-                            onCheckedChange = { cashSettlement = it },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = NeonGreen,
-                                checkmarkColor = Color.Black,
-                                uncheckedColor = TextSecondary
-                            )
-                        )
-                        Text("تسویه نقدی (۲٪ تخفیف اضافه)", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "مبلغ نهایی",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            finalAmount.toFaPrice(),
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                            color = NeonGreen
-                        )
-                    }
+            GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.ReceiptLong, contentDescription = null, tint = Gold, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "مبلغ نهایی سفارش",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFFE3BFFF),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        finalAmount.toFaPrice(),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        color = NeonGreen
+                    )
                 }
             }
         }
@@ -345,15 +317,12 @@ fun CartScreen(viewModel: VizitorViewModel) {
                 enabled = items.isNotEmpty(),
                 onClick = {
                     val png = if (hasSignature) renderSignature(signaturePaths) else null
-                    viewModel.issueInvoice(png, cashSettlement, note) { invoice ->
+                    viewModel.issueInvoice(png, false, note) { invoice ->
                         signaturePaths.clear()
                         hasSignature = false
                         note = ""
                         goldBurst = true // ❄️✨ افکت یخ/باران طلایی
-                        viewModel.showToast(
-                            "فاکتور ${invoice.id.toFaNumber()} صادر شد ✅ " +
-                                    (if (invoice.discount > 0) "با ${invoice.discount.toFaPrice()} کسورات" else "")
-                        )
+                        viewModel.showToast("فاکتور ${invoice.id.toFaNumber()} صادر شد ✅")
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -378,69 +347,94 @@ private fun CartLine(
     onDelete: () -> Unit,
     onSetQty: (Double) -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    item.productName,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1
+    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
+        Column(Modifier.fillMaxWidth()) {
+            // ردیف اول: نام + قیمت واحد | کنترل تعداد
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1.25f)) {
+                    Text(
+                        item.productName,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "قیمت واحد: ${item.unitPrice.toFaPrice()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                }
+                Spacer(Modifier.width(6.dp))
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(NeonPurple.copy(alpha = 0.25f)),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = NeonPurple)
+                ) { Icon(Icons.Filled.Remove, contentDescription = "کمتر", modifier = Modifier.size(16.dp)) }
+                var qtyText by remember(item.quantity) { mutableStateOf(item.quantity.toFaNumber()) }
+                OutlinedTextField(
+                    value = qtyText,
+                    onValueChange = { v ->
+                        qtyText = v
+                        v.parseAmount()?.let { q -> onSetQty(q) }
+                    },
+                    modifier = Modifier
+                        .width(62.dp)
+                        .padding(horizontal = 4.dp),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleSmall.copy(
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = NeonPurple,
+                        unfocusedBorderColor = Color(0x33FFFFFF),
+                        cursorColor = NeonPurple
+                    )
                 )
+                IconButton(
+                    onClick = onAdd,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(NeonGreen.copy(alpha = 0.9f)),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.Black)
+                ) { Icon(Icons.Filled.Add, contentDescription = "بیشتر", modifier = Modifier.size(16.dp)) }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ردیف دوم: مبلغ نهایی آیتم + حذف
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    "${item.unitPrice.toFaPrice()} × ${item.quantity.toFaNumber()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    "مبلغ نهایی آیتم",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary,
+                    modifier = Modifier.weight(1f)
                 )
                 Text(
                     (item.quantity.toLong() * item.unitPrice).toFaPrice(),
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.Bold, color = NeonGreen
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = NeonGreen
                     )
                 )
+                Spacer(Modifier.width(10.dp))
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = DangerColor.copy(alpha = 0.15f),
+                        contentColor = DangerColor
+                    )
+                ) { Icon(Icons.Filled.Delete, contentDescription = "حذف", modifier = Modifier.size(16.dp)) }
             }
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(NeonPurple.copy(alpha = 0.25f)),
-                colors = IconButtonDefaults.iconButtonColors(contentColor = NeonPurple)
-            ) { Icon(Icons.Filled.Remove, contentDescription = "کمتر", modifier = Modifier.size(16.dp)) }
-            Spacer(Modifier.width(6.dp))
-            var qtyText by remember(item.quantity) { mutableStateOf(item.quantity.toFaNumber()) }
-            OutlinedTextField(
-                value = qtyText,
-                onValueChange = { v ->
-                    qtyText = v
-                    v.parseAmount()?.let { q -> onSetQty(q) }
-                },
-                modifier = Modifier.width(66.dp),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.titleSmall.copy(
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.ExtraBold
-                ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = NeonPurple,
-                    unfocusedBorderColor = Color(0x33FFFFFF),
-                    cursorColor = NeonPurple
-                )
-            )
-            Spacer(Modifier.width(6.dp))
-            IconButton(
-                onClick = onAdd,
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(NeonGreen.copy(alpha = 0.9f)),
-                colors = IconButtonDefaults.iconButtonColors(contentColor = Color.Black)
-            ) { Icon(Icons.Filled.Add, contentDescription = "بیشتر", modifier = Modifier.size(16.dp)) }
-            Spacer(Modifier.width(8.dp))
-            IconButton(
-                onClick = onDelete,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = DangerColor)
-            ) { Icon(Icons.Filled.Delete, contentDescription = "حذف", modifier = Modifier.size(18.dp)) }
         }
     }
 }

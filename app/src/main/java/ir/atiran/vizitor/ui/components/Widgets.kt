@@ -59,11 +59,13 @@ fun NeonPurpleButton(
         modifier = modifier
             .height(58.dp)
             .pressScale()
+            .shineSweep()
+            .border(1.dp, Gold.copy(alpha = if (enabled) 0.65f else 0.15f), shape)
             .clickable(enabled = enabled, onClick = onClick),
         shape = shape,
         fillBrush = Brush.verticalGradient(
             colors = if (enabled)
-                listOf(Color(0xFFA05CFF), Color(0xFF7A2FE0), Color(0xFF521AA8))
+                listOf(Color(0xFFB06CFF), Color(0xFF7A2FE0), Color(0xFF4A1799))
             else
                 listOf(Color(0xFF2A2F3A), Color(0xFF232733))
         ),
@@ -106,11 +108,13 @@ fun NeonGreenButton(
         modifier = modifier
             .height(50.dp)
             .pressScale()
+            .shineSweep()
+            .border(1.dp, Color(0xFF063D24).copy(alpha = if (enabled) 0.9f else 0.2f), shape)
             .clickable(enabled = enabled, onClick = onClick),
         shape = shape,
         fillBrush = Brush.verticalGradient(
             colors = if (enabled)
-                listOf(Color(0xFF7DFFC0), Color(0xFF2BFF88), Color(0xFF0FBF62))
+                listOf(Color(0xFF8CFFCB), Color(0xFF2BFF88), Color(0xFF0CB35C))
             else
                 listOf(Color(0xFF2A2F3A), Color(0xFF232733))
         ),

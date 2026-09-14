@@ -131,7 +131,8 @@ class VizitorRepository(private val context: Context) {
         val items = db.cart().getAll()
         require(items.isNotEmpty()) { "سبد سفارش خالی است" }
         val gross = items.sumOf { it.quantity.toLong() * it.unitPrice }
-        val discount = computeDiscount(gross, cashSettlement)
+        // نسخه ۱٫۶٫۰ — تخفیفات و کسورات به درخواست کارفرما حذف شد
+        val discount = 0L
         val sig = signaturePng?.let {
             Base64.encodeToString(it, Base64.NO_WRAP)
         }
@@ -208,7 +209,8 @@ class VizitorRepository(private val context: Context) {
                 db.products().upsertAll(cat.data.map {
                     ProductEntity(
                         it.id, it.code, it.name, it.groupName, it.price, it.stock,
-                        isVip = it.isVip, unit = it.unit, packSize = it.packSize, price2 = it.price2
+                        isVip = it.isVip, unit = it.unit, packSize = it.packSize, price2 = it.price2,
+                        consumerPrice = it.consumerPrice
                     )
                 })
                 pulled += cat.data.size

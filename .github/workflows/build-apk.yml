@@ -47,31 +47,31 @@ jobs:
       - name: Prepare distributable APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-v1.5.0.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-v1.6.0.apk"
           ls -la dist/
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: Vizitor-APK
-          path: dist/Vizitor-v1.5.0.apk
+          path: dist/Vizitor-v1.6.0.apk
 
       - name: Publish GitHub Release with downloadable APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.0
+          tag_name: v1.6.0
           name: "آتیران ویزیتور — نسخه ۱٫۱٫۰ (نسخه شگفتی: اشتراک PDF/Word/تصویر، یخ طلایی، جستجوی صوتی، نقشه داخلی، کارنامه ماهانه)"
           body: |
             نسخه قابل نصب اپلیکیشن **آتیران ویزیتور** ویژه پخش آجیل و خشکبار.
 
-            📲 برای نصب روی گوشی اندروید، فایل **Vizitor-v1.5.0.apk** را از بخش Assets پایین همین صفحه دانلود و نصب کنید.
+            📲 برای نصب روی گوشی اندروید، فایل **Vizitor-v1.6.0.apk** را از بخش Assets پایین همین صفحه دانلود و نصب کنید.
 
             ✨ نکات این نسخه:
             - آیکون سه‌بعدی جدید: حرف M با نئون بنفش که strokes آن پوسته‌های طلایی پسته خندان و دره میانی آن کاسه آجیل و خشکبار است
             - تم PremiumUX (Dark Slate + Glassmorphism + نئون بنفش/سبز/طلایی)
             - آفلاین-اول با Room و همگام‌سازی خودکار با SQL Server (پورت 1433)
             - اسکنر بارکد، امضای دیجیتال، دستیار فروش هوشمند Gemini
-          files: dist/Vizitor-v1.5.0.apk
+          files: dist/Vizitor-v1.6.0.apk
           target_commitish: arena/01a09dd8-vizitor
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

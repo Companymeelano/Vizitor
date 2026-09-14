@@ -23,6 +23,7 @@ import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.ui.components.RoyalHeader
 import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
 import ir.atiran.vizitor.ui.components.auroraFrame
+import ir.atiran.vizitor.ui.components.PriceTag3D
 import ir.atiran.vizitor.ui.components.royalBorder
 import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import ir.atiran.vizitor.util.parseAmount
@@ -86,6 +87,7 @@ import ir.atiran.vizitor.ui.components.rememberVoiceSearch
 import ir.atiran.vizitor.ui.components.tilt3D
 import ir.atiran.vizitor.ui.theme.DangerRed
 import ir.atiran.vizitor.ui.theme.Gold
+import ir.atiran.vizitor.ui.theme.GoldDark
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.TextSecondary
@@ -336,38 +338,31 @@ private fun ProductCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = TextSecondary
             )
-            Spacer(Modifier.height(5.dp))
-            Row(Modifier.fillMaxWidth()) {
-                Text(
-                    "فروش ۱",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = TextSecondary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    product.price.toFaPrice(),
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = NeonGreen
-                    )
-                )
-            }
-            Spacer(Modifier.height(2.dp))
-            Row(Modifier.fillMaxWidth()) {
-                Text(
-                    "فروش ۲",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = TextSecondary,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    (if (product.price2 > 0) product.price2 else product.price).toFaPrice(),
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Gold
-                    )
-                )
-            }
+            Spacer(Modifier.height(6.dp))
+            PriceTag3D(
+                label = "فروش ۱",
+                price = product.price,
+                face = Brush.linearGradient(listOf(Color(0xFF8CFFCB), Color(0xFF17D877))),
+                edge = Color(0xFF0B7A44),
+                textColor = Color.Black,
+                modifier = Modifier.fillMaxWidth()
+            )
+            PriceTag3D(
+                label = "فروش ۲",
+                price = if (product.price2 > 0) product.price2 else product.price,
+                face = Brush.linearGradient(listOf(Color(0xFFFFE29A), Color(0xFFF0B23C))),
+                edge = Color(0xFF8F6414),
+                textColor = Color.Black,
+                modifier = Modifier.fillMaxWidth()
+            )
+            PriceTag3D(
+                label = "مصرف‌کننده",
+                price = if (product.consumerPrice > 0) product.consumerPrice else product.price,
+                face = Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)),
+                edge = Color(0xFF2C0B4E),
+                textColor = Color.White,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(Modifier.height(8.dp))
 
@@ -456,6 +451,14 @@ private fun ProductZoomDialog(product: ProductEntity, onDismiss: () -> Unit) {
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
+                    "قیمت مصرف‌کننده: ${(if (product.consumerPrice > 0) product.consumerPrice else product.price).toFaPrice()}",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        color = Color(0xFFE3BFFF),
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
                     if (product.stock > 0) "موجودی زنده: ${product.stock.toFaNumber()} ${product.unit}" else "ناموجود",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (product.stock > 0) NeonGreen else DangerRed
@@ -527,7 +530,8 @@ private fun AddToCartDialog(
     onConfirm: (Double, Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var qtyText by remember { mutableStateOf("1") }
+    var qtyText by remember { mutableStateOf("0") }
+    var lockedQty by remember { mutableStateOf(0.0) }
     var level by remember { mutableStateOf(initialLevel) }
     var manual by remember { mutableStateOf(false) }
     var manualText by remember { mutableStateOf("") }
@@ -535,6 +539,7 @@ private fun AddToCartDialog(
     val hasPrice2 = product.price2 > 0
     val levelPrice = if (level == 2 && hasPrice2) product.price2 else product.price
     val qty = qtyText.parseAmount() ?: 0.0
+    val effectiveQty = if (lockedQty > 0) lockedQty else qty
     val finalPrice: Long = if (manual) (manualText.parseAmount()?.toLong() ?: levelPrice) else levelPrice
 
     Dialog(onDismissRequest = onDismiss) {
@@ -563,7 +568,10 @@ private fun AddToCartDialog(
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = { qtyText = ((qty + 1).coerceAtMost(product.stock)).toLong().toString() },
+                        onClick = {
+                            qtyText = ((qty + 1).coerceAtMost(product.stock)).toLong().toString()
+                            lockedQty = 0.0
+                        },
                         colors = IconButtonDefaults.iconButtonColors(
                             containerColor = NeonPurple.copy(alpha = 0.25f),
                             contentColor = NeonPurple
@@ -571,7 +579,10 @@ private fun AddToCartDialog(
                     ) { Icon(Icons.Filled.Add, contentDescription = "بیشتر") }
                     OutlinedTextField(
                         value = qtyText,
-                        onValueChange = { qtyText = it },
+                        onValueChange = {
+                            qtyText = it
+                            lockedQty = 0.0
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 8.dp),
@@ -588,12 +599,48 @@ private fun AddToCartDialog(
                         )
                     )
                     IconButton(
-                        onClick = { qtyText = (qty - 1).coerceAtLeast(0.0).toLong().toString() },
+                        onClick = {
+                            qtyText = (qty - 1).coerceAtLeast(0.0).toLong().toString()
+                            lockedQty = 0.0
+                        },
                         colors = IconButtonDefaults.iconButtonColors(
                             containerColor = Color(0x1AFFFFFF),
                             contentColor = TextSecondary
                         )
                     ) { Icon(Icons.Filled.Remove, contentDescription = "کمتر") }
+                }
+                Spacer(Modifier.height(6.dp))
+                // درج سریع بر اساس بسته‌بندی + دکمه درج تعداد
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PackChip("۱ بسته (${product.packSize.toFaNumber()})") {
+                        qtyText = product.packSize.toString()
+                        lockedQty = product.packSize.toDouble()
+                    }
+                    PackChip("۲ بسته") {
+                        val v = product.packSize * 2
+                        qtyText = v.toString()
+                        lockedQty = v.toDouble()
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (qty > 0) Brush.linearGradient(listOf(Gold, GoldDark))
+                                else Color(0x14FFFFFF)
+                            )
+                            .clickable(enabled = qty > 0) {
+                                lockedQty = qty.coerceAtMost(product.stock)
+                            }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            if (lockedQty > 0) "تعداد درج شد ✓" else "درج تعداد",
+                            color = if (qty > 0) Color.Black else TextSecondary,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -720,7 +767,7 @@ private fun AddToCartDialog(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        (finalPrice.toBigDecimal() * qty.toBigDecimal()).toLong().toFaPrice(),
+                        (finalPrice.toBigDecimal() * effectiveQty.toBigDecimal()).toLong().toFaPrice(),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = Gold
@@ -730,8 +777,9 @@ private fun AddToCartDialog(
 
                 Spacer(Modifier.height(14.dp))
                 NeonGreenButton(
-                    text = "افزودن به سبد 🛒",
-                    onClick = { if (qty > 0) onConfirm(qty.coerceAtMost(product.stock), finalPrice) },
+                    text = if (lockedQty > 0) "افزودن ${lockedQty.toFaNumber()} عدد به سبد 🛒" else "افزودن به سبد 🛒",
+                    onClick = { if (lockedQty > 0) onConfirm(lockedQty.coerceAtMost(product.stock), finalPrice) },
+                    enabled = lockedQty > 0,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(6.dp))
@@ -740,5 +788,21 @@ private fun AddToCartDialog(
                 }
             }
         }
+    }
+}
+
+/** چیپ درج سریع تعداد بر اساس بسته‌بندی کالا. */
+@Composable
+private fun PackChip(label: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .padding(end = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(NeonPurple.copy(alpha = 0.18f))
+            .border(1.dp, NeonPurple.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        Text(label, color = Color(0xFFE3BFFF), fontWeight = FontWeight.Bold, fontSize = 11.sp)
     }
 }

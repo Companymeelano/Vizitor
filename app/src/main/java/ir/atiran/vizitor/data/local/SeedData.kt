@@ -15,18 +15,18 @@ data class PaymentSeed(val customerId: Int, val amount: Long, val daysAgo: Int)
 object SeedData {
 
     val products = listOf(
-        ProductEntity(1, "6260201000011", "پسته اکبری فندقی درجه یک", "پسته", 1_850_000, 42.0, "🥜", unit = "کیلو", packSize = 10, price2 = 1_920_000),
-        ProductEntity(2, "6260201000028", "بادام هندی ویتنامی W240", "مغز آجیل", 980_000, 118.0, "🌰", unit = "کیلو", packSize = 20, price2 = 1_020_000),
-        ProductEntity(3, "6260201000035", "پسته احمدآقایی خندان", "پسته", 1_650_000, 96.0, "🥜", unit = "کیلو", packSize = 10, price2 = 1_710_000),
-        ProductEntity(4, "6260201000042", "فندق تازه توخالی", "مغز آجیل", 1_150_000, 63.0, "🌰", unit = "کیلو", packSize = 15, price2 = 1_190_000),
-        ProductEntity(5, "6260201000059", "مغز گردوی کاغذی چهارمحال", "مغز آجیل", 1_320_000, 55.0, "🧠", unit = "کیلو", packSize = 12, price2 = 1_370_000),
-        ProductEntity(6, "6260201000066", "کشمش طلایی ملایر ممتاز", "خشکبار", 385_000, 140.0, "🍇", unit = "کیلو", packSize = 25, price2 = 399_000),
-        ProductEntity(7, "6260201000073", "خرما مضافتی بم سوپر", "خشکبار", 1_250_000, 22.0, "🌴", isVip = true, unit = "کارتن ۵ کیلو", packSize = 5, price2 = 1_290_000),
-        ProductEntity(8, "6260201000080", "آجیل شب یلدایی مخلوط لوکس", "آجیل مخلوط", 1_980_000, 48.0, "🎁", isVip = true, unit = "کیلو", packSize = 8, price2 = 2_050_000),
-        ProductEntity(9, "6260201000097", "توت خشک درشت ملارد", "خشکبار", 460_000, 87.0, "🫐", unit = "کیلو", packSize = 20, price2 = 475_000),
-        ProductEntity(10, "6260201000103", "انجیر خشک استعناب", "خشکبار", 540_000, 15.0, "🍯", isVip = true, unit = "بسته ۵۰۰ گرم", packSize = 2, price2 = 560_000),
-        ProductEntity(11, "6260201000110", "تخمه کدو گرامی بو داده", "تخمه", 720_000, 74.0, "🎃", unit = "کیلو", packSize = 16, price2 = 745_000),
-        ProductEntity(12, "6260201000127", "بادام درختی سنگی خام", "مغز آجیل", 890_000, 102.0, "🌰", unit = "کیلو", packSize = 20, price2 = 920_000)
+        ProductEntity(1, "6260201000011", "پسته اکبری فندقی درجه یک", "پسته", 1_850_000, 42.0, "🥜", unit = "کیلو", packSize = 10, price2 = 1_920_000), consumerPrice = 2_250_000,
+        ProductEntity(2, "6260201000028", "بادام هندی ویتنامی W240", "مغز آجیل", 980_000, 118.0, "🌰", unit = "کیلو", packSize = 20, price2 = 1_020_000), consumerPrice = 1_180_000,
+        ProductEntity(3, "6260201000035", "پسته احمدآقایی خندان", "پسته", 1_650_000, 96.0, "🥜", unit = "کیلو", packSize = 10, price2 = 1_710_000), consumerPrice = 2_050_000,
+        ProductEntity(4, "6260201000042", "فندق تازه توخالی", "مغز آجیل", 1_150_000, 63.0, "🌰", unit = "کیلو", packSize = 15, price2 = 1_190_000), consumerPrice = 1_390_000,
+        ProductEntity(5, "6260201000059", "مغز گردوی کاغذی چهارمحال", "مغز آجیل", 1_320_000, 55.0, "🧠", unit = "کیلو", packSize = 12, price2 = 1_370_000), consumerPrice = 1_620_000,
+        ProductEntity(6, "6260201000066", "کشمش طلایی ملایر ممتاز", "خشکبار", 385_000, 140.0, "🍇", unit = "کیلو", packSize = 25, price2 = 399_000), consumerPrice = 479_000,
+        ProductEntity(7, "6260201000073", "خرما مضافتی بم سوپر", "خشکبار", 1_250_000, 22.0, "🌴", isVip = true, unit = "کارتن ۵ کیلو", packSize = 5, price2 = 1_290_000), consumerPrice = 1_550_000,
+        ProductEntity(8, "6260201000080", "آجیل شب یلدایی مخلوط لوکس", "آجیل مخلوط", 1_980_000, 48.0, "🎁", isVip = true, unit = "کیلو", packSize = 8, price2 = 2_050_000), consumerPrice = 2_460_000,
+        ProductEntity(9, "6260201000097", "توت خشک درشت ملارد", "خشکبار", 460_000, 87.0, "🫐", unit = "کیلو", packSize = 20, price2 = 475_000), consumerPrice = 570_000,
+        ProductEntity(10, "6260201000103", "انجیر خشک استعناب", "خشکبار", 540_000, 15.0, "🍯", isVip = true, unit = "بسته ۵۰۰ گرم", packSize = 2, price2 = 560_000), consumerPrice = 672_000,
+        ProductEntity(11, "6260201000110", "تخمه کدو گرامی بو داده", "تخمه", 720_000, 74.0, "🎃", unit = "کیلو", packSize = 16, price2 = 745_000), consumerPrice = 894_000,
+        ProductEntity(12, "6260201000127", "بادام درختی سنگی خام", "مغز آجیل", 890_000, 102.0, "🌰", unit = "کیلو", packSize = 20, price2 = 920_000), consumerPrice = 1_104_000
     )
 
     val customers = listOf(

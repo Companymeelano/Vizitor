@@ -91,7 +91,8 @@ function action_catalog(): never
                 CAST(ISNULL(p.IsVip, 0) AS BIT) AS is_vip,
                 ISNULL(p.UnitName, N'کیلو') AS unit,
                 ISNULL(p.PackSize, 1) AS pack_size,
-                CAST(ISNULL(p.Price2, p.Price) AS BIGINT) AS price2
+                CAST(ISNULL(p.Price2, p.Price) AS BIGINT) AS price2,
+                CAST(ISNULL(p.ConsumerPrice, p.Price) AS BIGINT) AS consumer_price
             FROM " . TBL_PRODUCTS . " p
             WHERE p.IsActive = 1 AND p.UpdatedAt >= :since
             ORDER BY p.Name";

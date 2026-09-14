@@ -27,7 +27,8 @@ data class ProductDto(
     @SerializedName("is_vip") val isVip: Boolean,
     @SerializedName("unit") val unit: String = "کیلو",
     @SerializedName("pack_size") val packSize: Int = 1,
-    @SerializedName("price2") val price2: Long = 0
+    @SerializedName("price2") val price2: Long = 0,
+    @SerializedName("consumer_price") val consumerPrice: Long = 0
 )
 
 data class CustomerDto(

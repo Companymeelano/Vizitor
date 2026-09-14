@@ -40,6 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.sp
+import ir.atiran.vizitor.util.toFaPrice
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -333,5 +336,54 @@ fun Modifier.auroraFrame(shape: Shape = RoundedCornerShape(16.dp)): Modifier {
             style = Stroke(stroke * 3f),
             alpha = 0.16f
         )
+    }
+}
+
+/**
+ * برچسب قیمت سه‌بعدی — لایه عمق تیره زیرین + رویه گرادیانی براق + قاب نوری.
+ * برای نمایش قیمت فروش ۱ / فروش ۲ / مصرف‌کننده در کارت کالا.
+ */
+@Composable
+fun PriceTag3D(
+    label: String,
+    price: Long,
+    face: Brush,
+    edge: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.padding(bottom = 6.dp)) {
+        // لایه عمق سه‌بعدی
+        Box(
+            Modifier
+                .matchParentSize()
+                .offset(x = (-2).dp, y = 3.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(edge.copy(alpha = 0.75f))
+        )
+        // رویه اصلی
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(face)
+                .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(10.dp))
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label,
+                    color = textColor.copy(alpha = 0.85f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    price.toFaPrice(),
+                    color = textColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
     }
 }

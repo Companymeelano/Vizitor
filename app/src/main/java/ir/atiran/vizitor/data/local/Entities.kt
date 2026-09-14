@@ -27,6 +27,7 @@ data class ProductEntity(
     val unit: String = "کیلو",     // واحد شمارش کالا
     val packSize: Int = 1,         // تعداد/وزن داخل هر بسته
     val price2: Long = 0,          // قیمت فروش ۲ (۰ = مشابه فروش ۱)
+    val consumerPrice: Long = 0,   // قیمت مصرف‌کننده (۰ = مشابه فروش ۱)
     val updatedAt: Long = System.currentTimeMillis()
 )
 

@@ -34,6 +34,12 @@ import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.filled.BarChart
 import ir.atiran.vizitor.ui.components.RoyalBarChart
 import ir.atiran.vizitor.ui.components.RoyalHeader
+import ir.atiran.vizitor.ui.theme.NeonPurpleDark
+import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.foundation.border
+import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.ui.components.RoyalTable
 import ir.atiran.vizitor.ui.components.royalBorder
 import androidx.compose.material3.Icon
@@ -100,60 +106,49 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
             }
         }
 
-        // ── بنر مدال عملکرد بازاریاب (طلایی) ────────────────────────────────
+        // ── تارگت ویزیتور — کارت کامل و هم‌اندازه سایر بخش‌ها ────────────────
         item {
-            MedalBanner(progress = progress, remaining = (target - todaySales).coerceAtLeast(0))
-        }
-
-        // ── ردیف تارگت روزانه ───────────────────────────────────────────────
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                GlassCard(
-                    modifier = Modifier
-                        .weight(1.2f)
-                        .height(200.dp)
-                        .royalBorder()
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        NeonDonutChart(
-                            progress = progress,
-                            centerValue = "${(progress * 100).toInt()}٪".toFaDigits(),
-                            centerLabel = "تارگت روزانه",
-                            size = 128.dp
+            GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    NeonDonutChart(
+                        progress = progress,
+                        centerValue = "${(progress * 100).toInt()}٪".toFaDigits(),
+                        centerLabel = "پیشرفت",
+                        size = 150.dp
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        RoyalHeader(text = "تارگت ویزیتور امروز", icon = Icons.Filled.Flag)
+                        Spacer(Modifier.height(10.dp))
+                        TargetStatRow("هدف روزانه", target.toFaPrice(), Color(0xFFE3BFFF))
+                        TargetStatRow("فروش امروز", todaySales.toFaPrice(), NeonGreen)
+                        TargetStatRow(
+                            "مانده تا هدف",
+                            (target - todaySales).coerceAtLeast(0).toFaPrice(),
+                            if (todaySales >= target) NeonGreen else Gold
                         )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "فروش: ${todaySales.toFaPrice()}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
+                        TargetStatRow(
+                            "وضعیت",
+                            if (progress >= 1f) "هدف محقق شد 🏆"
+                            else "${(progress * 100).toInt()}٪ تکمیل".toFaDigits(),
+                            if (progress >= 1f) NeonGreen else NeonPurple
                         )
                     }
                 }
+            }
+        }
 
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // ویجت فاکتورهای در انتظار سینک
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .royalBorder()
-                    ) {
-                        Column(Modifier.fillMaxSize()) {
-                            Text("در صف ارسال", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "${pending.toFaNumber()} فاکتور",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                                color = if (pending > 0) Gold else TextSecondary
-                            )
-                        }
-                    }
+        // ── فاکتورهای در صف ارسال ──────────────────────────────────────────
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
+                Column(Modifier.fillMaxWidth()) {
+                    Text("در صف ارسال", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "${pending.toFaNumber()} فاکتور",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = Gold
+                    )
                 }
             }
         }
@@ -216,69 +211,6 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
  * بنر مدال عملکرد بازاریاب — حاشیه طلایی، نشان مدال و نوار پیشرفت سبک.
  * بدون انیمیشن دائمی: فقط یک نوار استاتیک برای حفظ روان‌بودن اسکرول.
  */
-@Composable
-private fun MedalBanner(progress: Float, remaining: Long) {
-    val achieved = progress >= 1f
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .goldBorder()
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(Brush.radialGradient(listOf(Gold, Gold.copy(alpha = 0.15f)))),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Filled.MilitaryTech,
-                    contentDescription = "مدال عملکرد",
-                    tint = Color(0xFF3A2A00),
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    if (achieved) "مدال طلایی عملکرد فعال شد 🏆" else "مسیر مدال طلایی عملکرد",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Gold
-                )
-                Text(
-                    if (achieved) "تارگت امروز کامل شد؛ عملکرد شما طلایی است!"
-                    else "${remaining.toFaPrice()} فروش تا نشان طلا",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
-                Spacer(Modifier.height(6.dp))
-                // نوار پیشرفت سبک (بدون انیمیشن دائمی)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF1C2330))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(progress.coerceIn(0.05f, 1f))
-                            .clip(CircleShape)
-                            .background(
-                                Brush.horizontalGradient(
-                                    if (achieved) listOf(Gold, Color(0xFFFFF3C4))
-                                    else listOf(NeonGreen, Color(0xFFB8FFD9))
-                                )
-                            )
-                    )
-                }
-            }
-        }
-    }
-}
-
 /** سطح سبز نئونی ملایم برای ویجت پورسانت. */
 private fun Modifier.neonGreenSurface(): Modifier = this.then(
     Modifier.background(
@@ -409,53 +341,106 @@ private fun buildWeekly(
 }
 
 /**
- * کارت سه مشتری با بیشترین بدهکاری — حاشیه قرمز/طلایی و مبالغ برجسته.
+ * جدول سه‌بعدی هشدار بدهی مشتریان — رتبه، مشتری، نوار بدهی و مبلغ،
+ * با سربرگ گرادیانی بنفش و ردیف جمع طلایی.
  */
 @Composable
 private fun DebtorsCard(debtors: List<ir.atiran.vizitor.data.local.CustomerEntity>) {
+    val list = debtors.filter { it.debt > 0 }
+    val maxDebt = list.maxOfOrNull { it.debt }?.coerceAtLeast(1L) ?: 1L
+    val sum = list.sumOf { it.debt }
+    val medals = listOf("🥇", "🥈", "🥉")
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .royalBorder()
     ) {
         Column {
-            RoyalHeader(text = "هشدار بدهی — بیشترین مانده حساب", icon = Icons.Filled.WarningAmber)
-            Spacer(Modifier.height(8.dp))
-            if (debtors.all { it.debt <= 0 }) {
+            RoyalHeader(text = "هشدار بدهی مشتریان", icon = Icons.Filled.WarningAmber)
+            Spacer(Modifier.height(10.dp))
+            if (list.isEmpty()) {
                 Text(
                     "هیچ مشتری بدهکاری وجود ندارد 🎉",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
-            }
-            debtors.filter { it.debt > 0 }.forEachIndexed { i, c ->
-                Row(
-                    modifier = Modifier.padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            } else {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(RoyalSurfaceBrush)
+                        .border(1.dp, Color(0x33B04BF8), RoundedCornerShape(14.dp))
                 ) {
-                    Text(
-                        (i + 1).toFaNumber(),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                        color = DangerRed
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(c.name, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                        Text(
-                            c.city,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(Brush.horizontalGradient(listOf(NeonPurple, NeonPurpleDark)))
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                    ) {
+                        Text("رتبه", Modifier.weight(0.55f), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                        Text("مشتری", Modifier.weight(1.7f), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                        Text("مانده بدهی", Modifier.weight(1.15f), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, textAlign = TextAlign.End)
                     }
-                    Text(
-                        c.debt.toFaPrice(),
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = DangerRed
-                        )
-                    )
+                    list.forEachIndexed { i, c ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .background(if (i % 2 == 0) Color(0x10FFFFFF) else Color.Transparent)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(medals.getOrElse(i) { (i + 1).toFaNumber() }, Modifier.weight(0.55f), fontSize = 15.sp)
+                            Column(Modifier.weight(1.7f)) {
+                                Text(c.name, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold), maxLines = 1)
+                                Text(c.city, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(5.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(Color(0x1AFFFFFF))
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth((c.debt.toFloat() / maxDebt).coerceIn(0.08f, 1f))
+                                            .height(5.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(Brush.horizontalGradient(listOf(DangerRed, Gold)))
+                                    )
+                                }
+                            }
+                            Text(
+                                c.debt.toFaPrice(),
+                                Modifier.weight(1.15f),
+                                color = DangerRed,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.End
+                            )
+                        }
+                    }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(Gold.copy(alpha = 0.10f))
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("مجموع بدهی این مشتریان", Modifier.weight(1f), color = Gold, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                        Text(sum.toFaPrice(), color = Gold, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                    }
                 }
             }
         }
+    }
+}
+
+/** ردیف آمار کارت تارگت — برچسب + مقدار رنگی. */
+@Composable
+private fun TargetStatRow(label: String, value: String, color: Color) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = TextSecondary, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold), color = color)
     }
 }

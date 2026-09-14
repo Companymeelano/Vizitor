@@ -93,8 +93,6 @@ object InvoiceShare {
         right.color = MUTED; right.textSize = 36f
         c.drawText("جمع اقلام: ${invoice.grossAmount.toFaPrice()}", W - MARGIN.toFloat(), y, right)
         y += 62f
-        c.drawText("کسورات: ${invoice.discount.toFaPrice()}", W - MARGIN.toFloat(), y, right)
-        y += 70f
         right.color = GREEN; right.textSize = 48f
         c.drawText("مبلغ نهایی: ${invoice.finalAmount.toFaPrice()}", W - MARGIN.toFloat(), y, right)
         y += 90f
@@ -173,7 +171,7 @@ object InvoiceShare {
                 append("<tr><td>${it.productName}</td><td>${it.quantity}</td><td>${it.unitPrice}</td><td>${it.lineTotal}</td></tr>")
             }
             append("</table>")
-            append("<p>جمع: ${invoice.grossAmount} ریال | کسورات: ${invoice.discount} ریال | " +
+            append("<p>جمع اقلام: ${invoice.grossAmount} ریال | " +
                     "<b>نهایی: ${invoice.finalAmount} ریال</b></p>")
             append("<p style=\"color:#B8860B\">Developed by Milano Technical Team, Milad Yaghoobi</p>")
             append("</body></html>")
@@ -191,7 +189,6 @@ object InvoiceShare {
             if (invoice.note.isNotBlank()) appendLine("توضیحات: ${invoice.note}")
             appendLine("تاریخ: ${invoice.createdAt.toFaDate()}")
             items.forEach { appendLine("• ${it.productName} × ${it.quantity} = ${it.lineTotal.toFaPrice()}") }
-            appendLine("کسورات: ${invoice.discount.toFaPrice()}")
             appendLine("💰 مبلغ نهایی: ${invoice.finalAmount.toFaPrice()}")
             appendLine("Developed by Milano Technical Team, Milad Yaghoobi")
         }
