@@ -14,3 +14,4 @@ keystore/
 server/vendor/
 worker/node_modules/
 worker/.wrangler/
+build.log

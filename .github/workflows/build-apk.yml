@@ -26,9 +26,23 @@ jobs:
           java-version: 17
 
       - name: Clean & Build Debug APK
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x gradlew
-          ./gradlew clean assembleDebug --no-daemon --stacktrace
+          set +e
+          ./gradlew clean assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            # در صورت خطا، لاگ را برای عیب‌یابی داخل مخزن ثبت کن (بدون بازفعال‌سازی CI)
+            git config user.name "vizitor-ci"
+            git config user.email "ci@vizitor.local"
+            git add -f build.log
+            git commit -m "chore(ci): build log [skip ci]"
+            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/Companymeelano/Vizitor.git" \
+              HEAD:arena/01a09dd8-vizitor || true
+            exit "$rc"
+          fi
 
       - name: Prepare distributable APK
         run: |
