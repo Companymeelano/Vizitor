@@ -31,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import kotlin.math.sin
 import kotlin.math.cos
-import androidx.compose.animation.core.FastOutSlowIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -190,7 +189,7 @@ fun ShimmerGoldText(
         text = text,
         modifier = modifier.onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) },
         style = MaterialTheme.typography.displaySmall,
-        color = { _ ->
+        color = { _: androidx.compose.ui.text.TextStyle ->
             Brush.linearGradient(
                 colors = listOf(Gold, Color(0xFFFFF7CF), Gold),
                 start = Offset(startX, 0f),
@@ -210,7 +209,7 @@ fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
     val progress = remember(active) { androidx.compose.animation.core.Animatable(0f) }
     androidx.compose.runtime.LaunchedEffect(active) {
         progress.snapTo(0f)
-        progress.animateTo(1f, tween(1200, easing = FastOutSlowIn))
+        progress.animateTo(1f, tween(1200))
         onFinished()
     }
     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
