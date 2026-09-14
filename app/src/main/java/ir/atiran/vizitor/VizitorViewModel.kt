@@ -12,8 +12,10 @@ import androidx.lifecycle.viewModelScope
 import ir.atiran.vizitor.ai.GeminiAssistant
 import ir.atiran.vizitor.data.local.CartItemEntity
 import ir.atiran.vizitor.data.local.CustomerEntity
+import ir.atiran.vizitor.data.local.ChatMessageType
 import ir.atiran.vizitor.data.local.InvoiceEntity
 import ir.atiran.vizitor.data.local.ProductEntity
+import ir.atiran.vizitor.data.local.ChatPrefs
 import ir.atiran.vizitor.data.local.SeedData
 import ir.atiran.vizitor.data.local.TopProduct
 import ir.atiran.vizitor.data.local.InvoiceItemEntity
@@ -124,6 +126,34 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
     fun removeFromCart(productId: Int) = viewModelScope.launch { repo.removeFromCart(productId) }
 
     fun selectCustomer(customer: CustomerEntity?) { _selectedCustomer.value = customer }
+
+    // ── اتاق گفتگوی ویزیتورها ────────────────────────────────────────────────
+    val chatMessages = repo.chatMessages.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    init {
+        viewModelScope.launch { repo.seedChatIfEmpty() }
+    }
+
+    fun sendChatMessage(text: String, type: ChatMessageType) = viewModelScope.launch {
+        if (!ChatPrefs.isRegistered) return@launch
+        repo.sendChatMessage(
+            senderName = ChatPrefs.fullName.value,
+            senderUsername = ChatPrefs.username.value,
+            senderPhone = ChatPrefs.phone.value,
+            text = text,
+            type = type
+        )
+    }
+
+    fun pinChatMessage(id: Long, pinned: Boolean) = viewModelScope.launch {
+        repo.pinChatMessage(id, pinned)
+        _toast.value = if (pinned) "پیام در بالای گفتگو سنجاق شد 📌" else "پیام از سنجاق برداشته شد"
+    }
+
+    fun deleteChatMessage(id: Long) = viewModelScope.launch {
+        repo.deleteChatMessage(id)
+        _toast.value = "پیام حذف شد 🗑️"
+    }
 
     /** ثبت مشتری جدید — محلی (در انتظار تأیید حسابداری) + تلاش ارسال به آتیران. */
     fun addPendingCustomer(

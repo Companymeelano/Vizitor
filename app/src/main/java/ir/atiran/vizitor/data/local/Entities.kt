@@ -112,6 +112,22 @@ data class CartItemEntity(
     val stock: Double
 )
 
+/** پیام گفتگوی گروهی ویزیتورها — اتاق محلی گفتگو (Offline-First، آماده سینک با آتیران). */
+@Entity(tableName = "chat_messages")
+data class ChatMessageEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val senderName: String,
+    val senderUsername: String,   // انگلیسی — بدون @
+    val senderPhone: String = "",
+    val text: String,             // متن پیام | برای VOICE/VIDEO مدت، برای STICKER ایموجی
+    val type: ChatMessageType = ChatMessageType.TEXT,
+    val timeLong: Long = System.currentTimeMillis(),
+    val pinned: Boolean = false,  // سنجاق‌شده توسط مدیر
+    val mine: Boolean = false
+)
+
+enum class ChatMessageType { TEXT, VOICE, STICKER, VIDEO }
+
 /** خروجی غیرموجودیتی: پرفروش‌ترین‌ها (پروجکشن کوئری). */
 data class TopProduct(
     val productName: String,

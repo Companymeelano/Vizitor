@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.TrendingUp
@@ -91,7 +92,10 @@ import ir.atiran.vizitor.util.toFaPrice
 private val DebtBarColors = listOf(Color(0xFFFF4D6D), Color(0xFFFF8FA3))
 
 @Composable
-fun DashboardScreen(viewModel: VizitorViewModel) {
+fun DashboardScreen(
+    viewModel: VizitorViewModel,
+    onOpenChat: () -> Unit = {}
+) {
     val todaySales by viewModel.todaySales.collectAsState()
     val followUp by viewModel.followUpCustomers.collectAsState()
     val pending by viewModel.pendingCount.collectAsState()
@@ -130,6 +134,24 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
                     )
                 }
                 Spacer(Modifier.width(10.dp))
+                // ورود سریع به اتاق گفتگوی ویزیتورها (v2.3.0) — حباب طلایی همگام با تم
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Gold.copy(alpha = 0.13f))
+                        .border(1.dp, Gold.copy(alpha = 0.45f), CircleShape)
+                        .clickable(onClick = onOpenChat),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Message,
+                        contentDescription = "اتاق گفتگو",
+                        tint = Gold,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
                 ThemeDotsSwitch()
             }
         }

@@ -95,6 +95,7 @@ import ir.atiran.vizitor.ui.theme.GoldDark
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
 
@@ -104,6 +105,7 @@ fun CatalogScreen(
     onOpenScanner: () -> Unit
 ) {
     val products by viewModel.products.collectAsState()
+    val cartItems by viewModel.cartItems.collectAsState()
     var query by remember { mutableStateOf("") }
     var zoomProduct by remember { mutableStateOf<ProductEntity?>(null) }
     var addProduct by remember { mutableStateOf<ProductEntity?>(null) }
@@ -156,6 +158,7 @@ fun CatalogScreen(
             items(filtered, key = { it.id }) { product ->
                 ProductCard(
                     product = product,
+                    qtyInCart = remember(cartItems) { cartItems.firstOrNull { it.productId == product.id }?.quantity ?: 0.0 },
                     onAdd = { addProduct = product },
                     onRemove = { viewModel.decrement(product.id) },
                     onZoom = { zoomProduct = product }
@@ -242,6 +245,7 @@ private fun SearchField(value: String, onChange: (String) -> Unit) {
 @Composable
 private fun ProductCard(
     product: ProductEntity,
+    qtyInCart: Double,
     onAdd: () -> Unit,
     onRemove: () -> Unit,
     onZoom: () -> Unit
@@ -249,6 +253,8 @@ private fun ProductCard(
     val inStock = product.stock > 0
     val lowStock = product.stock in 0.0..10.0
     val stockColor = if (inStock) if (lowStock) Gold else NeonGreen else DangerRed
+    // رنگ‌های تم — صحنه کالا با رنگ اصلی پالت فعال کاربر رنگ می‌گیرد
+    val p = vizitorPalette
 
     GlassCard(
         modifier = Modifier
@@ -258,26 +264,28 @@ private fun ProductCard(
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // ═══ صحنه نمایش کالا — هاله طلایی پشت محصول + نشان‌های وضعیت ═══
+            // ═══ صحنه نمایش کالا — گرادیان از پالت تم + هاله طلایی ═══
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(94.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .background(
-                        Brush.verticalGradient(listOf(Color(0x26B04BF8), Color(0x09FFFFFF)))
+                        Brush.verticalGradient(
+                            listOf(p.halo1.copy(alpha = 0.9f), Color(0x09FFFFFF))
+                        )
                     )
                     .clickable(onClick = onZoom)
                     .auroraFrame(RoundedCornerShape(18.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                // هاله نور طلایی نرم پشت ایموجی
+                // هاله نور طلایی نرم پشت ایموجی — از رنگ طلای تم فعال
                 Box(
                     modifier = Modifier
                         .size(62.dp)
                         .clip(CircleShape)
                         .background(
-                            Brush.radialGradient(listOf(Color(0x2EFFD166), Color.Transparent))
+                            Brush.radialGradient(listOf(p.gold.copy(alpha = 0.24f), Color.Transparent))
                         )
                 )
                 Text(product.imageEmoji, fontSize = 42.sp, textAlign = TextAlign.Center)
@@ -388,7 +396,7 @@ private fun ProductCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // دکمه‌های شناور + و -
+            // ═══ استپر زنده: تعداد فعلی این کالا در سبد، بین دو دکمه ═══
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -405,7 +413,29 @@ private fun ProductCard(
                 ) {
                     Icon(Icons.Filled.Remove, contentDescription = "کاهش", modifier = Modifier.size(18.dp))
                 }
-                Spacer(Modifier.weight(1f))
+                // نمایش زنده تعداد در سبد (وقتی صفر: طلایی «·»)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 6.dp)
+                        .height(30.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (qtyInCart > 0) Gold.copy(alpha = 0.14f) else Color(0x0FFFFFFF))
+                        .border(
+                            1.dp,
+                            if (qtyInCart > 0) Gold.copy(alpha = 0.45f) else Color(0x22FFFFFF),
+                            RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (qtyInCart > 0) "در سبد: ${qtyInCart.toFaNumber()}" else "·",
+                        fontSize = if (qtyInCart > 0) 10.5.sp else 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (qtyInCart > 0) Gold else TextSecondary,
+                        maxLines = 1
+                    )
+                }
                 IconButton(
                     onClick = onAdd,
                     enabled = inStock,
@@ -453,8 +483,29 @@ private fun PricePanel(product: ProductEntity) {
             Text(
                 "قیمت‌های کالا (ریال)",
                 style = MaterialTheme.typography.labelSmall,
-                color = Gold
+                color = Gold,
+                modifier = Modifier.weight(1f)
             )
+            // چیپ هوشمند «سود مشتری» — حاشیه قیمت مصرف‌کننده تا فروش ۱
+            if (sale1 > 0 && consumer > sale1) {
+                val margin = ((consumer - sale1) * 100 / sale1).toInt()
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(NeonGreen.copy(alpha = 0.13f))
+                        .border(1.dp, NeonGreen.copy(alpha = 0.38f), RoundedCornerShape(50))
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "سود مشتری: ${margin.toFaNumber()}٪+",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = NeonGreen,
+                        maxLines = 1
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(7.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {

@@ -144,3 +144,24 @@ interface CartDao {
     @Query("SELECT COALESCE(SUM(quantity), 0) FROM cart_items")
     fun observeItemCount(): Flow<Double>
 }
+
+@Dao
+interface ChatDao {
+    @Query("SELECT * FROM chat_messages ORDER BY timeLong ASC")
+    fun observeAll(): kotlinx.coroutines.flow.Flow<List<ChatMessageEntity>>
+
+    @Query("SELECT COUNT(*) FROM chat_messages")
+    suspend fun count(): Int
+
+    @Insert
+    suspend fun insert(msg: ChatMessageEntity): Long
+
+    @Insert
+    suspend fun insertAll(msgs: List<ChatMessageEntity>)
+
+    @Query("UPDATE chat_messages SET pinned = :pinned WHERE id = :id")
+    suspend fun setPinned(id: Long, pinned: Boolean)
+
+    @Query("DELETE FROM chat_messages WHERE id = :id")
+    suspend fun delete(id: Long)
+}

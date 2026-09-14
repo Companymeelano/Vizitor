@@ -450,8 +450,8 @@ private fun CustomerCard(
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .royalBorder()
-            .then(if (customer.isVip) Modifier.goldBorder() else Modifier)
+            // تک‌قاب دقیق: VIP فقط قاب طلایی، عادی فقط قاب سلطنتی — بدون تداخل/بیرون‌زدگی
+            .then(if (customer.isVip) Modifier.goldBorder() else Modifier.royalBorder())
     ) {
         Column {
             // ═══ ردیف هویت: آواتار تو‌حلقه + نام + چیپ وضعیت ═══
@@ -500,13 +500,12 @@ private fun CustomerCard(
                                 .shadow(4.dp, CircleShape, ambientColor = statusColor, spotColor = statusColor)
                         )
                     }
-                    // نشان طلایی ترتیب ویزیت (پس از بهینه‌سازی مسیر)
+                    // نشان طلایی ترتیب ویزیت (پس از بهینه‌سازی مسیر) — داخل آواتار، بدون بیرون‌زدگی
                     if (order != null) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .offset(x = (-2).dp, y = (-2).dp)
-                                .size(21.dp)
+                                .size(19.dp)
                                 .clip(CircleShape)
                                 .background(Brush.linearGradient(listOf(Color(0xFFFFF3D6), Gold)))
                                 .border(1.dp, Color.White.copy(alpha = 0.65f), CircleShape),

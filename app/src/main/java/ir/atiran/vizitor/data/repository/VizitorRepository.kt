@@ -13,6 +13,8 @@ import android.content.Context
 import android.util.Base64
 import ir.atiran.vizitor.data.local.AppDatabase
 import ir.atiran.vizitor.data.local.CartItemEntity
+import ir.atiran.vizitor.data.local.ChatMessageEntity
+import ir.atiran.vizitor.data.local.ChatMessageType
 import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.data.local.InvoiceEntity
 import ir.atiran.vizitor.data.local.InvoiceItemEntity
@@ -41,6 +43,7 @@ class VizitorRepository(private val context: Context) {
     val cartItems = db.cart().observeAll()
     val invoices = db.invoices().observeAll()
     val pendingCount = db.invoices().observePendingCount()
+    val chatMessages: Flow<List<ChatMessageEntity>> = db.chat().observeAll()
     val config = settings.config
 
     /** جمع ناخالص سبد. */
@@ -304,6 +307,47 @@ class VizitorRepository(private val context: Context) {
         db.salMali().forCustomer(customerId)
 
     suspend fun topProducts(): List<TopProduct> = db.invoices().topProducts()
+
+    // ── اتاق گفتگوی ویزیتورها ────────────────────────────────────────────────
+    /** کاشت پیام‌های نمونه در نخستین ورود به گفتگو تا فضای زنده ایجاد شود. */
+    suspend fun seedChatIfEmpty() {
+        if (db.chat().count() > 0) return
+        val now = System.currentTimeMillis()
+        db.chat().insertAll(
+            listOf(
+                ChatMessageEntity(0, "رضا مرادی", "reza.mr", "09122338801",
+                    "سلام رفقا! تور پسته اکبری امروز عالی بود، مشتری‌ام ذوق زده بود 🥜", ChatMessageType.TEXT, now - 4 * 3_600_000),
+                ChatMessageEntity(0, "سارا کاظمی", "sara.kz", "09351174412",
+                    "کشمش ملایر موجودیش تمام شده؛ موقع پیش‌فاکتور دقت کنید 🙏", ChatMessageType.TEXT, now - 3 * 3_600_000 - 400_000),
+                ChatMessageEntity(0, "مهدی رستمی", "mehdi.77", "09124488855",
+                    "00:24", ChatMessageType.VOICE, now - 2 * 3_600_000),
+                ChatMessageEntity(0, "رضا مرادی", "reza.mr", "09122338801",
+                    "01:35", ChatMessageType.VIDEO, now - 90 * 60_000),
+                ChatMessageEntity(0, "سارا کاظمی", "sara.kz", "09351174412",
+                    "🔥", ChatMessageType.STICKER, now - 30 * 60_000)
+            )
+        )
+    }
+
+    suspend fun sendChatMessage(
+        senderName: String,
+        senderUsername: String,
+        senderPhone: String,
+        text: String,
+        type: ChatMessageType = ChatMessageType.TEXT
+    ): Long = db.chat().insert(
+        ChatMessageEntity(
+            senderName = senderName,
+            senderUsername = senderUsername,
+            senderPhone = senderPhone,
+            text = text,
+            type = type,
+            mine = true
+        )
+    )
+
+    suspend fun pinChatMessage(id: Long, pinned: Boolean) = db.chat().setPinned(id, pinned)
+    suspend fun deleteChatMessage(id: Long) = db.chat().delete(id)
 
     suspend fun itemsFor(invoiceId: Long): List<InvoiceItemEntity> =
         db.invoices().getItems(invoiceId)

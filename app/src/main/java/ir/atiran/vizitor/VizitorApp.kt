@@ -26,6 +26,8 @@ class VizitorApp : Application() {
         // موتور گرافیک سازگار: تشخیص قدرت دستگاه و تنظیم خودکار سطح جلوه‌ها
         // تا اجرای برنامه روی هیچ گوشی‌ای (اقتصادی تا پرچمدار) هنگ نداشته باشد
         VizitorPerf.detect(this)
+        // مقداردهی پروفایل و تنظیمات اتاق گفتگوی ویزیتورها
+        ir.atiran.vizitor.data.local.ChatPrefs.init(this)
         val repository = VizitorRepository(this)
         // کاشت داده نمونه برای اولین اجرا (حالت دمو تا اتصال سرور واقعی)
         appScope.launch { repository.ensureSeeded() }

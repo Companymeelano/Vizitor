@@ -85,6 +85,7 @@ import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.ui.components.dashboardBackdrop
 import ir.atiran.vizitor.ui.screens.CartScreen
 import ir.atiran.vizitor.ui.screens.CatalogScreen
+import ir.atiran.vizitor.ui.screens.ChatScreen
 import ir.atiran.vizitor.ui.screens.CustomersScreen
 import ir.atiran.vizitor.ui.screens.DashboardScreen
 import ir.atiran.vizitor.ui.screens.ReportsScreen
@@ -103,6 +104,7 @@ object Routes {
     const val CART = "cart"
     const val CUSTOMERS = "customers"
     const val REPORTS = "reports"
+    const val CHAT = "chat"
     const val SCANNER = "scanner"
 }
 
@@ -174,7 +176,14 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
                 .padding(innerPadding)
                 .dashboardBackdrop()
         ) {
-            composable(Routes.DASHBOARD) { DashboardScreen(viewModel) }
+            composable(Routes.DASHBOARD) {
+                DashboardScreen(
+                    viewModel = viewModel,
+                    onOpenChat = { navController.navigate(Routes.CHAT) }
+                )
+            }
+            // ── اتاق گفتگوی ویزیتورها (v2.3.0) ─────────────────────────────
+            composable(Routes.CHAT) { ChatScreen(viewModel) }
             composable(Routes.CATALOG) {
                 CatalogScreen(
                     viewModel = viewModel,
