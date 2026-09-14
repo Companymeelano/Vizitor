@@ -1,0 +1,331 @@
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  Vizitor — آتیران ویزیتور | ناوبری اصلی + نوار پایین ۵ تایی با FAB مرکزی
+ *  Developed by Milano Technical Team, Milad Yaghoobi
+ *  ─────────────────────────────────────────────────────────────────────────
+ *  تب ۱: پیشخوان من | تب ۲: ویترین کالا | تب ۳: سبد سفارش (FAB مرکزی)
+ *  تب ۴: گشت‌زنی | تب ۵: گزارشات و تنظیمات
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+package ir.atiran.vizitor.ui.navigation
+
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TravelExplore
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import ir.atiran.vizitor.VizitorViewModel
+import ir.atiran.vizitor.ui.components.dashboardBackdrop
+import ir.atiran.vizitor.ui.screens.CartScreen
+import ir.atiran.vizitor.ui.screens.CatalogScreen
+import ir.atiran.vizitor.ui.screens.CustomersScreen
+import ir.atiran.vizitor.ui.screens.DashboardScreen
+import ir.atiran.vizitor.ui.screens.ReportsScreen
+import ir.atiran.vizitor.ui.screens.ScannerScreen
+import ir.atiran.vizitor.ui.theme.DarkSlateElevated
+import ir.atiran.vizitor.ui.theme.GlassBorder
+import ir.atiran.vizitor.ui.theme.Gold
+import ir.atiran.vizitor.ui.theme.NeonPurple
+import ir.atiran.vizitor.ui.theme.NeonPurpleGlow
+import ir.atiran.vizitor.ui.theme.TextSecondary
+
+object Routes {
+    const val DASHBOARD = "dashboard"
+    const val CATALOG = "catalog"
+    const val CART = "cart"
+    const val CUSTOMERS = "customers"
+    const val REPORTS = "reports"
+    const val SCANNER = "scanner"
+}
+
+data class TabItem(val route: String, val label: String, val icon: ImageVector)
+
+private val rightTabs = listOf(
+    TabItem(Routes.DASHBOARD, "پیشخوان", Icons.Filled.Dashboard),
+    TabItem(Routes.CATALOG, "ویترین", Icons.Filled.Storefront)
+)
+
+private val leftTabs = listOf(
+    TabItem(Routes.CUSTOMERS, "گشت‌زنی", Icons.Filled.TravelExplore),
+    TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Settings)
+)
+
+@Composable
+fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
+    val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    // دوربین برای اسکنر بارکد
+    val cameraPermissionGranted = remember {
+        androidx.compose.runtime.mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                    PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> cameraPermissionGranted.value = granted }
+
+    // نمایش پیام‌های سراسری
+    val toast by viewModel.toast.collectAsState()
+    LaunchedEffect(toast) {
+        toast?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short)
+            viewModel.consumeToast()
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            VizitorBottomBar(
+                navController = navController,
+                onFabClick = {
+                    navController.navigate(Routes.CART) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true; restoreState = true
+                    }
+                },
+                onScanClick = {
+                    if (cameraPermissionGranted.value) {
+                        navController.navigate(Routes.SCANNER)
+                    } else {
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Routes.DASHBOARD,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .dashboardBackdrop()
+        ) {
+            composable(Routes.DASHBOARD) { DashboardScreen(viewModel) }
+            composable(Routes.CATALOG) {
+                CatalogScreen(
+                    viewModel = viewModel,
+                    onOpenScanner = {
+                        if (cameraPermissionGranted.value) navController.navigate(Routes.SCANNER)
+                        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                )
+            }
+            composable(Routes.CART) { CartScreen(viewModel) }
+            composable(Routes.CUSTOMERS) { CustomersScreen(viewModel) }
+            composable(Routes.REPORTS) { ReportsScreen(viewModel) }
+            composable(Routes.SCANNER) {
+                ScannerScreen(
+                    onBarcode = { code ->
+                        viewModel.findProductByBarcode(code) { product ->
+                            viewModel.showToast(
+                                if (product != null) "«${product.name}» با بارکد $code به سبد اضافه شد ✅"
+                                else "کالایی با بارکد $code یافت نشد ❌"
+                            )
+                        }
+                        navController.popBackStack()
+                    },
+                    onClose = { navController.popBackStack() }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * نوار ناوبری پایین شیشه‌ای:
+ * [پیشخوان][ویترین] — (FAB مرکزی: سبد سفارش) — [گشت‌زنی][گزارشات]
+ */
+@Composable
+private fun VizitorBottomBar(
+    navController: androidx.navigation.NavController,
+    onFabClick: () -> Unit,
+    onScanClick: () -> Unit
+) {
+    val backStack by navController.currentBackStackEntryAsState()
+    val currentRoute = backStack?.destination?.hierarchy?.firstOrNull()?.route
+    val vm: VizitorViewModel = viewModel()
+    val cartCount by vm.cartItems.collectAsState()
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        NavigationBar(
+            containerColor = DarkSlateElevated.copy(alpha = 0.92f),
+            tonalElevation = 0.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(0.dp))
+        ) {
+            rightTabs.forEach { tab ->
+                BottomTab(tab, currentRoute == tab.route, navController)
+            }
+
+            // جایگاه خالی برای FAB مرکزی (سبد سفارش)
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier.weight(1f).height(80.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(Modifier.height(30.dp))
+                    Text(
+                        "سبد سفارش",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (currentRoute == Routes.CART) NeonPurple else TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            leftTabs.forEach { tab ->
+                BottomTab(tab, currentRoute == tab.route, navController)
+            }
+        }
+
+        // ── دکمه مرکزی شناور (FAB) — تب ۳: سبد سفارش ────────────────────────
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = (-26).dp)
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(listOf(Color(0xFF7A2FB8), NeonPurple))
+                )
+                .border(2.dp, Gold.copy(alpha = 0.7f), CircleShape)
+                .padding(0.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // دکمه واقعی
+            androidx.compose.material3.FloatingActionButton(
+                onClick = onFabClick,
+                containerColor = Color.Transparent,
+                elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(0.dp),
+                modifier = Modifier
+                    .size(64.dp)
+                    .align(Alignment.Center)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.ShoppingCart,
+                        contentDescription = "سبد سفارش",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    val count = cartCount.sumOf { it.quantity }.toInt()
+                    if (count > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 8.dp, y = (-8).dp)
+                                .clip(CircleShape)
+                                .background(ir.atiran.vizitor.ui.theme.NeonGreen)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                "$count",
+                                color = Color.Black,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.BottomTab(
+    tab: TabItem,
+    selected: Boolean,
+    navController: androidx.navigation.NavController
+) {
+    NavigationBarItem(
+        selected = selected,
+        onClick = {
+            navController.navigate(tab.route) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true; restoreState = true
+            }
+        },
+        icon = {
+            Icon(
+                tab.icon,
+                contentDescription = tab.label,
+                tint = if (selected) NeonPurple else TextSecondary,
+                modifier = Modifier.size(24.dp)
+            )
+        },
+        label = {
+            Text(
+                tab.label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selected) NeonPurple else TextSecondary,
+                maxLines = 1
+            )
+        },
+        colors = NavigationBarItemDefaults.colors(
+            indicatorColor = NeonPurpleGlow.copy(alpha = 0.18f)
+        )
+    )
+}

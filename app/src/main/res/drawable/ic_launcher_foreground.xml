@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Developed by Milano Technical Team, Milad Yaghoobi — V letter mark -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M34,32 L54,76 L74,32 L64,32 L54,56 L44,32 Z"
+        android:fillColor="#B04BF8" />
+    <path
+        android:pathData="M30,30 L54,82 L78,30 L73,30 L54,71 L35,30 Z"
+        android:fillColor="#FFD166"
+        android:fillAlpha="0.55" />
+</vector>

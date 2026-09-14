@@ -1,0 +1,20 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  Vizitor — پراکسی معکوس هوش مصنوعی روی Cloudflare Workers
+#  Developed by Milano Technical Team, Milad Yaghoobi
+#
+#  استقرار:
+#    npm i -g wrangler && wrangler login
+#    wrangler secret put GEMINI_API_KEY      ← کلید گوگل را وارد کنید
+#    wrangler kv:namespace create RATE_LIMIT_KV   ← (اختیاری، محدودیت نرخ)
+#    سپس شناسه namespace را در بخش [[kv_namespaces]] جایگذاری کنید
+#    wrangler deploy
+# ═══════════════════════════════════════════════════════════════════════════
+
+name = "vizitor-ai-proxy"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# محدودیت نرخ دقیق با KV (اختیاری):
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT_KV"
+# id = "PASTE_KV_NAMESPACE_ID_HERE"

@@ -1,0 +1,14 @@
+{
+  "name": "vizitor-ai-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Developed by Milano Technical Team, Milad Yaghoobi — Gemini reverse proxy for Atiran Vizitor",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}

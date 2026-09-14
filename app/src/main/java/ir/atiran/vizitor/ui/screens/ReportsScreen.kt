@@ -1,0 +1,320 @@
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  Vizitor — آتیران ویزیتور | تب ۵: گزارشات و تنظیمات (Reports & Sync)
+ *  Developed by Milano Technical Team, Milad Yaghoobi
+ *  ─────────────────────────────────────────────────────────────────────────
+ *  تاریخچه فاکتورها + پیکربندی سرور (IP و پورت 1433) +
+ *  مدیریت همگام‌سازی + درباره ما (لایسنس و تیم توسعه)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+package ir.atiran.vizitor.ui.screens
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import ir.atiran.vizitor.VizitorViewModel
+import ir.atiran.vizitor.data.local.InvoiceEntity
+import ir.atiran.vizitor.data.local.InvoiceStatus
+import ir.atiran.vizitor.data.repository.ServerConfig
+import ir.atiran.vizitor.ui.components.GlassCard
+import ir.atiran.vizitor.ui.components.MilanoFooter
+import ir.atiran.vizitor.ui.components.NeonGreenButton
+import ir.atiran.vizitor.ui.components.NeonPurpleButton
+import ir.atiran.vizitor.ui.components.SectionTitle
+import ir.atiran.vizitor.ui.components.StatusChip
+import ir.atiran.vizitor.ui.theme.DangerRed
+import ir.atiran.vizitor.ui.theme.Gold
+import ir.atiran.vizitor.ui.theme.NeonGreen
+import ir.atiran.vizitor.ui.theme.NeonPurple
+import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.util.toFaDate
+import ir.atiran.vizitor.util.toFaNumber
+import ir.atiran.vizitor.util.toFaPrice
+import ir.atiran.vizitor.util.toFaTime
+
+@Composable
+fun ReportsScreen(viewModel: VizitorViewModel) {
+    val invoices by viewModel.invoices.collectAsState()
+    val config by viewModel.config.collectAsState()
+    val syncing by viewModel.syncing.collectAsState()
+
+    // فرم پیکربندی سرور
+    var ip by remember(config.serverIp) { mutableStateOf(config.serverIp) }
+    var httpPort by remember(config.httpPort) { mutableStateOf(config.httpPort.toString()) }
+    var dbPort by remember(config.dbPort) { mutableStateOf(config.dbPort.toString()) }
+    var apiPath by remember(config.apiPath) { mutableStateOf(config.apiPath) }
+    var apiKey by remember(config.apiKey) { mutableStateOf(config.apiKey) }
+    var workerUrl by remember(config.workerUrl) { mutableStateOf(config.workerUrl) }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = NeonPurple,
+        unfocusedBorderColor = Color(0x33FFFFFF),
+        focusedLabelColor = NeonPurple,
+        cursorColor = NeonPurple
+    )
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 110.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Column {
+                Text("گزارشات و تنظیمات", style = MaterialTheme.typography.displaySmall)
+                Text(
+                    "تاریخچه فروش، پیکربندی سرور و همگام‌سازی",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+        }
+
+        // ── تاریخچه فاکتورها ────────────────────────────────────────────────
+        item { SectionTitle(text = "تاریخچه فاکتورها", icon = Icons.Filled.History) }
+
+        if (invoices.isEmpty()) {
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "هنوز فاکتوری صادر نشده است.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+
+        items(invoices.take(30), key = { it.id }) { invoice ->
+            InvoiceHistoryRow(invoice)
+        }
+
+        // ── پیکربندی سرور ───────────────────────────────────────────────────
+        item { SectionTitle(text = "پیکربندی سرور آتیران", icon = Icons.Filled.Dns) }
+
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = ip, onValueChange = { ip = it },
+                        label = { Text("آدرس IP سرور") },
+                        singleLine = true, colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = httpPort, onValueChange = { httpPort = it.filter(Char::isDigit) },
+                            label = { Text("پورت وب‌سرویس") },
+                            singleLine = true, colors = fieldColors,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = dbPort, onValueChange = { dbPort = it.filter(Char::isDigit) },
+                            label = { Text("پورت SQL Server") },
+                            singleLine = true, colors = fieldColors,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    OutlinedTextField(
+                        value = apiPath, onValueChange = { apiPath = it },
+                        label = { Text("مسیر API (مثال: vizitor)") },
+                        singleLine = true, colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = apiKey, onValueChange = { apiKey = it },
+                        label = { Text("کلید API") },
+                        singleLine = true, colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = workerUrl, onValueChange = { workerUrl = it },
+                        label = { Text("آدرس پراکسی هوش مصنوعی (Cloudflare Worker)") },
+                        singleLine = true, colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row {
+                        NeonPurpleButton(
+                            text = "ذخیره پیکربندی",
+                            onClick = {
+                                viewModel.saveConfig(
+                                    config.copy(
+                                        serverIp = ip.trim(),
+                                        httpPort = httpPort.toIntOrNull() ?: 8080,
+                                        dbPort = dbPort.toIntOrNull() ?: 1433,
+                                        apiPath = apiPath.trim(),
+                                        apiKey = apiKey.trim(),
+                                        workerUrl = workerUrl.trim()
+                                    )
+                                )
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        NeonGreenButton(text = "تست اتصال", onClick = { viewModel.testConnection() })
+                    }
+                }
+            }
+        }
+
+        // ── مدیریت همگام‌سازی ───────────────────────────────────────────────
+        item { SectionTitle(text = "مدیریت همگام‌سازی", icon = Icons.Filled.CloudSync) }
+
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("همگام‌سازی خودکار", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "سینک خودکار فاکتورها و کاتالوگ پس از اتصال به شبکه",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                        Switch(
+                            checked = config.autoSync,
+                            onCheckedChange = { viewModel.saveConfig(config.copy(autoSync = it)) },
+                            colors = SwitchDefaults.colors(checkedTrackColor = NeonGreen)
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (config.lastSyncAt > 0)
+                            "آخرین همگام‌سازی: ${config.lastSyncAt.toFaDate()} — ${config.lastSyncAt.toFaTime()}"
+                        else "هنوز همگام‌سازی انجام نشده است",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    NeonGreenButton(
+                        text = if (syncing) "در حال همگام‌سازی…" else "همگام‌سازی اکنون",
+                        icon = Icons.Filled.Sync,
+                        enabled = !syncing,
+                        onClick = { viewModel.syncNow() },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (syncing) {
+                        Spacer(Modifier.height(10.dp))
+                        CircularProgressIndicator(
+                            color = NeonGreen,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── درباره ما ───────────────────────────────────────────────────────
+        item { SectionTitle(text = "درباره ما", icon = Icons.Filled.Info) }
+
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Text(
+                        "آتیران ویزیتور — نسخه ۱٫۰٫۰",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Gold
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "سامانه فروش و ویزیت هوشمند متصل به دیتابیس حسابداری آتیران (SQL Server). " +
+                                "معماری آفلاین-اول با همگام‌سازی خودکار و دستیار فروش مبتنی بر هوش مصنوعی.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "لایسنس: تجاری — تمامی حقوق برای مجموعه آتیران محفوظ است. © ۱۴۰۴",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+
+        item { MilanoFooter() }
+    }
+}
+
+@Composable
+private fun InvoiceHistoryRow(invoice: InvoiceEntity) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "فاکتور ${if (invoice.serverId != null) invoice.serverId else "#" + invoice.id}",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    "${invoice.customerName} | ${invoice.createdAt.toFaDate()} — ${invoice.createdAt.toFaTime()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Text(
+                    invoice.finalAmount.toFaPrice(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NeonGreen
+                )
+                if (invoice.discount > 0) {
+                    Text(
+                        "کسورات: ${invoice.discount.toFaPrice()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Gold
+                    )
+                }
+            }
+            StatusChip(
+                text = when (invoice.status) {
+                    InvoiceStatus.SYNCED -> "سینک شده"
+                    InvoiceStatus.PENDING -> "در صف"
+                    InvoiceStatus.FAILED -> "خطا"
+                },
+                color = when (invoice.status) {
+                    InvoiceStatus.SYNCED -> NeonGreen
+                    InvoiceStatus.PENDING -> Gold
+                    InvoiceStatus.FAILED -> DangerRed
+                }
+            )
+        }
+    }
+}
