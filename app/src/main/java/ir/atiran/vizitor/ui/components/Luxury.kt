@@ -199,6 +199,7 @@ fun ShimmerGoldText(
         modifier = modifier.onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) },
         style = style
     )
+}
 
 /**
  * انفجار ذرات طلایی — جلوه یک‌باره (۱٫۲ ثانیه) هنگام صدور موفق فاکتور.
