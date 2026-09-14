@@ -34,8 +34,8 @@ to this project's gradle.properties.
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :app:generateDebugBuildConfig
-> Task :app:checkDebugAarMetadata
 > Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
@@ -45,7 +45,6 @@ to this project's gradle.properties.
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
@@ -53,12 +52,12 @@ to this project's gradle.properties.
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
 > Task :app:compressDebugAssets
-> Task :app:processDebugResources
-> Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugStartupProfile
-> Task :app:kspDebugKotlin
-> Task :app:mergeExtDexDebug
 > Task :app:mergeDebugJniLibFolders
+> Task :app:processDebugManifestForPackage
+> Task :app:checkDebugDuplicateClasses
+> Task :app:processDebugResources
+> Task :app:mergeExtDexDebug
 > Task :app:mergeLibDexDebug
 > Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
@@ -68,33 +67,12 @@ to this project's gradle.properties.
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libbarhopper_v3.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so.
 
+> Task :app:kspDebugKotlin
+
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/VizitorViewModel.kt:44:77 Unresolved reference 'ServerConfig'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/VizitorViewModel.kt:155:31 Unresolved reference 'ServerConfig'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:173:20 Cannot infer type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:173:20 Not enough information to infer type argument for 'T'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:173:29 Cannot infer type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:173:31 Unresolved reference 'mutableFloatStateOf'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:184:25 None of the following candidates is applicable:
-fun BigDecimal.times(other: BigDecimal): BigDecimal
-fun BigInteger.times(other: BigInteger): BigInteger
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:185:18 Overload resolution ambiguity between candidates:
-fun BigDecimal.unaryMinus(): BigDecimal
-fun BigInteger.unaryMinus(): BigInteger
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:185:52 None of the following candidates is applicable:
-fun BigDecimal.times(other: BigDecimal): BigDecimal
-fun BigInteger.times(other: BigInteger): BigInteger
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:191:13 Argument type mismatch: actual type is 'androidx.compose.ui.graphics.Brush', but 'androidx.compose.ui.graphics.Color' was expected.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:191:13 Type mismatch: inferred type is 'androidx.compose.ui.graphics.Brush', but 'androidx.compose.ui.graphics.Color' was expected.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:212:66 Unresolved reference 'FastOutSlowIn'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:233:47 Cannot access 'constructor(packedValue: Long): Offset': it is internal in 'androidx/compose/ui/geometry/Offset'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/MiniRouteMap.kt:114:40 Unresolved reference 'nativeCanvas'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/CustomersScreen.kt:302:14 Unresolved reference 'background'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/CustomersScreen.kt:302:25 Unresolved reference 'Color'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/CustomersScreen.kt:317:41 Unresolved reference 'Color'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/CustomersScreen.kt:318:43 Unresolved reference 'Color'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/CustomersScreen.kt:319:41 Unresolved reference 'Color'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/CustomersScreen.kt:320:43 Unresolved reference 'Color'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:34:40 Unresolved reference 'FastOutSlowIn'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:193:19 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:213:53 Unresolved reference 'FastOutSlowIn'.
 e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:341:17 Unresolved reference 'Icon'.
 e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:394:22 Unresolved reference 'background'.
 e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:401:26 Unresolved reference 'background'.
@@ -307,5 +285,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 2m 35s
+BUILD FAILED in 3m 27s
 32 actionable tasks: 31 executed, 1 up-to-date
