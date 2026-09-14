@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,8 +49,9 @@ import ir.atiran.vizitor.ui.theme.TextSecondary
 import ir.atiran.vizitor.ui.theme.vizitorPalette
 
 /**
- * دکمه اکشن اصلی لاکچری — گرادیان رنگ اصلی تم + حلقه طلایی + جاروب نور.
- * گرادیان و رنگ متن از پالت فعال می‌آیند (بنفش/طلایی/زمردی/روشن).
+ * ✨ دکمه اکشن اصلی سه‌بعدی (نسخه ۱٫۹٫۰ — مجسمه‌ای):
+ * لبه عمق فیزیکی زیر سطح + هاله نور پرتابی + گرادیان تم + جاروب نور +
+ * آیکن داخل گوی شیشه‌ای. رنگ‌ها از پالت فعال.
  */
 @Composable
 fun NeonPurpleButton(
@@ -55,51 +61,94 @@ fun NeonPurpleButton(
     icon: ImageVector? = null,
     enabled: Boolean = true
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(26.dp)
     val p = vizitorPalette
-    LuxurySurface(
+    val face = 58.dp
+    val glowColor = p.primary.copy(alpha = 0.30f)
+    Box(
         modifier = modifier
-            .height(58.dp)
-            .pressScale()
-            .shineSweep()
-            .border(1.dp, Gold.copy(alpha = if (enabled) 0.65f else 0.15f), shape)
-            .clickable(enabled = enabled, onClick = onClick),
-        shape = shape,
-        fillBrush = Brush.verticalGradient(
-            colors = if (enabled)
-                listOf(p.btnPrimaryTop, p.primary, p.btnPrimaryBottom)
-            else
-                listOf(p.textPrimary.copy(alpha = 0.12f), p.textPrimary.copy(alpha = 0.06f))
-        ),
-        enabled = enabled
-    ) {
-        Row(
-            Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            if (icon != null) {
-                Icon(
-                    icon, contentDescription = null,
-                    tint = if (enabled) p.onPrimary else p.textSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
+            .height(face + 6.dp)
+            .pressScale(target = 0.97f)
+            .drawBehind {
+                // هاله نور پرتابی زیر دکمه (حس شناور بودن)
+                if (enabled) {
+                    drawRoundRect(
+                        brush = Brush.radialGradient(
+                            colors = listOf(glowColor, Color.Transparent),
+                            center = Offset(size.width / 2f, size.height),
+                            radius = size.minDimension * 2.2f
+                        ),
+                        cornerRadius = CornerRadius(30.dp.toPx())
+                    )
+                }
             }
-            Text(
-                text,
-                color = if (enabled) p.onPrimary else p.textSecondary,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.4.sp
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        // لبه عمق فیزیکی (۳بعد واقعی)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(face)
+                .align(Alignment.BottomCenter)
+                .clip(shape)
+                .background(
+                    if (enabled) p.btnPrimaryBottom.copy(alpha = 0.9f)
+                    else p.textPrimary.copy(alpha = 0.05f)
                 )
-            )
+        )
+        // سطح اصلی دکمه
+        LuxurySurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(face),
+            shape = shape,
+            fillBrush = Brush.verticalGradient(
+                colors = if (enabled)
+                    listOf(p.btnPrimaryTop, p.primary, p.btnPrimaryBottom)
+                else
+                    listOf(p.textPrimary.copy(alpha = 0.12f), p.textPrimary.copy(alpha = 0.06f))
+            ),
+            enabled = enabled
+        ) {
+            Row(
+                Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (icon != null) {
+                    // گوی شیشه‌ای آیکن
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = if (enabled) 0.18f else 0.06f))
+                            .border(1.dp, Color.White.copy(alpha = if (enabled) 0.35f else 0.10f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            icon, contentDescription = null,
+                            tint = if (enabled) p.onPrimary else p.textSecondary,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(
+                    text,
+                    color = if (enabled) p.onPrimary else p.textSecondary,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.4.sp
+                    )
+                )
+            }
         }
     }
 }
 
 /**
- * دکمه ثانویه لاکچری — گرادیان رنگ تایید/موفقیت تم با حاشیه هم‌خانواده.
+ * ✨ دکمه ثانویه سه‌بعدی — لبه عمق + هاله نور + آیکن در گوی شیشه‌ای.
  */
 @Composable
 fun NeonGreenButton(
@@ -109,42 +158,82 @@ fun NeonGreenButton(
     icon: ImageVector? = null,
     enabled: Boolean = true
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(22.dp)
     val p = vizitorPalette
-    LuxurySurface(
+    val face = 50.dp
+    val glowColor = p.accent.copy(alpha = 0.28f)
+    Box(
         modifier = modifier
-            .height(50.dp)
-            .pressScale()
-            .shineSweep()
-            .border(1.dp, p.accentDark.copy(alpha = if (enabled) 0.9f else 0.2f), shape)
-            .clickable(enabled = enabled, onClick = onClick),
-        shape = shape,
-        fillBrush = Brush.verticalGradient(
-            colors = if (enabled)
-                listOf(p.btnAccentTop, p.accent, p.btnAccentBottom)
-            else
-                listOf(p.textPrimary.copy(alpha = 0.12f), p.textPrimary.copy(alpha = 0.06f))
-        ),
-        enabled = enabled
-    ) {
-        Row(
-            Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            if (icon != null) {
-                Icon(
-                    icon, contentDescription = null,
-                    tint = if (enabled) p.onAccent else p.textSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(6.dp))
+            .height(face + 6.dp)
+            .pressScale(target = 0.97f)
+            .drawBehind {
+                if (enabled) {
+                    drawRoundRect(
+                        brush = Brush.radialGradient(
+                            colors = listOf(glowColor, Color.Transparent),
+                            center = Offset(size.width / 2f, size.height),
+                            radius = size.minDimension * 2.2f
+                        ),
+                        cornerRadius = CornerRadius(26.dp.toPx())
+                    )
+                }
             }
-            Text(
-                text,
-                color = if (enabled) p.onAccent else p.textSecondary,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold)
-            )
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        // لبه عمق فیزیکی
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(face)
+                .align(Alignment.BottomCenter)
+                .clip(shape)
+                .background(
+                    if (enabled) p.accentDark.copy(alpha = 0.9f)
+                    else p.textPrimary.copy(alpha = 0.05f)
+                )
+        )
+        // سطح اصلی دکمه
+        LuxurySurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(face),
+            shape = shape,
+            fillBrush = Brush.verticalGradient(
+                colors = if (enabled)
+                    listOf(p.btnAccentTop, p.accent, p.btnAccentBottom)
+                else
+                    listOf(p.textPrimary.copy(alpha = 0.12f), p.textPrimary.copy(alpha = 0.06f))
+            ),
+            enabled = enabled
+        ) {
+            Row(
+                Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (icon != null) {
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = if (p.isDark) 0.18f else 0.14f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            icon, contentDescription = null,
+                            tint = if (enabled) p.onAccent else p.textSecondary,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    text,
+                    color = if (enabled) p.onAccent else p.textSecondary,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold)
+                )
+            }
         }
     }
 }

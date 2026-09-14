@@ -13,6 +13,12 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -54,8 +60,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -210,11 +221,22 @@ private fun VizitorBottomBar(
 
     Box(modifier = Modifier.fillMaxWidth()) {
         NavigationBar(
-            containerColor = DarkSlateElevated.copy(alpha = 0.92f),
+            containerColor = DarkSlateElevated.copy(alpha = 0.94f),
             tonalElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .border(0.5.dp, GlassBorder, RoundedCornerShape(0.dp))
+                // خط نور گرادیانی بالای نوار (امضای لوکس)
+                .drawBehind {
+                    drawLine(
+                        brush = Brush.horizontalGradient(
+                            listOf(Color.Transparent, NeonPurple, Gold, Color.Transparent)
+                        ),
+                        start = Offset(0f, 0.5f),
+                        end = Offset(size.width, 0.5f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
         ) {
             rightTabs.forEach { tab ->
                 BottomTab(tab, currentRoute == tab.route, navController)
@@ -243,50 +265,84 @@ private fun VizitorBottomBar(
         }
 
         // ── دکمه مرکزی شناور (FAB) — تب ۳: سبد سفارش ────────────────────────
+        // قوس نور طلایی که دور FAB در مدار می‌چرخد ✨
+        val orbitTransition = rememberInfiniteTransition(label = "fabOrbit")
+        val orbitAngle by orbitTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(animation = tween(3000, easing = LinearEasing)),
+            label = "orbitAngle"
+        )
+        val ringGold = Gold
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (-26).dp)
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(listOf(NeonPurpleDark, NeonPurple))
-                )
-                .border(2.dp, Gold.copy(alpha = 0.7f), CircleShape)
-                .padding(0.dp),
+                .offset(y = (-30).dp)
+                .size(74.dp),
             contentAlignment = Alignment.Center
         ) {
-            // دکمه واقعی
-            androidx.compose.material3.FloatingActionButton(
-                onClick = onFabClick,
-                containerColor = Color.Transparent,
-                elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(0.dp),
+            // حلقه مداری نور (رویه غیرکلیپ‌شده)
+            Canvas(Modifier.fillMaxSize()) {
+                val r = size.minDimension / 2f - 4.dp.toPx()
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                val tl = Offset(cx - r, cy - r)
+                val arcSize = Size(r * 2f, r * 2f)
+                drawArc(
+                    color = ringGold.copy(alpha = 0.20f),
+                    startAngle = 0f, sweepAngle = 360f, useCenter = false,
+                    topLeft = tl, size = arcSize,
+                    style = Stroke(2.5.dp.toPx())
+                )
+                drawArc(
+                    color = ringGold,
+                    startAngle = orbitAngle, sweepAngle = 105f, useCenter = false,
+                    topLeft = tl, size = arcSize,
+                    style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+            // دایره اصلی دکمه
+            Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .align(Alignment.Center)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Filled.ShoppingCart,
-                        contentDescription = "سبد سفارش",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+                    .size(62.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(listOf(NeonPurpleDark, NeonPurple))
                     )
-                    val count = cartCount.sumOf { it.quantity }.toInt()
-                    if (count > 0) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 8.dp, y = (-8).dp)
-                                .clip(CircleShape)
-                                .background(ir.atiran.vizitor.ui.theme.NeonGreen)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                "$count",
-                                color = MaterialTheme.colorScheme.onSecondary,
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold)
-                            )
+                    .border(1.5.dp, ringGold.copy(alpha = 0.7f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.FloatingActionButton(
+                    onClick = onFabClick,
+                    containerColor = Color.Transparent,
+                    elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(0.dp),
+                    modifier = Modifier
+                        .size(62.dp)
+                        .align(Alignment.Center)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Filled.ShoppingCart,
+                            contentDescription = "سبد سفارش",
+                            tint = Color.White,
+                            modifier = Modifier.size(27.dp)
+                        )
+                        val count = cartCount.sumOf { it.quantity }.toInt()
+                        if (count > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 8.dp, y = (-8).dp)
+                                    .clip(CircleShape)
+                                    .background(ir.atiran.vizitor.ui.theme.NeonGreen)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    "$count",
+                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold)
+                                )
+                            }
                         }
                     }
                 }

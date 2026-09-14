@@ -1,15 +1,22 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Vizitor — آتیران ویزیتور | معماری کارت‌های لاکچری (تم‌پذیر)
+ *  Vizitor — آتیران ویزیتور | معماری کریستال + بکگراند ابریشمی (نسخه ۱٫۹٫۰)
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
- *  کارت‌ها و پنل‌ها با سطح جامد + هاله‌های نورِ پالت فعال + خط نور استودیویی.
- *  تمام رنگ‌ها از LocalVizitorPalette خوانده می‌شوند؛ با تعویض تم (تیره
- *  لاکچری ⇄ روشن لاکچری) ظاهر کارت‌ها خودکار هماهنگ می‌ماند.
+ *  ▸ کارت‌های کریستالی: گرادیان عمودی ظریف + خط نور استودیویی — بدون هاله دایره
+ *  ▸ بکگراند «ابریشم روان»: موج‌های سه‌بعدی حرکت‌کننده + غبار طلایی درخشان
+ *  ▸ ShimmerBorder: حاشیه نور متحرک برای کارت‌های سلطنتی
+ *  همه رنگ‌ها از LocalVizitorPalette پیروی می‌کنند.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -17,6 +24,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -25,18 +33,24 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.ui.theme.DarkSlate
+import ir.atiran.vizitor.ui.theme.DarkSlateDeep
 import ir.atiran.vizitor.ui.theme.DarkSlateElevated
 import ir.atiran.vizitor.ui.theme.GlassBorder
 import ir.atiran.vizitor.ui.theme.GlassFill
 import ir.atiran.vizitor.ui.theme.GlassHighlight
 import ir.atiran.vizitor.ui.theme.vizitorPalette
+import kotlin.math.sin
+import kotlin.random.Random
 
 /**
- * پس‌زمینه کارت لاکچری: سطح جامدِ تم + هاله رنگی گوشه بالا + هاله ثانویه
- * گوشه پایین + خط نور استودیویی بالا + حاشیه شیشه‌ایِ پالت.
+ * کارت کریستالی: گرادیان عمودی خیلی ظریف روی سطح تم + خط نور استودیویی بالا
+ * + حاشیه شیشه‌ای پالت. (هاله‌های دایره‌ای نسخه‌های قبل حذف شدند)
  */
 @Composable
 fun Modifier.glassPanel(
@@ -45,42 +59,33 @@ fun Modifier.glassPanel(
     borderWidth: Dp = 1.dp
 ): Modifier {
     val surface = DarkSlateElevated
-    val halo1 = vizitorPalette.halo1
-    val halo2 = vizitorPalette.halo2
+    val surfaceDeep = DarkSlateDeep
     val streak = GlassHighlight
     return this
         .clip(shape)
-        .background(surface, shape)
         .drawBehind {
-            // هاله اصلی (گوشه بالا)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(halo1, Color.Transparent),
-                    center = Offset(size.width * 0.92f, size.height * 0.02f),
-                    radius = size.width * 0.95f
+            // گرادیان عمق کریستالی (بالا روشن‌تر، پایین عمیق‌تر)
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        surface,
+                        androidx.compose.ui.graphics.lerp(surface, surfaceDeep, 0.55f)
+                    )
                 )
             )
-            // هاله ثانویه (گوشه پایین)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(halo2, Color.Transparent),
-                    center = Offset(size.width * 0.05f, size.height * 1.05f),
-                    radius = size.width * 0.85f
-                )
-            )
-            // خط نور استودیویی بالای سطح
+            // خط نور استودیویی بالای کارت
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(streak, Color.Transparent),
                     startY = 0f,
-                    endY = size.height * 0.35f
+                    endY = size.height * 0.30f
                 )
             )
         }
         .border(borderWidth, borderColor, shape)
 }
 
-/** کارت لاکچری آماده استفاده با پدینگ داخلی استاندارد. */
+/** کارت کریستالی آماده استفاده با پدینگ داخلی استاندارد. */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
@@ -104,34 +109,155 @@ fun Modifier.neonGlow(color: Color, radius: Dp = 18.dp): Modifier = this
 fun Modifier.goldBorder(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier =
     this.border(1.5.dp, Color(0xB3FFD166), shape)
 
-/** پس‌زمینه تمام صفحه با گرادیان پس‌زمینه تم + هاله‌های نور ملایم. */
+/**
+ * ✨ حاشیه نور متحرک (Shimmer Border) — باریکه نور طلایی که آرام دور کارت
+ * سفر می‌کند. امضای بصری لوکس نسخه جدید؛ سبک و فقط یک لایه رسم.
+ */
+@Composable
+fun Modifier.shimmerBorder(
+    shape: Shape = RoundedCornerShape(22.dp),
+    width: Dp = 1.5.dp,
+    periodMs: Int = 3400
+): Modifier {
+    val transition = rememberInfiniteTransition(label = "shimmerBorder")
+    val t by transition.animateFloat(
+        initialValue = -0.35f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(periodMs, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "borderPhase"
+    )
+    val p = vizitorPalette
+    return this.drawBehind {
+        val w = size.width
+        val band = w * 0.42f
+        val x = t * (w + band * 2) - band
+        drawRoundRect(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    p.primaryDark.copy(alpha = 0.85f),
+                    p.primary,
+                    p.gold.copy(alpha = 0.95f),
+                    p.goldHighlight,
+                    p.gold.copy(alpha = 0.95f),
+                    p.primary,
+                    p.primaryDark.copy(alpha = 0.85f)
+                ),
+                start = Offset(x - band / 2, 0f),
+                end = Offset(x + band / 2, size.height)
+            ),
+            style = Stroke(width.toPx()),
+            cornerRadius = CornerRadius(20.dp.toPx())
+        )
+    }
+}
+
+// ── بکگراند ابریشمی ─────────────────────────────────────────────────────────
+
+/** نقاط غبار طلایی (ثابت با سید؛ بدون هزینه محاسباتی در هر فریم). */
+private data class Stardust(val x: Float, val y: Float, val r: Float, val speed: Float)
+
+private val stardust: List<Stardust> = run {
+    val rnd = Random(1404)
+    List(26) {
+        Stardust(
+            x = rnd.nextFloat(),
+            y = rnd.nextFloat(),
+            r = 1.2f + rnd.nextFloat() * 2.3f,
+            speed = 0.6f + rnd.nextFloat() * 1.4f
+        )
+    }
+}
+
+/**
+ * ✨ بکگراند «ابریشم روان» — جایگزین هاله‌های دایره‌ای قدیمی:
+ * سه موج ابریشمی بزرگ و کم‌رنگ (رنگ اصلی، طلایی، لهجه) که آرام سر می‌خورند
+ * + ۲۶ ذره غبار طلایی چشمک‌زن + گرادیان عمقی پس‌زمینه تم.
+ * فقط ۳ انیمیشن سبک در لایه رسم — روان روی همه گوشی‌ها.
+ */
 @Composable
 fun Modifier.dashboardBackdrop(): Modifier {
     val bg = DarkSlate
-    val halo1 = vizitorPalette.halo1
-    val halo2 = vizitorPalette.halo2
+    val bgDeep = DarkSlateDeep
+    val p = vizitorPalette
     val dust = GlassFill
-    return drawBehind {
-        drawRect(bg)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(halo1, Color.Transparent),
-                center = Offset(size.width * 0.85f, size.height * 0.08f),
-                radius = size.width * 0.9f
+
+    val transition = rememberInfiniteTransition(label = "silk")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(14000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "silkPhase"
+    )
+    val twinkle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(5200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "twinklePhase"
+    )
+
+    return this.drawBehind {
+        val w = size.width
+        val h = size.height
+
+        // ۱) گرادیان پایه (بالا عمیق‌تر ← پایین روشن‌تر جزئی)
+        drawRect(brush = Brush.verticalGradient(listOf(bgDeep, bg, bg)))
+
+        // ۲) موج‌های ابریشمی روان (بدون دایره!)
+        val silkColors = listOf(
+            p.primary.copy(alpha = 0.055f),
+            p.gold.copy(alpha = 0.045f),
+            p.accent.copy(alpha = 0.045f)
+        )
+        silkColors.forEachIndexed { band, color ->
+            val baseY = h * (0.22f + band * 0.26f)
+            val amp = h * (0.045f + band * 0.012f)
+            val drift = phase * (1f - band * 0.18f) + band * 2.1f
+            val path = Path()
+            path.moveTo(-40f, baseY + sin(drift) * amp)
+            val segments = 6
+            for (s in 1..segments) {
+                val x = -40f + (w + 80f) * s / segments
+                val y = baseY + sin(drift + s * 1.05f) * amp
+                val prevX = -40f + (w + 80f) * (s - 1) / segments
+                val prevY = baseY + sin(drift + (s - 1) * 1.05f) * amp
+                path.quadraticTo(
+                    (prevX + x) / 2f, prevY + (prevY - y) * 0.35f,
+                    x, y
+                )
+            }
+            path.lineTo(w + 40f, h + 40f)
+            path.lineTo(-40f, h + 40f)
+            path.close()
+            drawPath(
+                path = path,
+                brush = Brush.verticalGradient(
+                    colors = listOf(color, Color.Transparent),
+                    startY = baseY - amp,
+                    endY = baseY + h * 0.35f
+                )
             )
-        )
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(halo2, Color.Transparent),
-                center = Offset(size.width * 0.1f, size.height * 0.95f),
-                radius = size.width * 0.8f
-            )
-        )
-        drawRoundRect(
-            color = dust,
-            topLeft = Offset.Zero,
-            size = size,
-            cornerRadius = CornerRadius.Zero
-        )
+        }
+
+        // ۳) غبار طلایی چشمک‌زن
+        stardust.forEach { star ->
+            val tw = (sin(twinkle * star.speed + star.x * 12f) + 1f) / 2f
+            val alpha = 0.10f + tw * 0.45f
+            val cx = star.x * w
+            val cy = star.y * h
+            drawCircle(p.gold.copy(alpha = alpha * 0.35f), radius = star.r * 2.6f, center = Offset(cx, cy))
+            drawCircle(p.goldHighlight.copy(alpha = alpha), radius = star.r, center = Offset(cx, cy))
+        }
+
+        // ۴) لایه غبار ملایم یکپارچه‌کننده
+        drawRoundRect(color = dust, topLeft = Offset.Zero, size = size, cornerRadius = CornerRadius.Zero)
     }
 }

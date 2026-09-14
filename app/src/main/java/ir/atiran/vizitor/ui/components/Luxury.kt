@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -272,13 +273,44 @@ val RoyalSurfaceBrush: Brush
         listOf(vizitorPalette.royalSurfaceTop, vizitorPalette.royalSurfaceBottom)
     )
 
-/** قاب سلطنتی: حاشیه گرادیانی رنگ اصلی تم → متن برجسته → طلایی. */
+/**
+ * ✨ قاب سلطنتی نورِ روان: حاشیه گرادیانی تم + باریکه نور طلایی که آرام
+ * دور کارت سفر می‌کند — امضای بصری لوکس (فقط یک لایه رسم سبک).
+ */
 @Composable
-fun Modifier.royalBorder(shape: Shape = RoundedCornerShape(22.dp)): Modifier = this.border(
-    width = 1.5.dp,
-    brush = Brush.linearGradient(listOf(NeonPurple, vizitorPalette.accentText, Gold)),
-    shape = shape
-)
+fun Modifier.royalBorder(shape: Shape = RoundedCornerShape(22.dp)): Modifier {
+    val transition = rememberInfiniteTransition(label = "royalShimmer")
+    val t by transition.animateFloat(
+        initialValue = -0.35f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "royalShimmerT"
+    )
+    val p = vizitorPalette
+    return this
+        .border(
+            width = 1.5.dp,
+            brush = Brush.linearGradient(listOf(p.primary, p.accentText, p.gold)),
+            shape = shape
+        )
+        .drawBehind {
+            val w = size.width
+            val band = w * 0.45f
+            val x = t * (w + band * 2f) - band
+            drawRoundRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color.Transparent, p.goldHighlight.copy(alpha = 0.85f), Color.Transparent),
+                    start = Offset(x - band / 2, 0f),
+                    end = Offset(x + band / 2, size.height)
+                ),
+                style = Stroke(1.5.dp.toPx()),
+                cornerRadius = CornerRadius(22.dp.toPx())
+            )
+        }
+}
 
 /** سرتیتر سلطنتی بخش‌ها — آیکون در گوی بنفش + متن گرادیانی درخشان. */
 @Composable
