@@ -535,7 +535,7 @@ private fun AddToCartDialog(
     val hasPrice2 = product.price2 > 0
     val levelPrice = if (level == 2 && hasPrice2) product.price2 else product.price
     val qty = qtyText.parseAmount() ?: 0.0
-    val finalPrice = if (manual) (manualText.parseAmount() ?: levelPrice) else levelPrice
+    val finalPrice: Long = if (manual) (manualText.parseAmount()?.toLong() ?: levelPrice) else levelPrice
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
