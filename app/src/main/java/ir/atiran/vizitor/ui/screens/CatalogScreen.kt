@@ -625,9 +625,9 @@ private fun AddToCartDialog(
                     Box(
                         Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (qty > 0) Brush.linearGradient(listOf(Gold, GoldDark))
-                                else Color(0x14FFFFFF)
+                            .then(
+                                if (qty > 0) Modifier.background(Brush.linearGradient(listOf(Gold, GoldDark)))
+                                else Modifier.background(Color(0x14FFFFFF))
                             )
                             .clickable(enabled = qty > 0) {
                                 lockedQty = qty.coerceAtMost(product.stock)

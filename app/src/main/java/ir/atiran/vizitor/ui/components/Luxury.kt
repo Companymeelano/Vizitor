@@ -41,6 +41,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.util.toFaPrice
 import androidx.compose.foundation.layout.Spacer
