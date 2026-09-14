@@ -21,6 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -185,19 +186,19 @@ fun ShimmerGoldText(
     )
     val sweep = widthPx * 0.35f
     val startX = -sweep + phase * (widthPx + sweep * 2f)
-    androidx.compose.foundation.text.BasicText(
+    val style = MaterialTheme.typography.displaySmall.copy(
+        brush = Brush.horizontalGradient(
+            colors = listOf(Gold, Color(0xFFFFF7CF), Gold),
+            startX = startX,
+            endX = startX + sweep,
+            tileMode = androidx.compose.ui.graphics.TileMode.Clamp
+        )
+    )
+    androidx.compose.material3.Text(
         text = text,
         modifier = modifier.onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) },
-        style = MaterialTheme.typography.displaySmall,
-        color = { _: androidx.compose.ui.text.TextStyle ->
-            Brush.linearGradient(
-                colors = listOf(Gold, Color(0xFFFFF7CF), Gold),
-                start = Offset(startX, 0f),
-                end = Offset(startX + sweep, 0f)
-            )
-        }
+        style = style
     )
-}
 
 /**
  * انفجار ذرات طلایی — جلوه یک‌باره (۱٫۲ ثانیه) هنگام صدور موفق فاکتور.
