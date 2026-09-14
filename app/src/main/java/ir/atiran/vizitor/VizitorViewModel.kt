@@ -17,6 +17,7 @@ import ir.atiran.vizitor.data.local.ProductEntity
 import ir.atiran.vizitor.data.local.SeedData
 import ir.atiran.vizitor.data.local.TopProduct
 import ir.atiran.vizitor.data.local.InvoiceItemEntity
+import ir.atiran.vizitor.data.repository.ServerConfig
 import ir.atiran.vizitor.data.repository.SyncReport
 import ir.atiran.vizitor.data.repository.VizitorRepository
 import kotlinx.coroutines.flow.MutableStateFlow

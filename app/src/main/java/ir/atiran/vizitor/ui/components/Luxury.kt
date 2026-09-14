@@ -29,6 +29,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import kotlin.math.sin
+import kotlin.math.cos
+import androidx.compose.animation.core.FastOutSlowIn
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -166,9 +171,7 @@ fun LuxurySurface(
 @Composable
 fun ShimmerGoldText(
     text: String,
-    modifier: Modifier = Modifier,
-    style: androidx.compose.ui.text.TextStyle =
-        androidx.compose.material3.MaterialTheme.typography.displaySmall
+    modifier: Modifier = Modifier
 ) {
     var widthPx by remember { mutableFloatStateOf(1f) }
     val transition = rememberInfiniteTransition(label = "titleShine")
@@ -182,12 +185,12 @@ fun ShimmerGoldText(
         label = "titlePhase"
     )
     val sweep = widthPx * 0.35f
-    val startX = -sweep + phase * (widthPx + sweep * 2)
+    val startX = -sweep + phase * (widthPx + sweep * 2f)
     androidx.compose.foundation.text.BasicText(
         text = text,
         modifier = modifier.onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) },
-        style = style,
-        color = {
+        style = MaterialTheme.typography.displaySmall,
+        color = { _ ->
             Brush.linearGradient(
                 colors = listOf(Gold, Color(0xFFFFF7CF), Gold),
                 start = Offset(startX, 0f),
@@ -207,10 +210,7 @@ fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
     val progress = remember(active) { androidx.compose.animation.core.Animatable(0f) }
     androidx.compose.runtime.LaunchedEffect(active) {
         progress.snapTo(0f)
-        progress.animateTo(
-            1f,
-            tween(1200, easing = androidx.compose.animation.core.FastOutSlowIn)
-        )
+        progress.animateTo(1f, tween(1200, easing = FastOutSlowIn))
         onFinished()
     }
     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
@@ -219,11 +219,11 @@ fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
         val maxR = size.minDimension * 0.5f
         val p = progress.value
         repeat(42) { i ->
-            val angle = (i * 137.5f) * (kotlin.math.PI / 180.0) // زاویه طلایی
+            val angle = i * 2.39996f // زاویه طلایی (رادیان)
             val speed = 0.55f + ((i * 29) % 45) / 100f
             val dist = p * maxR * speed
-            val x = cx + kotlin.math.cos(angle) * dist
-            val y = cy + kotlin.math.sin(angle) * dist * 0.8f + p * p * 120f
+            val x = cx + cos(angle) * dist
+            val y = cy + sin(angle) * dist * 0.8f + p * p * 120f
             val sz = ((3 + (i % 4) * 2).dp.toPx()) * (1f - p * 0.5f)
             val color = when (i % 3) {
                 0 -> Gold

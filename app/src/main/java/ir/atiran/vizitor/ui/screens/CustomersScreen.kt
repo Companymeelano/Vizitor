@@ -12,6 +12,8 @@ package ir.atiran.vizitor.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import ir.atiran.vizitor.ui.components.rememberVoiceSearch
 import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.components.MiniRouteMap
