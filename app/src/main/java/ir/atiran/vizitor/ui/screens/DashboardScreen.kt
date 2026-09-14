@@ -12,6 +12,7 @@ package ir.atiran.vizitor.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -85,6 +86,11 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
                     color = TextSecondary
                 )
             }
+        }
+
+        // ── بنر مدال عملکرد بازاریاب (طلایی) ────────────────────────────────
+        item {
+            MedalBanner(progress = progress, remaining = (target - todaySales).coerceAtLeast(0))
         }
 
         // ── ردیف تارگت + پورسانت ────────────────────────────────────────────
@@ -180,6 +186,73 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
         }
 
         item { MilanoFooter() }
+    }
+}
+
+/**
+ * بنر مدال عملکرد بازاریاب — حاشیه طلایی، نشان مدال و نوار پیشرفت سبک.
+ * بدون انیمیشن دائمی: فقط یک نوار استاتیک برای حفظ روان‌بودن اسکرول.
+ */
+@Composable
+private fun MedalBanner(progress: Float, remaining: Long) {
+    val achieved = progress >= 1f
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .goldBorder()
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(Gold, Gold.copy(alpha = 0.15f)))),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.MilitaryTech,
+                    contentDescription = "مدال عملکرد",
+                    tint = Color(0xFF3A2A00),
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (achieved) "مدال طلایی عملکرد فعال شد 🏆" else "مسیر مدال طلایی عملکرد",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Gold
+                )
+                Text(
+                    if (achieved) "تارگت امروز کامل شد؛ عملکرد شما طلایی است!"
+                    else "${remaining.toFaPrice()} فروش تا نشان طلا",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Spacer(Modifier.height(6.dp))
+                // نوار پیشرفت سبک (بدون انیمیشن دائمی)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1C2330))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress.coerceIn(0.05f, 1f))
+                            .clip(CircleShape)
+                            .background(
+                                Brush.horizontalGradient(
+                                    if (achieved) listOf(Gold, Color(0xFFFFF3C4))
+                                    else listOf(NeonGreen, Color(0xFFB8FFD9))
+                                )
+                            )
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -21,8 +21,8 @@ android {
         applicationId = "ir.atiran.vizitor"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -69,6 +69,7 @@ dependencies {
 
     // ── Core / Navigation / Lifecycle ─────────────────────────────────────
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")

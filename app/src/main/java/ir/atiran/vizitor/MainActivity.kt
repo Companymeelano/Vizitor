@@ -22,6 +22,8 @@ import ir.atiran.vizitor.ui.theme.VizitorTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // اسپلش‌اسکرین لاکچری پیش از محتوای اصلی
+        androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {

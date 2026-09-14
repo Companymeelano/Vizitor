@@ -7,4 +7,11 @@
         <item name="android:navigationBarColor">@color/dark_slate</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+
+    <!-- اسپلش‌اسکرین لاکچری: پس‌زمینه اسلیت + آیکون M طلایی -->
+    <style name="Theme.Vizitor.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/dark_slate</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Vizitor</item>
+    </style>
 </resources>
