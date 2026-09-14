@@ -41,11 +41,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.style.TextAlign
+import ir.atiran.vizitor.ui.theme.GoldDark
 import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import ir.atiran.vizitor.ui.theme.TextPrimary
 import ir.atiran.vizitor.util.toFaNumber
@@ -64,6 +67,7 @@ fun NeonDonutChart(
     modifier: Modifier = Modifier,
     size: Dp = 150.dp,
     trackColor: Color = Color(0xFF1C2330),
+    centerColor: Color = NeonGreen,
     progressBrush: Brush = Brush.sweepGradient(
         colors = listOf(Color(0xFF0FBF62), NeonGreen, Color(0xFFB8FFD9), NeonGreen)
     )
@@ -150,7 +154,7 @@ fun NeonDonutChart(
             Text(
                 text = centerValue,
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-                color = NeonGreen
+                color = centerColor
             )
             Text(
                 text = centerLabel,
@@ -358,6 +362,93 @@ fun RoyalTable(data: List<Pair<String, Long>>, modifier: Modifier = Modifier) {
             Text("جمع هفته", Modifier.weight(0.7f), color = Gold, fontWeight = FontWeight.ExtraBold)
             Text(total.toFaPrice(), Modifier.weight(1.9f), color = Gold, fontWeight = FontWeight.ExtraBold)
             Text("۱۰۰٪", Modifier.weight(0.9f), color = Gold, textAlign = TextAlign.End, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+// ════════════════ اجزای سه‌بعدی مشترک (نسخه ۱٫۷٫۰ — تم یکدست پیشخوان) ════════════════
+
+/**
+ * نشان رتبه سه‌بعدی — گوی گرادیانی براق با لایه عمق تیره زیرین:
+ * رتبه ۱ طلایی، ۲ نقره‌ای، ۳ برنزی و رتبه‌های بعد بنفش سلطنتی.
+ * استایل یکسان برای جدول بدهی مشتریان و پرفروش‌ترین‌ها.
+ */
+@Composable
+fun RankBadge3D(rank: Int, modifier: Modifier = Modifier, size: Dp = 32.dp) {
+    val face = when (rank) {
+        1 -> listOf(Color(0xFFFFF3D6), Gold, GoldDark)
+        2 -> listOf(Color(0xFFF6F9FC), Color(0xFFC9D4E0), Color(0xFF93A1B3))
+        3 -> listOf(Color(0xFFF0C9A8), Color(0xFFC98A5B), Color(0xFF8A5327))
+        else -> listOf(Color(0xFFE3BFFF), NeonPurple, NeonPurpleDark)
+    }
+    val textColor = when (rank) {
+        1 -> Color(0xFF5C4200)
+        2 -> Color(0xFF2F3A47)
+        3 -> Color(0xFF4A2E14)
+        else -> Color.White
+    }
+    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        // لایه عمق (سایه سه‌بعدی)
+        Box(
+            Modifier
+                .offset(y = 2.dp)
+                .size(size - 3.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF04060A))
+        )
+        // رویه گرادیانی براق
+        Box(
+            Modifier
+                .size(size - 3.dp)
+                .clip(CircleShape)
+                .background(Brush.verticalGradient(face))
+                .border(1.dp, Color(0x66FFFFFF), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                rank.toFaNumber(),
+                color = textColor,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold)
+            )
+        }
+    }
+}
+
+/**
+ * نوار پیشرفت سه‌بعدی (عمق‌دار) — ریل تیره یکدست + پرشدگی گرادیانی +
+ * هایلایت نیمه‌بالایی برای حس برجستگی.
+ * در جهت چیدمان فارسی (راست‌به‌چپ) از سمت راست پر می‌شود.
+ */
+@Composable
+fun DepthBar(
+    fraction: Float,
+    fillColors: List<Color>,
+    modifier: Modifier = Modifier,
+    height: Dp = 7.dp
+) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(height / 2))
+            .background(Color(0x1AFFFFFF))
+    ) {
+        if (fraction > 0f) {
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction.coerceIn(0.05f, 1f))
+                    .height(height)
+                    .clip(RoundedCornerShape(height / 2))
+                    .background(Brush.horizontalGradient(fillColors))
+            ) {
+                // هایلایت نیمه‌بالا — برجستگی سه‌بعدی
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(height / 2)
+                        .background(Color.White.copy(alpha = 0.22f))
+                )
+            }
         }
     }
 }
