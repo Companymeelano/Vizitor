@@ -219,6 +219,9 @@ private fun VizitorBottomBar(
     val vm: VizitorViewModel = viewModel()
     val cartCount by vm.cartItems.collectAsState()
 
+    // رنگ‌های تم — کپچر در کانتکست کامپوزبل پیش از ورود به لایه رسم
+    val hairlinePrimary = NeonPurple
+    val hairlineGold = Gold
     Box(modifier = Modifier.fillMaxWidth()) {
         NavigationBar(
             containerColor = DarkSlateElevated.copy(alpha = 0.94f),
@@ -230,7 +233,7 @@ private fun VizitorBottomBar(
                 .drawBehind {
                     drawLine(
                         brush = Brush.horizontalGradient(
-                            listOf(Color.Transparent, NeonPurple, Gold, Color.Transparent)
+                            listOf(Color.Transparent, hairlinePrimary, hairlineGold, Color.Transparent)
                         ),
                         start = Offset(0f, 0.5f),
                         end = Offset(size.width, 0.5f),
