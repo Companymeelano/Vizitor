@@ -80,6 +80,7 @@ import ir.atiran.vizitor.ui.components.NeonGreenButton
 import ir.atiran.vizitor.ui.components.StatusChip
 import ir.atiran.vizitor.ui.components.StatusDot
 import ir.atiran.vizitor.ui.components.goldBorder
+import ir.atiran.vizitor.ui.theme.AccentText
 import ir.atiran.vizitor.ui.theme.DangerRed
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
@@ -430,7 +431,7 @@ private fun CustomerCard(
                 ) {
                     Icon(Icons.Filled.Message, contentDescription = "ارسال مانده", tint = NeonPurple, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("مانده حساب با پیامک", style = MaterialTheme.typography.labelMedium, color = Color(0xFFE3BFFF))
+                    Text("مانده حساب با پیامک", style = MaterialTheme.typography.labelMedium, color = AccentText)
                 }
             }
             Spacer(Modifier.height(8.dp))

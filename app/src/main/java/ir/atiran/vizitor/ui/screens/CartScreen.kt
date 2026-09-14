@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -87,10 +86,13 @@ import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.components.MilanoFooter
 import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.SectionTitle
+import ir.atiran.vizitor.ui.theme.AccentText
+import ir.atiran.vizitor.ui.theme.DarkSlateDeep
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
 import java.io.ByteArrayOutputStream
@@ -102,8 +104,6 @@ fun CartScreen(viewModel: VizitorViewModel) {
     val customers by viewModel.customers.collectAsState()
     val selectedCustomer by viewModel.selectedCustomer.collectAsState()
     val gross by viewModel.cartTotal.collectAsState()
-    val aiSuggestion by viewModel.aiSuggestion.collectAsState()
-    val aiLoading by viewModel.aiLoading.collectAsState()
     var note by remember { mutableStateOf("") }
 
     // نسخه ۱٫۶٫۰ — تخفیفات و کسورات حذف شد؛ مبلغ نهایی = جمع اقلام
@@ -223,39 +223,6 @@ fun CartScreen(viewModel: VizitorViewModel) {
             )
         }
 
-        // ── دستیار هوشمند فروش (AI) ─────────────────────────────────────────
-        item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Gold, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("دستیار هوشمند فروش", style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.weight(1f))
-                        if (aiLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = NeonGreen,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            TextButton(onClick = { viewModel.askAiAssistant() }) {
-                                Text("پیشنهاد کالای مکمل", color = NeonGreen)
-                            }
-                        }
-                    }
-                    aiSuggestion?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                }
-            }
-        }
-
         // ── جمع نهایی سفارش (بدون کسورات) ──────────────────────────────────
         item {
             GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
@@ -265,7 +232,7 @@ fun CartScreen(viewModel: VizitorViewModel) {
                     Text(
                         "مبلغ نهایی سفارش",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFFE3BFFF),
+                        color = AccentText,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
@@ -297,7 +264,7 @@ fun CartScreen(viewModel: VizitorViewModel) {
                             .fillMaxWidth()
                             .height(160.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF0D1017))
+                            .background(DarkSlateDeep)
                     )
                     Text(
                         if (hasSignature) "امضا دریافت شد ✅" else "مشتری با انگشت روی کادر بالا امضا می‌کند",
@@ -449,6 +416,9 @@ private fun SignaturePad(
     modifier: Modifier = Modifier
 ) {
     var currentPath by remember { mutableStateOf<Path?>(null) }
+    // رنگ‌های تم — خوانده شده پیش از ورود به Canvas
+    val inkColor = NeonGreen
+    val guideColor = vizitorPalette.glassBorder
 
     Canvas(
         modifier = modifier.pointerInput(Unit) {
@@ -473,16 +443,16 @@ private fun SignaturePad(
     ) {
         // خطوط راهنمای امضا
         drawLine(
-            color = Color(0x33FFFFFF),
+            color = guideColor,
             start = Offset(size.width * 0.1f, size.height * 0.75f),
             end = Offset(size.width * 0.9f, size.height * 0.75f),
             strokeWidth = 1.dp.toPx()
         )
         paths.forEach { path ->
-            drawPath(path = path, color = NeonGreen, style = Stroke(width = 3.dp.toPx()))
+            drawPath(path = path, color = inkColor, style = Stroke(width = 3.dp.toPx()))
         }
         currentPath?.let {
-            drawPath(path = it, color = NeonGreen, style = Stroke(width = 3.dp.toPx()))
+            drawPath(path = it, color = inkColor, style = Stroke(width = 3.dp.toPx()))
         }
     }
 }

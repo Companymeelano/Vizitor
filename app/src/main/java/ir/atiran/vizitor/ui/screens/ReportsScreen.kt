@@ -9,11 +9,17 @@
  */
 package ir.atiran.vizitor.ui.screens
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
@@ -71,11 +77,16 @@ import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.SectionTitle
 import ir.atiran.vizitor.ui.components.StatusChip
 import ir.atiran.vizitor.ui.components.ShimmerGoldText
+import ir.atiran.vizitor.ui.theme.AllPalettes
 import ir.atiran.vizitor.ui.theme.DangerRed
+import ir.atiran.vizitor.ui.theme.DonutTrack
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.ThemeManager
+import ir.atiran.vizitor.ui.theme.VizitorPalette
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.util.toFaDate
 import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
@@ -119,6 +130,11 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                 )
             }
         }
+
+        // ── پوسته و تم — ۵ تم لاکچری (۳ تیره + ۲ روشن) ──────────────────────
+        item { SectionTitle(text = "پوسته و تم (تیره و روشن لاکچری)", icon = Icons.Filled.Palette) }
+
+        item { ThemePickerCard() }
 
         // ── تاریخچه فاکتورها ────────────────────────────────────────────────
         item { SectionTitle(text = "تاریخچه فاکتورها", icon = Icons.Filled.History) }
@@ -270,7 +286,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
-                        "آتیران ویزیتور — نسخه ۱٫۶٫۰",
+                        "آتیران ویزیتور — نسخه ۱٫۸٫۰",
                         style = MaterialTheme.typography.titleMedium,
                         color = Gold
                     )
@@ -394,7 +410,7 @@ private fun MonthlyPerformanceCard(invoices: List<InvoiceEntity>, dailyTarget: L
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1C2330))
+                    .background(DonutTrack)
             ) {
                 Box(
                     modifier = Modifier
@@ -461,5 +477,99 @@ private fun ShareInvoiceDialog(
 private fun ShareOption(label: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Text(label, color = NeonGreen, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+// ════════════════════ انتخابگر پوسته و تم (نسخه ۱٫۸٫۰) ════════════════════
+
+/**
+ * کارت انتخاب تم — پنج تم لاکچری (۳ تیره + ۲ روشن) با سواچ رنگی زنده.
+ * انتخاب بلافاصله کل برنامه را بازرنگ می‌کند و ماندگار ذخیره می‌شود.
+ */
+@Composable
+private fun ThemePickerCard() {
+    val context = LocalContext.current
+    val currentThemeId by ThemeManager.themeId.collectAsState()
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AllPalettes.forEach { palette ->
+                ThemeRow(
+                    palette = palette,
+                    selected = palette.id == currentThemeId,
+                    onSelect = { ThemeManager.setTheme(context, palette.id) }
+                )
+            }
+        }
+    }
+}
+
+/** یک ردیف انتخاب تم: سواچ سه‌رنگ (پس‌زمینه/اصلی/طلایی) + نام + نشان انتخاب. */
+@Composable
+private fun ThemeRow(
+    palette: VizitorPalette,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) vizitorPalette.primary.copy(alpha = 0.08f) else Color.Transparent)
+            .border(
+                1.dp,
+                if (selected) vizitorPalette.gold.copy(alpha = 0.8f) else vizitorPalette.glassBorder,
+                RoundedCornerShape(14.dp)
+            )
+            .clickable(onClick = onSelect)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // سواچ سه‌تایی رنگ اصلی تم
+        Box {
+            Box(
+                Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(palette.background)
+                    .border(1.dp, vizitorPalette.glassBorder, CircleShape)
+            )
+            Box(
+                Modifier
+                    .offset(x = (-9).dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(palette.primary)
+                    .border(1.dp, vizitorPalette.glassBorder, CircleShape)
+            )
+            Box(
+                Modifier
+                    .offset(x = (-18).dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(palette.gold)
+                    .border(1.dp, vizitorPalette.glassBorder, CircleShape)
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                palette.displayName,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                if (palette.isDark) "تم تیره لاکچری" else "تم روشن لاکچری",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary
+            )
+        }
+        if (selected) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = "انتخاب شده",
+                tint = NeonGreen,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }

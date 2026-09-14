@@ -41,10 +41,11 @@ import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.GoldDark
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 
 /**
- * دکمه اکشن اصلی لاکچری — گرادیان بنفش سلطنتی + حلقه طلایی + جاروب نور.
- * (جایگزین سبک قبلی؛ تمام فراخوان‌های قبلی بدون تغییر امضا استفاده می‌شوند)
+ * دکمه اکشن اصلی لاکچری — گرادیان رنگ اصلی تم + حلقه طلایی + جاروب نور.
+ * گرادیان و رنگ متن از پالت فعال می‌آیند (بنفش/طلایی/زمردی/روشن).
  */
 @Composable
 fun NeonPurpleButton(
@@ -55,6 +56,7 @@ fun NeonPurpleButton(
     enabled: Boolean = true
 ) {
     val shape = RoundedCornerShape(20.dp)
+    val p = vizitorPalette
     LuxurySurface(
         modifier = modifier
             .height(58.dp)
@@ -65,9 +67,9 @@ fun NeonPurpleButton(
         shape = shape,
         fillBrush = Brush.verticalGradient(
             colors = if (enabled)
-                listOf(Color(0xFFB06CFF), Color(0xFF7A2FE0), Color(0xFF4A1799))
+                listOf(p.btnPrimaryTop, p.primary, p.btnPrimaryBottom)
             else
-                listOf(Color(0xFF2A2F3A), Color(0xFF232733))
+                listOf(p.textPrimary.copy(alpha = 0.12f), p.textPrimary.copy(alpha = 0.06f))
         ),
         enabled = enabled
     ) {
@@ -77,12 +79,16 @@ fun NeonPurpleButton(
             horizontalArrangement = Arrangement.Center
         ) {
             if (icon != null) {
-                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                Icon(
+                    icon, contentDescription = null,
+                    tint = if (enabled) p.onPrimary else p.textSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
                 Spacer(Modifier.width(8.dp))
             }
             Text(
                 text,
-                color = Color.White,
+                color = if (enabled) p.onPrimary else p.textSecondary,
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 0.4.sp
@@ -93,7 +99,7 @@ fun NeonPurpleButton(
 }
 
 /**
- * دکمه ثانویه لاکچری — گرادیان زمردی/سبز نئونی با حلقه طلایی.
+ * دکمه ثانویه لاکچری — گرادیان رنگ تایید/موفقیت تم با حاشیه هم‌خانواده.
  */
 @Composable
 fun NeonGreenButton(
@@ -104,19 +110,20 @@ fun NeonGreenButton(
     enabled: Boolean = true
 ) {
     val shape = RoundedCornerShape(18.dp)
+    val p = vizitorPalette
     LuxurySurface(
         modifier = modifier
             .height(50.dp)
             .pressScale()
             .shineSweep()
-            .border(1.dp, Color(0xFF063D24).copy(alpha = if (enabled) 0.9f else 0.2f), shape)
+            .border(1.dp, p.accentDark.copy(alpha = if (enabled) 0.9f else 0.2f), shape)
             .clickable(enabled = enabled, onClick = onClick),
         shape = shape,
         fillBrush = Brush.verticalGradient(
             colors = if (enabled)
-                listOf(Color(0xFF8CFFCB), Color(0xFF2BFF88), Color(0xFF0CB35C))
+                listOf(p.btnAccentTop, p.accent, p.btnAccentBottom)
             else
-                listOf(Color(0xFF2A2F3A), Color(0xFF232733))
+                listOf(p.textPrimary.copy(alpha = 0.12f), p.textPrimary.copy(alpha = 0.06f))
         ),
         enabled = enabled
     ) {
@@ -126,12 +133,16 @@ fun NeonGreenButton(
             horizontalArrangement = Arrangement.Center
         ) {
             if (icon != null) {
-                Icon(icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                Icon(
+                    icon, contentDescription = null,
+                    tint = if (enabled) p.onAccent else p.textSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(Modifier.width(6.dp))
             }
             Text(
                 text,
-                color = Color.Black,
+                color = if (enabled) p.onAccent else p.textSecondary,
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold)
             )
         }

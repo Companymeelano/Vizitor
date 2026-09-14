@@ -85,6 +85,7 @@ import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.components.goldBorder
 import ir.atiran.vizitor.ui.components.rememberVoiceSearch
 import ir.atiran.vizitor.ui.components.tilt3D
+import ir.atiran.vizitor.ui.theme.AccentText
 import ir.atiran.vizitor.ui.theme.DangerRed
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.GoldDark
@@ -453,7 +454,7 @@ private fun ProductZoomDialog(product: ProductEntity, onDismiss: () -> Unit) {
                 Text(
                     "قیمت مصرف‌کننده: ${(if (product.consumerPrice > 0) product.consumerPrice else product.price).toFaPrice()}",
                     style = MaterialTheme.typography.titleSmall.copy(
-                        color = Color(0xFFE3BFFF),
+                        color = AccentText,
                         fontWeight = FontWeight.ExtraBold
                     )
                 )
@@ -803,6 +804,6 @@ private fun PackChip(label: String, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        Text(label, color = Color(0xFFE3BFFF), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Text(label, color = AccentText, fontWeight = FontWeight.Bold, fontSize = 11.sp)
     }
 }

@@ -33,11 +33,14 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toArgb
 import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.ui.theme.DangerRed
+import ir.atiran.vizitor.ui.theme.DarkSlateDeep
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 
 /**
  * نقشه شماتیک منطقه با مسیر توزیع.
@@ -52,13 +55,21 @@ fun MiniRouteMap(
     modifier: Modifier = Modifier
 ) {
 
+    // رنگ‌های تم — خوانده شده در کانتکست کامپوزبل پیش از ورود به Canvas
+    val mapBg = DarkSlateDeep
+    val gridColor = vizitorPalette.textPrimary.copy(alpha = 0.07f)
+    val cGold = Gold
+    val cGreen = NeonGreen
+    val cDanger = DangerRed
+    val cLabelArgb = Gold.toArgb()
+
     Column {
         Box(
             modifier = modifier
                 .fillMaxWidth()
                 .height(220.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(Color(0xFF0D1017))
+                .background(mapBg)
         ) {
             Canvas(modifier = Modifier.fillMaxWidth().height(220.dp)) {
                 val w = size.width; val h = size.height
@@ -79,9 +90,9 @@ fun MiniRouteMap(
                 // شبکه ظریف شهری
                 for (i in 1 until 6) {
                     val gx = w * i / 6f
-                    drawLine(Color(0x12FFFFFF), Offset(gx, 0f), Offset(gx, h), strokeWidth = 1f)
+                    drawLine(gridColor, Offset(gx, 0f), Offset(gx, h), strokeWidth = 1f)
                     val gy = h * i / 6f
-                    drawLine(Color(0x12FFFFFF), Offset(0f, gy), Offset(w, gy), strokeWidth = 1f)
+                    drawLine(gridColor, Offset(0f, gy), Offset(w, gy), strokeWidth = 1f)
                 }
 
                 // مسیر طلایی بهینه
@@ -94,24 +105,24 @@ fun MiniRouteMap(
                     }
                 }
                 // هاله ملایم مسیر
-                drawPath(routePath, Gold.copy(alpha = 0.25f), style = Stroke(9f))
+                drawPath(routePath, cGold.copy(alpha = 0.25f), style = Stroke(9f))
                 drawPath(
-                    routePath, Gold,
+                    routePath, cGold,
                     style = Stroke(3.5f, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(16f, 10f), 0f))
                 )
 
                 // نشانگر مشتریان
                 customers.forEachIndexed { idx, c ->
                     val p = proj(c.lat, c.lng)
-                    val credit = if (c.creditOk) NeonGreen else DangerRed
+                    val credit = if (c.creditOk) cGreen else cDanger
                     if (c.isVip) {
-                        drawCircle(Gold.copy(alpha = 0.35f), radius = 16f, center = p)
+                        drawCircle(cGold.copy(alpha = 0.35f), radius = 16f, center = p)
                     }
-                    drawCircle(Color(0xFF0D1017), radius = 11f, center = p)
+                    drawCircle(mapBg, radius = 11f, center = p)
                     drawCircle(credit, radius = 8f, center = p)
-                    drawCircle(Gold, radius = 8f, center = p, style = Stroke(2f))
+                    drawCircle(cGold, radius = 8f, center = p, style = Stroke(2f))
                     // شماره ترتیب بازدید
-                    val label = Paint_label()
+                    val label = Paint_label(cLabelArgb)
                     drawContext.canvas.nativeCanvas.drawText(
                         (route.indexOf(c) + 1).toString(),
                         p.x + 14f, p.y - 12f, label
@@ -119,8 +130,8 @@ fun MiniRouteMap(
                 }
 
                 // موقعیت ویزیتور
-                drawCircle(NeonGreen.copy(alpha = 0.3f), radius = 20f, center = me)
-                drawCircle(NeonGreen, radius = 9f, center = me)
+                drawCircle(cGreen.copy(alpha = 0.3f), radius = 20f, center = me)
+                drawCircle(cGreen, radius = 9f, center = me)
                 drawCircle(Color.White, radius = 9f, center = me, style = Stroke(2.5f))
             }
         }
@@ -144,8 +155,8 @@ private fun LegendDot(color: Color, text: String) {
     }
 }
 
-private fun Paint_label() = android.graphics.Paint().apply {
-    color = android.graphics.Color.parseColor("#FFD166")
+private fun Paint_label(argb: Int) = android.graphics.Paint().apply {
+    color = argb
     textSize = 26f
     isAntiAlias = true
     textAlign = android.graphics.Paint.Align.LEFT

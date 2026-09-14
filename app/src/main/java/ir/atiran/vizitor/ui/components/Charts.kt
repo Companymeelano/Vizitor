@@ -32,10 +32,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.toArgb
+import ir.atiran.vizitor.ui.theme.DonutTrack
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
+import ir.atiran.vizitor.ui.theme.NeonGreenDark
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
@@ -66,12 +70,15 @@ fun NeonDonutChart(
     centerLabel: String,
     modifier: Modifier = Modifier,
     size: Dp = 150.dp,
-    trackColor: Color = Color(0xFF1C2330),
+    trackColor: Color = DonutTrack,
     centerColor: Color = NeonGreen,
     progressBrush: Brush = Brush.sweepGradient(
-        colors = listOf(Color(0xFF0FBF62), NeonGreen, Color(0xFFB8FFD9), NeonGreen)
+        colors = listOf(NeonGreenDark, NeonGreen, Color(0xFFB8FFD9), NeonGreen)
     )
 ) {
+    // رنگ‌های تم — خوانده شده در کانتکست کامپوزبل پیش از ورود به Canvas
+    val haloColor = NeonPurple.copy(alpha = 0.10f)
+    val tickColor = Gold
     val animated by produceState(initialValue = 0f, key1 = progress) {
         var current = 0f
         val step = progress / 40f
@@ -91,9 +98,9 @@ fun NeonDonutChart(
             val tl = Offset(pad, pad)
             val sweep = 360f * animated.coerceIn(0f, 1f)
 
-            // ۰) هاله بنفش سلطنتی پشت نمودار
+            // ۰) هاله رنگ اصلی تم پشت نمودار
             drawCircle(
-                color = NeonPurple.copy(alpha = 0.10f),
+                color = haloColor,
                 radius = min(this.size.width, this.size.height) / 2f - 1f,
                 style = Stroke(42f)
             )
@@ -118,7 +125,7 @@ fun NeonDonutChart(
                 val r2 = this.size.width / 2f - 9f
                 val cx = this.size.width / 2f
                 drawLine(
-                    Gold.copy(alpha = 0.55f),
+                    tickColor.copy(alpha = 0.55f),
                     Offset(cx + kotlin.math.cos(a).toFloat() * r1, cx + kotlin.math.sin(a).toFloat() * r1),
                     Offset(cx + kotlin.math.cos(a).toFloat() * r2, cx + kotlin.math.sin(a).toFloat() * r2),
                     strokeWidth = 2.5f
@@ -174,6 +181,13 @@ fun RoyalBarChart(
     data: List<Pair<String, Long>>,
     modifier: Modifier = Modifier
 ) {
+    // رنگ‌های تم — خوانده شده در کانتکست کامپوزبل پیش از ورود به Canvas
+    val cGold = Gold
+    val cPrimary = NeonPurple
+    val cPrimaryDark = NeonPurpleDark
+    val cBarTop = vizitorPalette.accentText
+    val cLabelArgb = TextSecondary.toArgb()
+    val cValueArgb = Gold.toArgb()
     Canvas(modifier = modifier) {
         if (data.isEmpty()) return@Canvas
         val w = size.width
@@ -184,7 +198,7 @@ fun RoyalBarChart(
         val barW = bw * 0.44f
 
         // خط مبنا طلایی
-        drawLine(Gold.copy(alpha = 0.7f), Offset(8f, base), Offset(w - 8f, base), 2f)
+        drawLine(cGold.copy(alpha = 0.7f), Offset(8f, base), Offset(w - 8f, base), 2f)
 
         data.forEachIndexed { i, entry ->
             val (label, v) = entry
@@ -194,7 +208,7 @@ fun RoyalBarChart(
 
             // بازتاب زیر مبنا
             drawRoundRect(
-                color = NeonPurple.copy(alpha = 0.14f),
+                color = cPrimary.copy(alpha = 0.14f),
                 topLeft = Offset(x, base + 5f),
                 size = Size(barW, min(hVal * 0.22f, 16f)),
                 cornerRadius = CornerRadius(6f)
@@ -211,12 +225,12 @@ fun RoyalBarChart(
                         lineTo(x + barW, base)
                         close()
                     },
-                    Color(0xFF38115F)
+                    cPrimaryDark.copy(alpha = 0.55f)
                 )
-                // وجه اصلی — گرادیان بنفش سلطنتی
+                // وجه اصلی — گرادیان رنگ اصلی تم
                 drawRoundRect(
                     brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFFE3BFFF), NeonPurple, NeonPurpleDark),
+                        colors = listOf(cBarTop, cPrimary, cPrimaryDark),
                         startY = y, endY = base
                     ),
                     topLeft = Offset(x, y),
@@ -232,11 +246,11 @@ fun RoyalBarChart(
                         lineTo(x + barW, y)
                         close()
                     },
-                    Color(0xFFF0DCFF)
+                    cBarTop
                 )
                 // درپوش طلایی درخشان
                 drawOval(
-                    brush = Brush.verticalGradient(listOf(Color(0xFFFFF3D6), Gold)),
+                    brush = Brush.verticalGradient(listOf(Color(0xFFFFF3D6), cGold)),
                     topLeft = Offset(x + barW * 0.14f, y - 8f),
                     size = Size(barW * 0.72f, 12f)
                 )
@@ -247,7 +261,7 @@ fun RoyalBarChart(
                         x + barW / 2f,
                         y - 16f,
                         android.graphics.Paint().apply {
-                            color = android.graphics.Color.parseColor("#FFD166")
+                            color = cValueArgb
                             textSize = 24f
                             textAlign = android.graphics.Paint.Align.CENTER
                             isAntiAlias = true
@@ -262,7 +276,7 @@ fun RoyalBarChart(
                 x + barW / 2f,
                 h - 12f,
                 android.graphics.Paint().apply {
-                    color = android.graphics.Color.parseColor("#9AA3B2")
+                    color = cLabelArgb
                     textSize = 26f
                     textAlign = android.graphics.Paint.Align.CENTER
                     isAntiAlias = true
@@ -379,7 +393,7 @@ fun RankBadge3D(rank: Int, modifier: Modifier = Modifier, size: Dp = 32.dp) {
         1 -> listOf(Color(0xFFFFF3D6), Gold, GoldDark)
         2 -> listOf(Color(0xFFF6F9FC), Color(0xFFC9D4E0), Color(0xFF93A1B3))
         3 -> listOf(Color(0xFFF0C9A8), Color(0xFFC98A5B), Color(0xFF8A5327))
-        else -> listOf(Color(0xFFE3BFFF), NeonPurple, NeonPurpleDark)
+        else -> listOf(vizitorPalette.accentText, NeonPurple, NeonPurpleDark)
     }
     val textColor = when (rank) {
         1 -> Color(0xFF5C4200)

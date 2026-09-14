@@ -66,6 +66,7 @@ import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.NeonPurpleDark
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -76,14 +77,16 @@ import ir.atiran.vizitor.ui.theme.GoldDark
 /**
  * حلقه طلایی گرادیانی دور سطوح — امضای بصری نسخه لاکچری.
  * (به‌جای shadow سنگین، فقط یک stroke گرادیانی؛ هزینه GPU ناچیز)
+ * رنگ‌ها از پالت تم فعال خوانده می‌شوند (تیره ⇄ روشن).
  */
+@Composable
 fun Modifier.goldRing(
     shape: RoundedCornerShape = RoundedCornerShape(20.dp),
     width: Dp = 1.6.dp
 ): Modifier = this.border(
     width,
     Brush.linearGradient(
-        colors = listOf(GoldDark, Gold, Color(0xFFFFF6CC), Gold, GoldDark),
+        colors = listOf(GoldDark, Gold, vizitorPalette.goldHighlight, Gold, GoldDark),
     ),
     shape
 )
@@ -209,7 +212,7 @@ fun ShimmerGoldText(
     val startX = -sweep + phase * (widthPx + sweep * 2f)
     val style = MaterialTheme.typography.displaySmall.copy(
         brush = Brush.horizontalGradient(
-            colors = listOf(Gold, Color(0xFFFFF7CF), Gold),
+            colors = listOf(Gold, vizitorPalette.goldHighlight, Gold),
             startX = startX,
             endX = startX + sweep,
             tileMode = androidx.compose.ui.graphics.TileMode.Clamp
@@ -257,15 +260,19 @@ fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
     }
 }
 
-// ════════════════════════ تم سلطنتی بنفش (نسخه ۱٫۵٫۰) ════════════════════════
+// ════════════════ تم سلطنتی (نسخه ۱٫۸٫۰ — چندتمی و تم‌پذیر) ════════════════
 
-/** گرادیان سطح سلطنتی بنفش برای کارت‌ها و جدول‌ها. */
-val RoyalSurfaceBrush = Brush.verticalGradient(listOf(Color(0xFF1E1133), Color(0xFF130B20)))
+/** گرادیان سطح سلطنتی برای کارت‌ها و جدول‌ها — از پالت تم فعال. */
+val RoyalSurfaceBrush: Brush
+    @Composable get() = Brush.verticalGradient(
+        listOf(vizitorPalette.royalSurfaceTop, vizitorPalette.royalSurfaceBottom)
+    )
 
-/** قاب سلطنتی: حاشیه گرادیانی بنفش → یاسی → طلایی. */
+/** قاب سلطنتی: حاشیه گرادیانی رنگ اصلی تم → متن برجسته → طلایی. */
+@Composable
 fun Modifier.royalBorder(shape: Shape = RoundedCornerShape(22.dp)): Modifier = this.border(
     width = 1.5.dp,
-    brush = Brush.linearGradient(listOf(NeonPurple, Color(0xFFE3BFFF), Gold)),
+    brush = Brush.linearGradient(listOf(NeonPurple, vizitorPalette.accentText, Gold)),
     shape = shape
 )
 
@@ -290,7 +297,9 @@ fun RoyalHeader(text: String, icon: ImageVector? = null, modifier: Modifier = Mo
             text,
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.ExtraBold,
-                brush = Brush.horizontalGradient(listOf(Color(0xFFF3E8FF), NeonPurple, Gold))
+                brush = Brush.horizontalGradient(
+                    listOf(vizitorPalette.textPrimary, NeonPurple, Gold)
+                )
             )
         )
     }
@@ -311,13 +320,17 @@ fun Modifier.auroraFrame(shape: Shape = RoundedCornerShape(16.dp)): Modifier {
             repeatMode = RepeatMode.Restart
         )
     )
+    // خواندن رنگ‌های تم در کانتکست کامپوزبل (پیش از ورود به لامبدای رسم)
+    val cPrimary = NeonPurple
+    val cAccent = NeonGreen
+    val cGold = Gold
     return this.drawWithContent {
         drawContent()
         val t = (1f + kotlin.math.sin(phase * 2f * Math.PI.toFloat())) / 2f
         val colors = listOf(
-            lerp(NeonPurple, Gold, t),
-            lerp(Gold, NeonGreen, t),
-            lerp(NeonGreen, NeonPurple, t)
+            lerp(cPrimary, cGold, t),
+            lerp(cGold, cAccent, t),
+            lerp(cAccent, cPrimary, t)
         )
         val stroke = 3.dp.toPx()
         val inset = stroke / 2f

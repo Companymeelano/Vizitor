@@ -86,14 +86,14 @@ import ir.atiran.vizitor.util.toFaDigits
 import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
 
-/** حاشیه ظریف بنفشِ یکسان برای جدول‌های سلطنتی داخل کارت‌ها. */
-private val RoyalTableBorder = Color(0x33B04BF8)
-
 /** گرادیان هشدار بدهی — سرخ تم با هایلایت ملایم. */
 private val DebtBarColors = listOf(Color(0xFFFF4D6D), Color(0xFFFF8FA3))
 
-/** گرادیان سلطنتی بنفش→طلایی برای سهم فروش کالاها. */
-private val ProductBarColors = listOf(NeonPurple, Gold)
+/** حاشیه ظریف یکسان برای جدول‌های سلطنتی داخل کارت‌ها — از رنگ اصلی تم. */
+private val RoyalTableBorder: Color @Composable get() = NeonPurple.copy(alpha = 0.20f)
+
+/** گرادیان سلطنتی (رنگ اصلی→طلایی) برای سهم فروش کالاها — از پالت تم. */
+private val ProductBarColors: List<Color> @Composable get() = listOf(NeonPurple, Gold)
 
 @Composable
 fun DashboardScreen(viewModel: VizitorViewModel) {

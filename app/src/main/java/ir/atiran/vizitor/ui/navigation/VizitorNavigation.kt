@@ -81,6 +81,7 @@ import ir.atiran.vizitor.ui.theme.DarkSlateElevated
 import ir.atiran.vizitor.ui.theme.GlassBorder
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonPurple
+import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import ir.atiran.vizitor.ui.theme.NeonPurpleGlow
 import ir.atiran.vizitor.ui.theme.TextSecondary
 
@@ -249,7 +250,7 @@ private fun VizitorBottomBar(
                 .size(64.dp)
                 .clip(CircleShape)
                 .background(
-                    Brush.linearGradient(listOf(Color(0xFF7A2FB8), NeonPurple))
+                    Brush.linearGradient(listOf(NeonPurpleDark, NeonPurple))
                 )
                 .border(2.dp, Gold.copy(alpha = 0.7f), CircleShape)
                 .padding(0.dp),
@@ -283,7 +284,7 @@ private fun VizitorBottomBar(
                         ) {
                             Text(
                                 "$count",
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onSecondary,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold)
                             )
                         }

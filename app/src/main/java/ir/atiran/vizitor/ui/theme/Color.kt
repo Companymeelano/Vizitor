@@ -1,42 +1,52 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Vizitor — آتیران ویزیتور | پالت رنگی PremiumUX
+ *  Vizitor — آتیران ویزیتور | پالت رنگی پویا (تم‌پذیر)
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
- *  Dark Slate Base + Neon Purple CTA + Neon Green Success + Gold VIP
+ *  تمام نام‌های رنگی قبلی حفظ شده‌اند، اما حالا به‌جای مقدار ثابت، از
+ *  LocalVizitorPalette خوانده می‌شوند؛ بنابراین با تعویض تم (تیره/روشن
+ *  لاکچری) رنگ کل برنامه خودکار و هماهنگ تغییر می‌کند — بدون تغییر در
+ *  کد صفحه‌ها. تعریف پالت‌ها: Themes.kt
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.ui.theme
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// ── پس‌زمینه پایه: خاکستری تیره متمایل به مشکی (Dark Slate) ────────────────
-val DarkSlate = Color(0xFF0B0E13)
-val DarkSlateElevated = Color(0xFF12161D)
-val DarkSlateDeep = Color(0xFF07090C)
+// ── سطوح پایه ───────────────────────────────────────────────────────────────
+val DarkSlate: Color @Composable get() = vizitorPalette.background
+val DarkSlateElevated: Color @Composable get() = vizitorPalette.surface
+val DarkSlateDeep: Color @Composable get() = vizitorPalette.surfaceDeep
 
-// ── بنفش نئونی: دکمه‌های اصلی اکشن (CTA) و آیکون‌های فعال ──────────────────
-val NeonPurple = Color(0xFFB04BF8)
-val NeonPurpleDark = Color(0xFF7A2FB8)
-val NeonPurpleGlow = Color(0x66B04BF8)
+// ── بنفش اصلی (CTA) ─────────────────────────────────────────────────────────
+val NeonPurple: Color @Composable get() = vizitorPalette.primary
+val NeonPurpleDark: Color @Composable get() = vizitorPalette.primaryDark
+val NeonPurpleGlow: Color @Composable get() = vizitorPalette.primary.copy(alpha = 0.40f)
 
-// ── سبز نئونی: موفقیت، تارگت فروش، پورسانت، افزودن به سبد ─────────────────
-val NeonGreen = Color(0xFF2BFF88)
-val NeonGreenDark = Color(0xFF0FBF62)
-val NeonGreenGlow = Color(0x592BFF88)
+// ── سبز موفقیت/تارگت ────────────────────────────────────────────────────────
+val NeonGreen: Color @Composable get() = vizitorPalette.accent
+val NeonGreenDark: Color @Composable get() = vizitorPalette.accentDark
+val NeonGreenGlow: Color @Composable get() = vizitorPalette.accent.copy(alpha = 0.35f)
 
-// ── طلایی: حاشیه‌ها، مشتریان VIP، مدال‌های عملکرد ──────────────────────────
-val Gold = Color(0xFFFFD166)
-val GoldDark = Color(0xFFC99B2E)
-val GoldGlow = Color(0x40FFD166)
+// ── طلایی VIP ───────────────────────────────────────────────────────────────
+val Gold: Color @Composable get() = vizitorPalette.gold
+val GoldDark: Color @Composable get() = vizitorPalette.goldDark
+val GoldGlow: Color @Composable get() = vizitorPalette.gold.copy(alpha = 0.25f)
 
-// ── شیشه (Glassmorphism) ───────────────────────────────────────────────────
-val GlassFill = Color(0x14FFFFFF)
-val GlassFillStrong = Color(0x1F1A2130)
-val GlassBorder = Color(0x33FFFFFF)
-val GlassHighlight = Color(0x22FFFFFF)
+// ── شیشه ────────────────────────────────────────────────────────────────────
+val GlassFill: Color @Composable get() = vizitorPalette.textPrimary.copy(alpha = 0.06f)
+val GlassFillStrong: Color @Composable get() = vizitorPalette.surface.copy(alpha = 0.92f)
+val GlassBorder: Color @Composable get() = vizitorPalette.glassBorder
+val GlassHighlight: Color @Composable get() = vizitorPalette.topStreak
 
-// ── وضعیت‌ها ───────────────────────────────────────────────────────────────
-val DangerRed = Color(0xFFFF4D6D)
-val TextPrimary = Color(0xFFF2F4F8)
-val TextSecondary = Color(0xFF9AA3B2)
+// ── متن‌ها و وضعیت‌ها ───────────────────────────────────────────────────────
+val DangerRed: Color @Composable get() = vizitorPalette.danger
+val TextPrimary: Color @Composable get() = vizitorPalette.textPrimary
+val TextSecondary: Color @Composable get() = vizitorPalette.textSecondary
+
+/** متن برجسته روی سطوح سلطنتی (یاسی در تم تیره، بنفش عمیق در تم روشن). */
+val AccentText: Color @Composable get() = vizitorPalette.accentText
+
+/** ریل نمودار دونات و نوارهای خاکستری پیشرفت. */
+val DonutTrack: Color @Composable get() = vizitorPalette.donutTrack
