@@ -58,8 +58,11 @@ import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.ProductEntity
 import ir.atiran.vizitor.ui.components.GlassCard
+import ir.atiran.vizitor.ui.components.MicButton
 import ir.atiran.vizitor.ui.components.MilanoFooter
+import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.components.goldBorder
+import ir.atiran.vizitor.ui.components.rememberVoiceSearch
 import ir.atiran.vizitor.ui.components.tilt3D
 import ir.atiran.vizitor.ui.theme.DangerRed
 import ir.atiran.vizitor.ui.theme.Gold
@@ -76,6 +79,10 @@ fun CatalogScreen(
 ) {
     val products by viewModel.products.collectAsState()
     var query by remember { mutableStateOf("") }
+    val startVoice = rememberVoiceSearch(
+        onResult = { query = it; viewModel.showToast("جستجوی صوتی: «$it»") },
+        onUnavailable = { viewModel.showToast("ورودی صوتی روی این دستگاه در دسترس نیست 🎙️") }
+    )
     val filtered = remember(products, query) {
         if (query.isBlank()) products
         else products.filter { it.name.contains(query) || it.code.contains(query) }
@@ -91,14 +98,18 @@ fun CatalogScreen(
         ) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                 Column {
-                    Text("ویترین کالا", style = MaterialTheme.typography.displaySmall)
+                    ShimmerGoldText("ویترین کالا")
                     Text(
                         "کاتالوگ زنده با موجودی لحظه‌ای",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
                     Spacer(Modifier.height(12.dp))
-                    SearchField(query) { query = it }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { SearchField(query) { query = it } }
+                        Spacer(Modifier.width(8.dp))
+                        MicButton(onClick = { startVoice() })
+                    }
                 }
             }
 

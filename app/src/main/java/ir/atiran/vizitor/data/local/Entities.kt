@@ -104,3 +104,9 @@ data class CartItemEntity(
     val quantity: Double,
     val stock: Double
 )
+
+/** خروجی غیرموجودیتی: پرفروش‌ترین‌ها (پروجکشن کوئری). */
+data class TopProduct(
+    val productName: String,
+    val total: Double
+)

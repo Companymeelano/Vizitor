@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Icon
@@ -51,6 +52,7 @@ import ir.atiran.vizitor.ui.components.NeonDonutChart
 import ir.atiran.vizitor.ui.components.SectionTitle
 import ir.atiran.vizitor.ui.components.StatusChip
 import ir.atiran.vizitor.ui.components.StatusDot
+import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.components.goldBorder
 import ir.atiran.vizitor.ui.theme.DangerRed
 import ir.atiran.vizitor.ui.theme.Gold
@@ -79,7 +81,7 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
     ) {
         item {
             Column {
-                Text("پیشخوان من", style = MaterialTheme.typography.displaySmall)
+                ShimmerGoldText("پیشخوان من")
                 Text(
                     "نمای هوشمند فروش امروز شما",
                     style = MaterialTheme.typography.bodyMedium,
@@ -159,6 +161,11 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
                     }
                 }
             }
+        }
+
+        // ── ویجت پرفروش‌ترین‌ها (از فاکتورهای محلی / سال مالی) ────────────────
+        item {
+            TopSellersCard(viewModel.topProducts.collectAsState().value)
         }
 
         // ── لیست هوشمند مشتریان نیازمند پیگیری (افت خرید) ───────────────────
@@ -301,6 +308,57 @@ private fun FollowUpCard(customer: CustomerEntity, onPick: () -> Unit) {
                 text = "افت ${customer.purchaseDropPercent.toFaNumber()}٪",
                 color = DangerRed
             )
+        }
+    }
+}
+
+/**
+ * ویجت پرفروش‌ترین‌ها — رتبه‌های طلایی بر پایه فاکتورهای محلی/سال مالی.
+ */
+@Composable
+private fun TopSellersCard(tops: List<ir.atiran.vizitor.data.local.TopProduct>) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            SectionTitle(
+                text = "پرفروش‌ترین‌های شما",
+                icon = Icons.Filled.EmojiEvents
+            )
+            Spacer(Modifier.height(8.dp))
+            if (tops.isEmpty()) {
+                Text(
+                    "پس از اولین فاکتور، پرفروش‌ها اینجا می‌درخشند. ✨",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+            tops.forEachIndexed { i, top ->
+                Row(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        (i + 1).toFaNumber(),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = when (i) {
+                            0 -> Gold
+                            1 -> Color(0xFFD7DEE9)
+                            else -> Color(0xFFC98A5B)
+                        }
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        top.productName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1
+                    )
+                    Text(
+                        "${top.total.toFaNumber()} واحد",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeonGreen
+                    )
+                }
+            }
         }
     }
 }

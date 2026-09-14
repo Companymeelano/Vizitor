@@ -14,7 +14,9 @@ import ir.atiran.vizitor.data.local.CartItemEntity
 import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.data.local.InvoiceEntity
 import ir.atiran.vizitor.data.local.ProductEntity
-import ir.atiran.vizitor.data.repository.ServerConfig
+import ir.atiran.vizitor.data.local.SeedData
+import ir.atiran.vizitor.data.local.TopProduct
+import ir.atiran.vizitor.data.local.InvoiceItemEntity
 import ir.atiran.vizitor.data.repository.SyncReport
 import ir.atiran.vizitor.data.repository.VizitorRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +44,29 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
     val config = repo.config.stateIn(viewModelScope, SharingStarted.Lazily, ServerConfig())
 
     val dailyTarget: Long get() = repo.dailyTarget
+
+    // ── پرفروش‌ترین‌ها (ترکیب فاکتورهای محلی + سال مالی) ─────────────────────
+    private val _topProducts = MutableStateFlow<List<TopProduct>>(emptyList())
+    val topProducts: StateFlow<List<TopProduct>> = _topProducts.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            invoices.collect {
+                _topProducts.value = repo.topProducts().ifEmpty { seedTopProducts() }
+            }
+        }
+    }
+
+    private fun seedTopProducts(): List<TopProduct> =
+        SeedData.salMali
+            .groupBy { it.productName }
+            .map { (name, rows) -> TopProduct(name, rows.sumOf { it.totalQty }) }
+            .sortedByDescending { it.total }
+            .take(3)
+
+    /** اقلام یک فاکتور (برای اشتراک‌گذاری PDF/Word/تصویر). */
+    fun invoiceItems(invoiceId: Long, onItems: (List<InvoiceItemEntity>) -> Unit) =
+        viewModelScope.launch { onItems(repo.itemsFor(invoiceId)) }
 
     // ── وضعیت صفحه ──────────────────────────────────────────────────────────
     private val _selectedCustomer = MutableStateFlow<CustomerEntity?>(null)

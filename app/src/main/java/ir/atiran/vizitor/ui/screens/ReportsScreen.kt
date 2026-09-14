@@ -10,6 +10,13 @@
 package ir.atiran.vizitor.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,6 +30,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.History
@@ -57,6 +67,7 @@ import ir.atiran.vizitor.ui.components.NeonGreenButton
 import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.SectionTitle
 import ir.atiran.vizitor.ui.components.StatusChip
+import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.theme.DangerRed
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
@@ -72,6 +83,8 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
     val invoices by viewModel.invoices.collectAsState()
     val config by viewModel.config.collectAsState()
     val syncing by viewModel.syncing.collectAsState()
+    val context = LocalContext.current
+    var shareTarget by remember { mutableStateOf<InvoiceEntity?>(null) }
 
     // فرم پیکربندی سرور
     var ip by remember(config.serverIp) { mutableStateOf(config.serverIp) }
@@ -95,7 +108,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
     ) {
         item {
             Column {
-                Text("گزارشات و تنظیمات", style = MaterialTheme.typography.displaySmall)
+                ShimmerGoldText("گزارشات و تنظیمات")
                 Text(
                     "تاریخچه فروش، پیکربندی سرور و همگام‌سازی",
                     style = MaterialTheme.typography.bodyMedium,
@@ -120,8 +133,11 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
         }
 
         items(invoices.take(30), key = { it.id }) { invoice ->
-            InvoiceHistoryRow(invoice)
+            InvoiceHistoryRow(invoice) { shareTarget = invoice }
         }
+
+        // ── کارنامه عملکرد ماهانه با رتبه مدال ─────────────────────────────
+        item { MonthlyPerformanceCard(invoices, viewModel.dailyTarget) }
 
         // ── پیکربندی سرور ───────────────────────────────────────────────────
         item { SectionTitle(text = "پیکربندی سرور آتیران", icon = Icons.Filled.Dns) }
@@ -251,7 +267,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
-                        "آتیران ویزیتور — نسخه ۱٫۲٫۰",
+                        "آتیران ویزیتور — نسخه ۱٫۳٫۰",
                         style = MaterialTheme.typography.titleMedium,
                         color = Gold
                     )
@@ -275,10 +291,14 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
 
         item { MilanoFooter() }
     }
+
+    shareTarget?.let { inv ->
+        ShareInvoiceDialog(inv, viewModel) { shareTarget = null }
+    }
 }
 
 @Composable
-private fun InvoiceHistoryRow(invoice: InvoiceEntity) {
+private fun InvoiceHistoryRow(invoice: InvoiceEntity, onShare: () -> Unit) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -316,6 +336,127 @@ private fun InvoiceHistoryRow(invoice: InvoiceEntity) {
                     InvoiceStatus.FAILED -> DangerRed
                 }
             )
+            Spacer(Modifier.width(6.dp))
+            IconButton(onClick = onShare) {
+                Icon(
+                    Icons.Filled.Share,
+                    contentDescription = "اشتراک فاکتور",
+                    tint = NeonGreen,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
+    }
+}
+
+/**
+ * کارنامه عملکرد ماهانه — رتبه‌بندی مدال برنزی/نقره‌ای/طلایی.
+ */
+@Composable
+private fun MonthlyPerformanceCard(invoices: List<InvoiceEntity>, dailyTarget: Long) {
+    val cal = java.util.Calendar.getInstance().apply {
+        set(java.util.Calendar.DAY_OF_MONTH, 1)
+        set(java.util.Calendar.HOUR_OF_DAY, 0)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }
+    val monthSales = invoices
+        .filter { it.createdAt >= cal.timeInMillis && it.status != InvoiceStatus.FAILED }
+        .sumOf { it.finalAmount }
+    val target = dailyTarget * 26
+    val ratio = if (target > 0) monthSales.toFloat() / target else 0f
+    val rank = when {
+        ratio >= 1f -> "مدال طلایی 🥇"
+        ratio >= 0.5f -> "مدال نقره‌ای 🥈"
+        ratio >= 0.25f -> "مدال برنزی 🥉"
+        else -> "در مسیر کسب مدال 💪"
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            SectionTitle(text = "کارنامه عملکرد ماهانه", icon = Icons.Filled.MilitaryTech)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(rank, style = MaterialTheme.typography.titleMedium, color = Gold)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    monthSales.toFaPrice(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NeonGreen
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1C2330))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(ratio.coerceIn(0.02f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFC98A5B), Color(0xFFD7DEE9), Gold)
+                            )
+                        )
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "هدف ماهانه: ${target.toFaPrice()} — ${(ratio * 100).toInt().toFaNumber()}٪ محقق شده",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+    }
+}
+
+/** دیالوگ اشتراک فاکتور: PDF / Word / تصویر / متن. */
+@Composable
+private fun ShareInvoiceDialog(
+    invoice: InvoiceEntity,
+    viewModel: ir.atiran.vizitor.VizitorViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("اشتراک فاکتور ${invoice.serverId ?: ("#" + invoice.id)}") },
+        text = {
+            Column {
+                ShareOption("📄 فایل PDF") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.sharePdf(context, invoice, items)
+                    }
+                }
+                ShareOption("📝 فایل Word") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.shareWord(context, invoice, items)
+                    }
+                }
+                ShareOption("🖼️ تصویر PNG") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.shareImage(context, invoice, items)
+                    }
+                }
+                ShareOption("📨 متن پیام") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.shareText(context, invoice, items)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("بستن") } }
+    )
+}
+
+@Composable
+private fun ShareOption(label: String, onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Text(label, color = NeonGreen, modifier = Modifier.fillMaxWidth())
     }
 }

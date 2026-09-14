@@ -20,6 +20,7 @@ import ir.atiran.vizitor.data.local.InvoiceStatus
 import ir.atiran.vizitor.data.local.ProductEntity
 import ir.atiran.vizitor.data.local.SalMaliHistoryEntity
 import ir.atiran.vizitor.data.local.SeedData
+import ir.atiran.vizitor.data.local.TopProduct
 import ir.atiran.vizitor.data.remote.InvoiceHeaderRequest
 import ir.atiran.vizitor.data.remote.InvoiceLineRequest
 import ir.atiran.vizitor.data.remote.RetrofitClient
@@ -225,6 +226,11 @@ class VizitorRepository(private val context: Context) {
 
     suspend fun salMaliFor(customerId: Int): List<SalMaliHistoryEntity> =
         db.salMali().forCustomer(customerId)
+
+    suspend fun topProducts(): List<TopProduct> = db.invoices().topProducts()
+
+    suspend fun itemsFor(invoiceId: Long): List<InvoiceItemEntity> =
+        db.invoices().getItems(invoiceId)
 
     suspend fun saveConfig(config: ServerConfig) = settings.save(config)
 

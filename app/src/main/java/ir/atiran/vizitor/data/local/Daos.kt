@@ -88,6 +88,13 @@ interface InvoiceDao {
 
     @Query("SELECT COUNT(*) FROM invoices WHERE status = 'PENDING' OR status = 'FAILED'")
     fun observePendingCount(): Flow<Int>
+
+    /** پرفروش‌ترین کالاها از اقلام فاکتورهای محلی (ویجت پرفروش‌ها). */
+    @Query(
+        "SELECT productName AS productName, SUM(quantity) AS total " +
+                "FROM invoice_items GROUP BY productName ORDER BY total DESC LIMIT 3"
+    )
+    suspend fun topProducts(): List<TopProduct>
 }
 
 @Dao

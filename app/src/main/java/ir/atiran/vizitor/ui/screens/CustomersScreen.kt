@@ -12,6 +12,13 @@ package ir.atiran.vizitor.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import ir.atiran.vizitor.ui.components.rememberVoiceSearch
+import ir.atiran.vizitor.ui.components.ShimmerGoldText
+import ir.atiran.vizitor.ui.components.MiniRouteMap
+import ir.atiran.vizitor.ui.components.MicButton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,6 +36,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -70,13 +78,23 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
     val customers by viewModel.customers.collectAsState()
     val context = LocalContext.current
     var optimized by remember { mutableStateOf(false) }
+    var showMap by remember { mutableStateOf(true) }
+    var query by remember { mutableStateOf("") }
+    val startVoice = rememberVoiceSearch(
+        onResult = { query = it; viewModel.showToast("جستجوی صوتی مشتری: «$it»") },
+        onUnavailable = { viewModel.showToast("ورودی صوتی روی این دستگاه در دسترس نیست 🎙️") }
+    )
 
     // موقعیت فرضی ویزیتور (در نسخه عملیاتی از FusedLocation استفاده می‌شود)
     val myLat = 35.7219; val myLng = 51.3815
 
-    val list = remember(customers, optimized) {
-        if (optimized) customers.sortedBy { distanceKm(myLat, myLng, it.lat, it.lng) }
-        else customers
+    val list = remember(customers, optimized, query) {
+        val base = if (query.isBlank()) customers
+        else customers.filter {
+            it.name.contains(query) || it.code.contains(query) || it.city.contains(query)
+        }
+        if (optimized) base.sortedBy { distanceKm(myLat, myLng, it.lat, it.lng) }
+        else base
     }
 
     LazyColumn(
@@ -86,18 +104,46 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
     ) {
         item {
             Column {
-                Text("گشت‌زنی", style = MaterialTheme.typography.displaySmall)
+                ShimmerGoldText("گشت‌زنی")
                 Text(
                     "مدیریت مسیر ویزیت و وضعیت اعتباری مشتریان",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
                 Spacer(Modifier.height(10.dp))
-                NeonGreenButton(
-                    text = if (optimized) "مسیر بهینه شد ✅ (نمایش ترتیب پیش‌فرض)" else "بهینه‌سازی مسیر توزیع",
-                    icon = Icons.Filled.Route,
-                    onClick = { optimized = !optimized }
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { CustomerSearchField(query) { query = it } }
+                    Spacer(Modifier.width(8.dp))
+                    MicButton(onClick = { startVoice() })
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NeonGreenButton(
+                        text = if (optimized) "مسیر بهینه شد ✅ (ترتیب پیش‌فرض)" else "بهینه‌سازی مسیر توزیع",
+                        icon = Icons.Filled.Route,
+                        onClick = { optimized = !optimized },
+                        modifier = Modifier.weight(1f)
+                    )
+                    NeonGreenButton(
+                        text = if (showMap) "پنهان‌کردن نقشه" else "نقشه داخلی",
+                        icon = Icons.Filled.NearMe,
+                        onClick = { showMap = !showMap }
+                    )
+                }
+            }
+        }
+
+        // ── نقشه داخلی با نشانگرهای طلایی و مسیر بهینه ────────────────────────
+        if (showMap) {
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    MiniRouteMap(
+                        customers = list,
+                        route = list,
+                        myLat = myLat,
+                        myLng = myLng
+                    )
+                }
             }
         }
 
@@ -243,5 +289,38 @@ private fun CustomerCard(
                 ) { Icon(Icons.Filled.NearMe, contentDescription = "مسیریابی") }
             }
         }
+    }
+}
+
+/** فیلد جستجوی مشتری (نام/کد/شهر) با سبک شیشه‌ای. */
+@Composable
+private fun CustomerSearchField(value: String, onChange: (String) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0x14FFFFFF))
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Filled.Search, contentDescription = null,
+            tint = TextSecondary, modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        androidx.compose.material3.TextField(
+            value = value,
+            onValueChange = onChange,
+            placeholder = { Text("جستجوی مشتری (نام/کد/شهر)…", color = TextSecondary) },
+            singleLine = true,
+            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = NeonPurple
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

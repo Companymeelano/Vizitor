@@ -75,6 +75,8 @@ import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.CartItemEntity
 import ir.atiran.vizitor.ui.components.GlassCard
+import ir.atiran.vizitor.ui.components.GoldBurstOverlay
+import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.components.MilanoFooter
 import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.SectionTitle
@@ -104,6 +106,9 @@ fun CartScreen(viewModel: VizitorViewModel) {
     val signaturePaths = remember { mutableStateListOf<Path>() }
     var hasSignature by remember { mutableStateOf(false) }
 
+    var goldBurst by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 110.dp),
@@ -111,7 +116,7 @@ fun CartScreen(viewModel: VizitorViewModel) {
     ) {
         item {
             Column {
-                Text("سبد سفارش", style = MaterialTheme.typography.displaySmall)
+                ShimmerGoldText("سبد سفارش")
                 Text(
                     "صدور فاکتور هوشمند برای مشتریان آتیران",
                     style = MaterialTheme.typography.bodyMedium,
@@ -319,6 +324,7 @@ fun CartScreen(viewModel: VizitorViewModel) {
                     viewModel.issueInvoice(png, cashSettlement) { invoice ->
                         signaturePaths.clear()
                         hasSignature = false
+                        goldBurst = true // ❄️✨ افکت یخ/باران طلایی
                         viewModel.showToast(
                             "فاکتور ${invoice.id.toFaNumber()} صادر شد ✅ " +
                                     (if (invoice.discount > 0) "با ${invoice.discount.toFaPrice()} کسورات" else "")
@@ -330,6 +336,10 @@ fun CartScreen(viewModel: VizitorViewModel) {
         }
 
         item { MilanoFooter() }
+    }
+
+    // جلوه یک‌باره یخ طلایی هنگام ثبت فاکتور
+    GoldBurstOverlay(active = goldBurst) { goldBurst = false }
     }
 }
 

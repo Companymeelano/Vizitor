@@ -35,7 +35,10 @@ class SyncWorker(
         val repo = VizitorRepository(applicationContext)
         return try {
             val report = repo.syncAll()
-            notifyUser("همگام‌سازی آتیران", report.summary)
+            val title = if (report.pushedInvoices > 0)
+                "✅ فاکتور شما در آتیران ثبت و تأیید شد"
+            else "همگام‌سازی آتیران"
+            notifyUser(title, report.summary)
             if (report.errors.isEmpty()) Result.success() else Result.retry()
         } catch (e: Exception) {
             Result.retry()

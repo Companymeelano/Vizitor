@@ -19,6 +19,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -156,4 +158,79 @@ fun LuxurySurface(
             .goldRing(shape, if (enabled) 1.6.dp else 1.dp),
         content = content
     )
+}
+
+/**
+ * عنوان طلایی با درخشش متحرک آرام (Shimmer) — یک لایه متن سبک.
+ */
+@Composable
+fun ShimmerGoldText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle =
+        androidx.compose.material3.MaterialTheme.typography.displaySmall
+) {
+    var widthPx by remember { mutableFloatStateOf(1f) }
+    val transition = rememberInfiniteTransition(label = "titleShine")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "titlePhase"
+    )
+    val sweep = widthPx * 0.35f
+    val startX = -sweep + phase * (widthPx + sweep * 2)
+    androidx.compose.foundation.text.BasicText(
+        text = text,
+        modifier = modifier.onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) },
+        style = style,
+        color = {
+            Brush.linearGradient(
+                colors = listOf(Gold, Color(0xFFFFF7CF), Gold),
+                start = Offset(startX, 0f),
+                end = Offset(startX + sweep, 0f)
+            )
+        }
+    )
+}
+
+/**
+ * انفجار ذرات طلایی — جلوه یک‌باره (۱٫۲ ثانیه) هنگام صدور موفق فاکتور.
+ * بدون انیمیشن دائمی: پس از پایان کاملاً از ترکیب خارج می‌شود (ضدهنگ).
+ */
+@Composable
+fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
+    if (!active) return
+    val progress = remember(active) { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(active) {
+        progress.snapTo(0f)
+        progress.animateTo(
+            1f,
+            tween(1200, easing = androidx.compose.animation.core.FastOutSlowIn)
+        )
+        onFinished()
+    }
+    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val maxR = size.minDimension * 0.5f
+        val p = progress.value
+        repeat(42) { i ->
+            val angle = (i * 137.5f) * (kotlin.math.PI / 180.0) // زاویه طلایی
+            val speed = 0.55f + ((i * 29) % 45) / 100f
+            val dist = p * maxR * speed
+            val x = cx + kotlin.math.cos(angle) * dist
+            val y = cy + kotlin.math.sin(angle) * dist * 0.8f + p * p * 120f
+            val sz = ((3 + (i % 4) * 2).dp.toPx()) * (1f - p * 0.5f)
+            val color = when (i % 3) {
+                0 -> Gold
+                1 -> ir.atiran.vizitor.ui.theme.NeonPurple
+                else -> Color(0xFFFFF7CF)
+            }
+            drawRect(color = color, topLeft = Offset(x, y), size = Size(sz, sz), alpha = 1f - p)
+        }
+    }
 }
