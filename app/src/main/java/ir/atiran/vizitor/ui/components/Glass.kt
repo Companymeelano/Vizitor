@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.ui.theme.DarkSlate
@@ -85,7 +87,7 @@ fun Modifier.glassPanel(
         .border(borderWidth, borderColor, shape)
 }
 
-/** کارت کریستالی آماده استفاده با پدینگ داخلی استاندارد. */
+/** کارت کریستالی آماده استفاده با پدینگ داخلی استاندارد و ورود سینمایی. */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
@@ -93,8 +95,27 @@ fun GlassCard(
     borderColor: Color = GlassBorder,
     content: @Composable BoxScope.() -> Unit
 ) {
+    // ✨ ورود سینمایی: محو + بالاآمدن + بزرگ‌نمایی ملایم (یک‌بار، سبک و روان)
+    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        enter.animateTo(
+            1f,
+            androidx.compose.animation.core.tween(
+                durationMillis = 450,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing
+            )
+        )
+    }
     Box(
         modifier = modifier
+            .graphicsLayer {
+                val e = enter.value
+                this.alpha = e
+                val s = 0.955f + 0.045f * e
+                scaleX = s
+                scaleY = s
+                translationY = (1f - e) * 30f
+            }
             .glassPanel(shape = shape, borderColor = borderColor)
             .padding(16.dp),
         content = content
@@ -247,7 +268,32 @@ fun Modifier.dashboardBackdrop(): Modifier {
             )
         }
 
-        // ۳) غبار طلایی چشمک‌زن
+        // ۳) پرتوهای نور خداگونه مورب — دو ستون نور پهن و بسیار کم‌رنگ که آرام می‌لغزند
+        repeat(2) { beam ->
+            val beamT = (sin(phase * 0.5f + beam * 2.6f) + 1f) / 2f
+            val cx = w * (0.18f + beam * 0.5f) + (beamT - 0.5f) * w * 0.16f
+            val bw = w * 0.15f
+            val slope = h * 0.5f
+            drawPath(
+                path = Path().apply {
+                    moveTo(cx - bw / 2f, -40f)
+                    lineTo(cx + bw / 2f, -40f)
+                    lineTo(cx + bw / 2f - slope, h + 40f)
+                    lineTo(cx - bw / 2f - slope, h + 40f)
+                    close()
+                },
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        p.goldHighlight.copy(alpha = 0.026f + beamT * 0.018f),
+                        Color.Transparent
+                    ),
+                    startY = 0f,
+                    endY = h
+                )
+            )
+        }
+
+        // ۴) غبار طلایی چشمک‌زن
         stardust.forEach { star ->
             val tw = (sin(twinkle * star.speed + star.x * 12f) + 1f) / 2f
             val alpha = 0.10f + tw * 0.45f
@@ -257,7 +303,7 @@ fun Modifier.dashboardBackdrop(): Modifier {
             drawCircle(p.goldHighlight.copy(alpha = alpha), radius = star.r, center = Offset(cx, cy))
         }
 
-        // ۴) لایه غبار ملایم یکپارچه‌کننده
+        // ۵) لایه غبار ملایم یکپارچه‌کننده
         drawRoundRect(color = dust, topLeft = Offset.Zero, size = size, cornerRadius = CornerRadius.Zero)
     }
 }

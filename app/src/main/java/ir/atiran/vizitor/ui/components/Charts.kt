@@ -9,6 +9,11 @@
  */
 package ir.atiran.vizitor.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -79,6 +86,16 @@ fun NeonDonutChart(
     // رنگ‌های تم — خوانده شده در کانتکست کامپوزبل پیش از ورود به Canvas
     val haloColor = NeonPurple.copy(alpha = 0.10f)
     val tickColor = Gold
+    // مدار چرخان تیک‌های طلایی ✨ (حرکت ابدی، خیلی آهسته)
+    val tickOrbit by rememberInfiniteTransition(label = "tickOrbit").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(18000, easing = LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+        ),
+        label = "tickOrbitV"
+    )
     val animated by produceState(initialValue = 0f, key1 = progress) {
         var current = 0f
         val step = progress / 40f
@@ -118,9 +135,9 @@ fun NeonDonutChart(
                 topLeft = tl, size = arcSize,
                 style = Stroke(stroke, cap = StrokeCap.Round)
             )
-            // ۳) تیک‌های طلایی دور نمودار (۱۲ نشان)
+            // ۳) تیک‌های طلایی چرخان دور نمودار (۱۲ نشان مداری)
             repeat(12) { i ->
-                val a = Math.toRadians((i * 30 - 90).toDouble())
+                val a = Math.toRadians((i * 30 + tickOrbit - 90).toDouble())
                 val r1 = this.size.width / 2f - 3f
                 val r2 = this.size.width / 2f - 9f
                 val cx = this.size.width / 2f
@@ -188,6 +205,14 @@ fun RoyalBarChart(
     val cBarTop = vizitorPalette.accentText
     val cLabelArgb = TextSecondary.toArgb()
     val cValueArgb = Gold.toArgb()
+    // رشد فنری ستون‌ها هنگام ورود 🌱 (یک‌بار، بدون هزینه ماندگار)
+    val grow = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        grow.animateTo(
+            1f,
+            androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = 240f)
+        )
+    }
     Canvas(modifier = modifier) {
         if (data.isEmpty()) return@Canvas
         val w = size.width
@@ -202,7 +227,7 @@ fun RoyalBarChart(
 
         data.forEachIndexed { i, entry ->
             val (label, v) = entry
-            val hVal = (v / max) * (base - 40f)
+            val hVal = (v / max) * (base - 40f) * grow.value
             val x = i * bw + (bw - barW) / 2f
             val y = base - hVal
 
@@ -255,7 +280,7 @@ fun RoyalBarChart(
                     size = Size(barW * 0.72f, 12f)
                 )
                 // مقدار بالای ستون
-                if (v > 0) {
+                if (v > 0 && grow.value > 0.9f) {
                     drawContext.canvas.nativeCanvas.drawText(
                         v.compactFa(),
                         x + barW / 2f,

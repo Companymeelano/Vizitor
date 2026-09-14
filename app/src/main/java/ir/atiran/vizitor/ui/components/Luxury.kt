@@ -117,6 +117,36 @@ fun Modifier.pressScale(target: Float = 0.96f): Modifier {
 }
 
 /**
+ * فشرده‌سازی سه‌بعدی هنگام لمس — دکمه واقعاً به درون لبه عمق فرو می‌رود
+ * و با فنریِ ملایم بازمی‌گردد. حس کلیدِ فیزیکیِ لوازم لوکس.
+ */
+@Composable
+fun Modifier.press3D(depth: Dp = 4.dp): Modifier {
+    var pressed by remember { mutableStateOf(false) }
+    val progress by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 520f),
+        label = "press3D"
+    )
+    val depthPx = with(androidx.compose.ui.platform.LocalDensity.current) { depth.toPx() }
+    return this
+        .graphicsLayer {
+            translationY = progress * depthPx
+            val s = 1f - progress * 0.025f
+            scaleX = s
+            scaleY = s
+        }
+        .pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                pressed = true
+                waitForUpOrCancellation()
+                pressed = false
+            }
+        }
+}
+
+/**
  * جاروب نور لاکچری: یک باریکه نور مورب که هر چند ثانیه یک‌بار از روی
  * سطح عبور می‌کند. فقط یک لایه draw سبک — بدون recomposition سنگین.
  */

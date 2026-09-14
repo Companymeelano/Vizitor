@@ -9,6 +9,12 @@
  */
 package ir.atiran.vizitor.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,19 +71,29 @@ fun NeonPurpleButton(
     val shape = RoundedCornerShape(26.dp)
     val p = vizitorPalette
     val face = 58.dp
-    val glowColor = p.primary.copy(alpha = 0.30f)
+    // نور تنفسی — تپش ملایم هاله زیر دکمه ✨
+    val breathe by rememberInfiniteTransition(label = "glowPulse").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2300, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glowPulseV"
+    )
+    val glowColor = p.primary.copy(alpha = 0.24f + breathe * 0.16f)
     Box(
         modifier = modifier
             .height(face + 6.dp)
-            .pressScale(target = 0.97f)
+            .press3D(depth = 4.dp)
             .drawBehind {
-                // هاله نور پرتابی زیر دکمه (حس شناور بودن)
+                // هاله نور تنفسی زیر دکمه (حس شناور و زنده بودن)
                 if (enabled) {
                     drawRoundRect(
                         brush = Brush.radialGradient(
                             colors = listOf(glowColor, Color.Transparent),
                             center = Offset(size.width / 2f, size.height),
-                            radius = size.minDimension * 2.2f
+                            radius = size.minDimension * (2.0f + breathe * 0.5f)
                         ),
                         cornerRadius = CornerRadius(30.dp.toPx())
                     )
@@ -161,11 +178,20 @@ fun NeonGreenButton(
     val shape = RoundedCornerShape(22.dp)
     val p = vizitorPalette
     val face = 50.dp
-    val glowColor = p.accent.copy(alpha = 0.28f)
+    val breathe2 by rememberInfiniteTransition(label = "glowPulse2").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2300, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glowPulse2V"
+    )
+    val glowColor = p.accent.copy(alpha = 0.22f + breathe2 * 0.14f)
     Box(
         modifier = modifier
             .height(face + 6.dp)
-            .pressScale(target = 0.97f)
+            .press3D(depth = 4.dp)
             .drawBehind {
                 if (enabled) {
                     drawRoundRect(
