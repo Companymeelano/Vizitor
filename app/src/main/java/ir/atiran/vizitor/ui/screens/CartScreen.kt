@@ -40,16 +40,18 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.window.Dialog
+import ir.atiran.vizitor.ui.components.RoyalHeader
+import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
 import ir.atiran.vizitor.ui.components.royalBorder
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -80,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.CartItemEntity
+import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.ui.components.GlassCard
 import ir.atiran.vizitor.ui.components.GoldBurstOverlay
 import ir.atiran.vizitor.ui.components.ShimmerGoldText
@@ -97,7 +100,6 @@ import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
 import java.io.ByteArrayOutputStream
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(viewModel: VizitorViewModel) {
     val items by viewModel.cartItems.collectAsState()
@@ -132,43 +134,68 @@ fun CartScreen(viewModel: VizitorViewModel) {
             }
         }
 
-        // ── انتخاب مشتری ────────────────────────────────────────────────────
+        // ── انتخاب مشتری — انتخابگر شیک با قابلیت «جستجو» ───────────────────
         item {
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                OutlinedTextField(
-                    value = selectedCustomer?.name ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("مشتری فاکتور") },
-                    placeholder = { Text("انتخاب مشتری…") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = NeonPurple,
-                        unfocusedBorderColor = Color(0x33FFFFFF),
-                        focusedLabelColor = NeonPurple,
-                        cursorColor = NeonPurple
-                    ),
+            var showPicker by remember { mutableStateOf(false) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color(0x0DFFFFFF))
+                    .royalBorder(RoundedCornerShape(18.dp))
+                    .clickable { showPicker = true }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor()
-                )
-                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(
-                        text = { Text("مشتری متفرقه") },
-                        onClick = {
-                            viewModel.selectCustomer(null); expanded = false
-                        }
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(NeonPurple, Color(0xFF2C0B4E)))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Person,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
-                    customers.forEach { customer ->
-                        DropdownMenuItem(
-                            text = { Text("${customer.name} — ${customer.groupName}") },
-                            onClick = {
-                                viewModel.selectCustomer(customer); expanded = false
-                            }
-                        )
-                    }
                 }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        selectedCustomer?.name ?: "جستجو و انتخاب مشتری فاکتور…",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+                        color = if (selectedCustomer != null) Color.Unspecified else TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        selectedCustomer?.let { "گروه ${it.groupName} • کد ${it.code}" }
+                            ?: "با نام، کد یا شهر جستجو کنید",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = "باز کردن لیست",
+                    tint = Gold,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            if (showPicker) {
+                CustomerPickerDialog(
+                    // مشتریان در انتظار تأیید حسابداری، قابل فاکتور نیستند
+                    customers = customers.filter { !it.pendingApproval },
+                    onDismiss = { showPicker = false },
+                    onPick = {
+                        viewModel.selectCustomer(it)
+                        showPicker = false
+                    }
+                )
             }
         }
 
@@ -479,4 +506,156 @@ private fun renderSignature(
     bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
     bitmap.recycle()
     return out.toByteArray()
+}
+
+/**
+ * ✨ دیالوگ جستجوی مشتری برای صدور فاکتور — جستجوی زنده بر اساس نام/کد/شهر،
+ * آواتار مینیاتوری، گروه و شهر مشتری + گزینه «مشتری متفرقه» در بالای لیست.
+ */
+@Composable
+private fun CustomerPickerDialog(
+    customers: List<CustomerEntity>,
+    onDismiss: () -> Unit,
+    onPick: (CustomerEntity?) -> Unit
+) {
+    var q by remember { mutableStateOf("") }
+    val filtered = remember(customers, q) {
+        if (q.isBlank()) customers
+        else customers.filter {
+            it.name.contains(q) || it.code.contains(q) || it.city.contains(q)
+        }
+    }
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(RoyalSurfaceBrush)
+                .royalBorder(RoundedCornerShape(24.dp))
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                RoyalHeader(text = "انتخاب مشتری فاکتور", icon = Icons.Filled.Person)
+                Spacer(Modifier.height(10.dp))
+                // فیلد جستجو
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0x14FFFFFF))
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.Search, contentDescription = null,
+                        tint = TextSecondary, modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    androidx.compose.material3.TextField(
+                        value = q,
+                        onValueChange = { q = it },
+                        placeholder = { Text("جستجوی مشتری (نام/کد/شهر)…", color = TextSecondary) },
+                        singleLine = true,
+                        colors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = NeonPurple
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Box(Modifier.height(300.dp)) {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item {
+                            PickerRow(
+                                title = "مشتری متفرقه (بدون ثبت در آتیران)",
+                                subtitle = "نخستین حذف انتخاب قبلی",
+                                initial = "●",
+                                tint = Gold,
+                                onClick = { onPick(null) }
+                            )
+                        }
+                        if (filtered.isEmpty()) {
+                            item {
+                                Text(
+                                    "مشتری‌ای مطابق جستجو یافت نشد ❌",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
+                        }
+                        items(filtered, key = { it.id }) { c ->
+                            PickerRow(
+                                title = c.name,
+                                subtitle = "گروه ${c.groupName} • ${c.city} • کد ${c.code}",
+                                initial = c.name.firstOrNull()?.toString() ?: "؟",
+                                tint = NeonPurple,
+                                onClick = { onPick(c) }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                NeonPurpleButton(
+                    text = "بستن",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+/** سطر مشتری در دیالوگ انتخابگر — آواتار کوچک + عنوان و زیرعنوان + کلیک انتخاب. */
+@Composable
+private fun PickerRow(
+    title: String,
+    subtitle: String,
+    initial: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0x0DFFFFFF))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.18f))
+                .border(1.dp, tint.copy(alpha = 0.45f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                initial,
+                color = tint,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
 }

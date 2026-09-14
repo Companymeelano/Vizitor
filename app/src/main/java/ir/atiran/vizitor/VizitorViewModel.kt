@@ -125,6 +125,17 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
 
     fun selectCustomer(customer: CustomerEntity?) { _selectedCustomer.value = customer }
 
+    /** ثبت مشتری جدید — محلی (در انتظار تأیید حسابداری) + تلاش ارسال به آتیران. */
+    fun addPendingCustomer(
+        name: String, group: String, city: String, address: String, phone: String
+    ) = viewModelScope.launch {
+        val (customer, pushed) = repo.addPendingCustomer(name, group, city, address, phone)
+        _toast.value = if (pushed)
+            "مشتری «${customer.name}» ثبت و برای تأیید به حسابداری آتیران ارسال شد 📨"
+        else
+            "مشتری «${customer.name}» محلی ثبت شد و در اولین سینک به آتیران ارسال می‌شود ⏳"
+    }
+
     fun findProductByBarcode(code: String, onResult: (ProductEntity?) -> Unit) =
         viewModelScope.launch {
             val p = repo.findByBarcode(code)

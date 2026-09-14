@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -77,7 +78,17 @@ import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.window.Dialog
+import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.RoyalHeader
+import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
 import ir.atiran.vizitor.ui.components.royalBorder
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -107,6 +118,7 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
     val context = LocalContext.current
     var optimized by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    var showAddCustomer by remember { mutableStateOf(false) }
     var statementCustomer by remember { mutableStateOf<CustomerEntity?>(null) }
     val invoices by viewModel.invoices.collectAsState()
     val startVoice = rememberVoiceSearch(
@@ -150,6 +162,14 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
                     text = if (optimized) "مسیر بهینه شد ✅ (بازگشت به ترتیب پیش‌فرض)" else "بهینه‌سازی مسیر ویزیت بر اساس نزدیکی جغرافیایی",
                     icon = Icons.Filled.Route,
                     onClick = { optimized = !optimized },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(10.dp))
+                // ✨ درگاه ثبت مشتری جدید — ارسال برای تأیید به حسابداری آتیران
+                NeonPurpleButton(
+                    text = "افزودن مشتری جدید (ارسال برای تأیید حسابداری)",
+                    icon = Icons.Filled.PersonAdd,
+                    onClick = { showAddCustomer = true },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -208,6 +228,129 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
     statementCustomer?.let { c ->
         StatementDialog(c, invoices) { statementCustomer = null }
     }
+
+    if (showAddCustomer) {
+        NewCustomerDialog(
+            onDismiss = { showAddCustomer = false },
+            onSubmit = { name, group, city, address, phone ->
+                viewModel.addPendingCustomer(name, group, city, address, phone)
+            }
+        )
+    }
+}
+
+/**
+ * ✨ فرم ثبت مشتری جدید — مخصوص مشتریانی که هنوز در سیستم آتیران تعریف نشده‌اند.
+ * پس از ثبت، اطلاعات برای «تأیید» به حسابداری آتیران ارسال می‌شود؛ کاربر
+ * حسابداری در بخش «مشتریان در انتظار» آن را تأیید می‌کند و آنگاه مشتری
+ * برای ویزیتور قابل فاکتورکردن خواهد بود.
+ */
+@Composable
+private fun NewCustomerDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (name: String, group: String, city: String, address: String, phone: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var group by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    val valid = name.isNotBlank() && phone.trim().length >= 7
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(26.dp))
+                .background(RoyalSurfaceBrush)
+                .royalBorder(RoundedCornerShape(26.dp))
+        ) {
+            Column(
+                Modifier
+                    .padding(18.dp)
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            ) {
+                RoyalHeader(text = "افزودن مشتری جدید", icon = Icons.Filled.PersonAdd)
+                Spacer(Modifier.height(10.dp))
+                // توضیح جریان تأیید
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Gold.copy(alpha = 0.10f))
+                        .border(1.dp, Gold.copy(alpha = 0.28f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.HourglassEmpty,
+                        contentDescription = null,
+                        tint = Gold,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "پس از ثبت، مشتری برای «تأیید» به حسابداری آتیران ارسال می‌شود و پس از تأیید، قابل فاکتور خواهد بود.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AccentText
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+
+                NewCustomerField(name, { name = it }, "نام و نام‌خانوادگی / عنوان فروشگاه *", Icons.Filled.Home)
+                Spacer(Modifier.height(8.dp))
+                NewCustomerField(phone, { phone = it }, "شماره تماس مشتری *", Icons.Filled.Call, KeyboardType.Phone)
+                Spacer(Modifier.height(8.dp))
+                NewCustomerField(city, { city = it }, "شهر", Icons.Filled.LocationOn)
+                Spacer(Modifier.height(8.dp))
+                NewCustomerField(group, { group = it }, "گروه مشتری (مثلاً خرده‌فروشی / عمده)", Icons.Filled.People)
+                Spacer(Modifier.height(8.dp))
+                NewCustomerField(address, { address = it }, "آدرس فروشگاه / محله", Icons.Filled.Route, singleLine = false)
+                Spacer(Modifier.height(14.dp))
+
+                NeonGreenButton(
+                    text = "ثبت و ارسال برای تأیید حسابداری 📨",
+                    enabled = valid,
+                    onClick = {
+                        onSubmit(name, group, city, address, phone)
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(4.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                    Text("انصراف", color = TextSecondary)
+                }
+            }
+        }
+    }
+}
+
+/** فیلد ورودی یکدست فرم مشتری جدید. */
+@Composable
+private fun NewCustomerField(
+    value: String,
+    onChange: (String) -> Unit,
+    label: String,
+    icon: ImageVector,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    singleLine: Boolean = true
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = NeonPurple, modifier = Modifier.size(18.dp)) },
+        singleLine = singleLine,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = NeonPurple,
+            unfocusedBorderColor = Color(0x33FFFFFF),
+            focusedLabelColor = NeonPurple,
+            cursorColor = NeonPurple
+        ),
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 private data class Txn(val date: Long, val title: String, val amount: Long, val credit: Boolean)
@@ -406,8 +549,9 @@ private fun CustomerCard(
                     )
                 }
                 StatusChip(
-                    text = if (customer.creditOk) "مجاز" else "مسدود",
-                    color = statusColor
+                    text = if (customer.pendingApproval) "در انتظار تأیید"
+                    else if (customer.creditOk) "مجاز" else "مسدود",
+                    color = if (customer.pendingApproval) Gold else statusColor
                 )
             }
 
@@ -445,6 +589,33 @@ private fun CustomerCard(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+                if (customer.pendingApproval) {
+                    // بنر در انتظار تأیید حسابداری
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Gold.copy(alpha = 0.11f))
+                            .border(1.dp, Gold.copy(alpha = 0.32f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.HourglassEmpty,
+                            contentDescription = null,
+                            tint = Gold,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(7.dp))
+                        Text(
+                            "در انتظار تأیید حسابداری آتیران — پس از تأیید، برای فاکتور فعال می‌شود",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Gold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
                 // کپسول مانده حساب — نمای فوری سلامت مالی مشتری
                 Row(
                     modifier = Modifier
@@ -471,17 +642,38 @@ private fun CustomerCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                }
             }
 
             Spacer(Modifier.height(10.dp))
 
             // ═══ اکشن اصلی: صدور فاکتور + تماس + مسیریابی ═══
             Row {
-                NeonGreenButton(
-                    text = "صدور فاکتور برای این مشتری",
-                    onClick = onPick,
-                    modifier = Modifier.weight(1f)
-                )
+                if (customer.pendingApproval) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Gold.copy(alpha = 0.10f))
+                            .border(1.dp, Gold.copy(alpha = 0.35f), RoundedCornerShape(22.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "پس از تأیید حسابداری، صدور فاکتور فعال می‌شود ⏳",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Gold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    NeonGreenButton(
+                        text = "صدور فاکتور برای این مشتری",
+                        onClick = onPick,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 Spacer(Modifier.width(8.dp))
                 IconButton(
                     onClick = onCall,

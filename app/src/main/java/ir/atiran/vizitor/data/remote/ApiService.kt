@@ -53,4 +53,11 @@ interface VizitorApiService {
         @Header("X-Api-Key") apiKey: String,
         @Body invoice: InvoiceHeaderRequest
     ): ApiEnvelope<SubmitInvoiceResponse>
+
+    /** ثبت مشتری جدید — پس از تأیید در بخش «مشتریان در انتظار» حسابداری آتیران فعال می‌شود. */
+    @POST("api.php?action=submit_customer")
+    suspend fun submitCustomer(
+        @Header("X-Api-Key") apiKey: String,
+        @Body customer: NewCustomerRequest
+    ): ApiEnvelope<NewCustomerResponse>
 }

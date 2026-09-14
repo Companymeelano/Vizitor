@@ -317,6 +317,124 @@ fun RoyalBarChart(
     }
 }
 
+/**
+ * دونات دوحلقه «نبض» — حلقه بیرونی پیشرفت تارگت (گرادیان سبز نئونی) +
+ * حلقه داخلی نسبت همگام‌سازی فاکتورها (گرادیان طلایی) با عمق سه‌بعدی.
+ * فوق‌فشرده برای کارت «در یک نگاه» پیشخوان.
+ */
+@Composable
+fun TwinDonutChart(
+    outerProgress: Float,
+    innerProgress: Float,
+    centerValue: String,
+    centerLabel: String,
+    modifier: Modifier = Modifier,
+    size: Dp = 118.dp
+) {
+    // رنگ‌های تم — کپچر در کانتکست کامپوزبل پیش از ورود به Canvas
+    val haloColor = NeonPurple.copy(alpha = 0.08f)
+    val trackColor = DonutTrack
+    val cGreenDark = NeonGreenDark
+    val cGreen = NeonGreen
+    val cGreenHi = Color(0xFFB8FFD9)
+    val cGoldDark = GoldDark
+    val cGold = Gold
+    val p = outerProgress.coerceIn(0f, 1f)
+    val q = innerProgress.coerceIn(0f, 1f)
+    // انیمیشن یک‌باره پرشدن دو حلقه (در حالت «سبک» آنی)
+    val anim by produceState(initialValue = if (VizitorPerf.entranceFx) 0f else 1f, key1 = p, key2 = q) {
+        if (!VizitorPerf.entranceFx) { value = 1f; return@produceState }
+        var cur = 0f
+        val t = maxOf(p, q).coerceAtLeast(0.01f)
+        while (cur < 1f) {
+            cur = min(cur + 0.03f, 1f)
+            value = cur
+            kotlinx.coroutines.delay(12)
+        }
+        value = 1f
+    }
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val cx = w / 2f
+        val outerStroke = 13.dp.toPx()
+        val innerStroke = 10.dp.toPx()
+        val gap = 7.dp.toPx()
+        val pad = outerStroke / 2f + 4f
+        val outerSize = Size(w - pad * 2, w - pad * 2)
+        val outerTl = Offset(pad, pad)
+        val ip = pad + outerStroke + gap + innerStroke / 2f
+        val innerSize = Size(w - ip * 2, w - ip * 2)
+        val innerTl = Offset(ip, ip)
+
+        // ۰) هاله ظریف پشت
+        drawCircle(
+            color = haloColor,
+            radius = w / 2f - 2f,
+            style = Stroke(26f)
+        )
+        // ۱) عمق حلقه بیرونی (حس سه‌بعدی)
+        drawArc(
+            color = Color(0xFF04060A),
+            startAngle = -90f, sweepAngle = 360f, useCenter = false,
+            topLeft = Offset(pad, pad + 6f), size = outerSize,
+            style = Stroke(outerStroke, cap = StrokeCap.Round)
+        )
+        // ۲) ریل حلقه بیرونی
+        drawArc(
+            color = trackColor,
+            startAngle = -90f, sweepAngle = 360f, useCenter = false,
+            topLeft = outerTl, size = outerSize,
+            style = Stroke(outerStroke, cap = StrokeCap.Round)
+        )
+        // ۳) ماژوری پیشرفت بیرونی — سبز نئونی (تارگت)
+        drawArc(
+            brush = Brush.sweepGradient(
+                colors = listOf(cGreenDark, cGreen, cGreenHi, cGreen)
+            ),
+            startAngle = -90f, sweepAngle = 360f * p * anim, useCenter = false,
+            topLeft = outerTl, size = outerSize,
+            style = Stroke(outerStroke + 8f, cap = StrokeCap.Round),
+            alpha = 0.16f
+        )
+        drawArc(
+            brush = Brush.sweepGradient(
+                colors = listOf(cGreenDark, cGreen, cGreenHi, cGreen)
+            ),
+            startAngle = -90f, sweepAngle = 360f * p * anim, useCenter = false,
+            topLeft = outerTl, size = outerSize,
+            style = Stroke(outerStroke, cap = StrokeCap.Round)
+        )
+        // ۴) ریل حلقه داخلی
+        drawArc(
+            color = trackColor,
+            startAngle = -90f, sweepAngle = 360f, useCenter = false,
+            topLeft = innerTl, size = innerSize,
+            style = Stroke(innerStroke, cap = StrokeCap.Round)
+        )
+        // ۵) ماژور طلایی داخلی — نسبت همگام‌سازی
+        drawArc(
+            brush = Brush.sweepGradient(
+                colors = listOf(cGoldDark, cGold, Color(0xFFFFF3D6), cGold)
+            ),
+            startAngle = -90f, sweepAngle = 360f * q * anim, useCenter = false,
+            topLeft = innerTl, size = innerSize,
+            style = Stroke(innerStroke, cap = StrokeCap.Round)
+        )
+        // ۶) تیک‌های ظریف ثابت بین دو حلقه
+        repeat(12) { i ->
+            val a = Math.toRadians((i * 30 - 90).toDouble())
+            val r1 = ip - gap / 2f - innerStroke / 2f
+            val r2 = r1 - 4f
+            drawLine(
+                cGold.copy(alpha = 0.30f),
+                Offset(cx + kotlin.math.cos(a).toFloat() * r1, cx + kotlin.math.sin(a).toFloat() * r1),
+                Offset(cx + kotlin.math.cos(a).toFloat() * r2, cx + kotlin.math.sin(a).toFloat() * r2),
+                strokeWidth = 2f
+            )
+        }
+    }
+}
+
 /** نشانگر کوچک رنگی وضعیت (سبز/قرمز) برای اعتبار مشتری. */
 @Composable
 fun StatusDot(color: Color, modifier: Modifier = Modifier) {

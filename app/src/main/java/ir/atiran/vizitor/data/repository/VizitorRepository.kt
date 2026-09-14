@@ -23,6 +23,7 @@ import ir.atiran.vizitor.data.local.SeedData
 import ir.atiran.vizitor.data.local.TopProduct
 import ir.atiran.vizitor.data.remote.InvoiceHeaderRequest
 import ir.atiran.vizitor.data.remote.InvoiceLineRequest
+import ir.atiran.vizitor.data.remote.NewCustomerRequest
 import ir.atiran.vizitor.data.remote.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -108,6 +109,52 @@ class VizitorRepository(private val context: Context) {
     suspend fun removeFromCart(productId: Int) = db.cart().deleteByProduct(productId)
 
     suspend fun findByBarcode(code: String): ProductEntity? = db.products().findByBarcode(code)
+
+    /**
+     * ثبت مشتری جدید «در انتظار تأیید حسابداری»:
+     * ۱) ذخیره فوری محلی با شناسه منفی و پرچم pendingApproval (آفلاین-اول)
+     * ۲) تلاش برای ارسال همان‌لحظه به سرور آتیران (action=submit_customer)
+     *    تا در بخش «مشتریان در انتظار» حسابداری مطرح و پس از تأیید فعال شود.
+     *    با قطعی شبکه، مشتری محلی باقی می‌ماند.
+     * @return جفت (مشتری ذخیره‌شده، موفقیت ارسال به سرور)
+     */
+    suspend fun addPendingCustomer(
+        name: String, group: String, city: String, address: String, phone: String
+    ): Pair<CustomerEntity, Boolean> {
+        // شناسه منفی متوالی (-1، -2، …) تا با شناسه‌های سرور هرگز برخورد نکند
+        val localId = (db.customers().getAll().minOfOrNull { it.id } ?: 0).let { minOf(it, 0) - 1 }
+        val customer = CustomerEntity(
+            id = localId,
+            code = "NEW${-localId}",
+            name = name.trim(),
+            groupName = group.trim().ifBlank { "مشتری متفرقه" },
+            city = city.trim().ifBlank { "-" },
+            address = address.trim().ifBlank { "-" },
+            phone = phone.trim(),
+            lat = 35.7219, lng = 51.3815,
+            creditOk = true, isVip = false, lastPurchaseDaysAgo = 0, purchaseDropPercent = 0,
+            debt = 0, pendingApproval = true
+        )
+        db.customers().upsertAll(listOf(customer))
+        val pushed = try {
+            val cfg = settings.config.first()
+            val api = RetrofitClient.buildApi(cfg.baseUrl)
+            val res = api.submitCustomer(
+                cfg.apiKey,
+                NewCustomerRequest(
+                    name = customer.name,
+                    groupName = customer.groupName,
+                    city = customer.city,
+                    address = customer.address,
+                    phone = customer.phone
+                )
+            )
+            res.success
+        } catch (e: Exception) {
+            false
+        }
+        return customer to pushed
+    }
 
     /**
      * محاسبه خودکار کسورات:

@@ -78,3 +78,18 @@ data class SubmitInvoiceResponse(
     @SerializedName("invoice_no") val invoiceNo: String,
     @SerializedName("server_time") val serverTime: Long
 )
+
+/** ثبت مشتری جدید (در انتظار تأیید حسابداری آتیران) — ارسال از سوی ویزیتور. */
+data class NewCustomerRequest(
+    @SerializedName("name") val name: String,
+    @SerializedName("group_name") val groupName: String,
+    @SerializedName("city") val city: String,
+    @SerializedName("address") val address: String,
+    @SerializedName("phone") val phone: String,
+    @SerializedName("visitor_note") val visitorNote: String = ""
+)
+
+data class NewCustomerResponse(
+    @SerializedName("request_id") val requestId: String,
+    @SerializedName("server_time") val serverTime: Long
+)

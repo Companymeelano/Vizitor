@@ -47,7 +47,8 @@ data class CustomerEntity(
     val isVip: Boolean = false,
     val lastPurchaseDaysAgo: Int = 0,
     val purchaseDropPercent: Int = 0, // درصد افت خرید — مبنای لیست پیگیری
-    val debt: Long = 0                // مانده بدهی مشتری (ریال)
+    val debt: Long = 0,                // مانده بدهی مشتری (ریال)
+    val pendingApproval: Boolean = false // true = مشتری جدید در انتظار تأیید حسابداری آتیران
 )
 
 /** هدر فاکتور — آینه جدول SalesHeader. */

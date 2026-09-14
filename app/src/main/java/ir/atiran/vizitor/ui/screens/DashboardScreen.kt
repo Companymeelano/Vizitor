@@ -1,15 +1,13 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Vizitor — آتیران ویزیتور | تب ۱: پیشخوان من (Smart Dashboard) v1.7.0
+ *  Vizitor — آتیران ویزیتور | تب ۱: پیشخوان من (Smart Dashboard) v2.2.0
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
- *  بازطراحی کامل با تم سلطنتی یکدست:
- *    ▸ همه بخش‌ها: کارت شیشه‌ای + قاب سلطنتی (royalBorder) + RoyalHeader
- *    ▸ چارت‌های سه‌بعدی هماهنگ با تم (دونات عمق‌دار، ستونی سه‌بعدی،
- *      نشان‌های رتبه طلایی/نقره‌ای/برنزی و نوارهای پیشرفت عمق‌دار)
- *    ▸ ترتیب بخش‌ها: تارگت ویزیتور ← بدهی مشتریان ← صف ارسال ← فروش هفتگی
- *      ← پرفروش‌ترین‌ها ← مشتریان نیازمند پیگیری
- *    ▸ مقیاس یکسان: فاصله ۱۶dp بین بخش‌ها، ۱۶dp پدینگ داخلی، تایپوگرافی تم
+ *  بازطراحی فشرده و هوشمند «در یک نگاه»:
+ *    ▸ کارت «نبض امروز»: دونات دوحلقه (تارگت بیرونی + سینک داخلی) + ۶ چیپ آمار
+ *    ▸ کارت «ریسک و فرصت»: بدهی‌های بزرگ و پرفروش‌ترین‌ها کنار هم در یک کارت
+ *    ▸ کارت هفتگی فشرده: چارت سه‌بعدی خلوت‌تر + ۳ چیپ خلاق (جمع/بهترین/میانگین)
+ *    ▸ سوییچر تم زنده در گوشه بالای صفحه (نقاط رنگی ۵ پالت، با چک‌مارک طلایی)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.ui.screens
@@ -31,13 +29,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Icon
@@ -52,9 +52,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.data.local.InvoiceEntity
@@ -63,37 +65,30 @@ import ir.atiran.vizitor.data.local.TopProduct
 import ir.atiran.vizitor.ui.components.DepthBar
 import ir.atiran.vizitor.ui.components.GlassCard
 import ir.atiran.vizitor.ui.components.MilanoFooter
-import ir.atiran.vizitor.ui.components.NeonDonutChart
 import ir.atiran.vizitor.ui.components.RankBadge3D
 import ir.atiran.vizitor.ui.components.RoyalBarChart
 import ir.atiran.vizitor.ui.components.RoyalHeader
-import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
-import ir.atiran.vizitor.ui.components.RoyalTable
 import ir.atiran.vizitor.ui.components.ShimmerGoldText
 import ir.atiran.vizitor.ui.components.StatusChip
 import ir.atiran.vizitor.ui.components.StatusDot
+import ir.atiran.vizitor.ui.components.TwinDonutChart
 import ir.atiran.vizitor.ui.components.goldBorder
 import ir.atiran.vizitor.ui.components.royalBorder
+import ir.atiran.vizitor.ui.theme.AllPalettes
 import ir.atiran.vizitor.ui.theme.DangerRed
 import ir.atiran.vizitor.ui.theme.Gold
-import ir.atiran.vizitor.ui.theme.GoldDark
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
-import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import ir.atiran.vizitor.ui.theme.TextPrimary
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.ThemeManager
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.util.toFaDigits
 import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
 
 /** گرادیان هشدار بدهی — سرخ تم با هایلایت ملایم. */
 private val DebtBarColors = listOf(Color(0xFFFF4D6D), Color(0xFFFF8FA3))
-
-/** حاشیه ظریف یکسان برای جدول‌های سلطنتی داخل کارت‌ها — از رنگ اصلی تم. */
-private val RoyalTableBorder: Color @Composable get() = NeonPurple.copy(alpha = 0.20f)
-
-/** گرادیان سلطنتی (رنگ اصلی→طلایی) برای سهم فروش کالاها — از پالت تم. */
-private val ProductBarColors: List<Color> @Composable get() = listOf(NeonPurple, Gold)
 
 @Composable
 fun DashboardScreen(viewModel: VizitorViewModel) {
@@ -118,36 +113,37 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ── سرصفحه ──────────────────────────────────────────────────────────
+        // ── سرصفحه + سوییچر تم (گوشه بالا، کنار عنوان) ─────────────────────
         item {
-            Column {
-                ShimmerGoldText("پیشخوان من")
-                Text(
-                    "نمای هوشمند فروش و عملکرد امروز شما",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    ShimmerGoldText("پیشخوان من")
+                    Text(
+                        "نمای فشرده و هوشمند عملکرد امروز — یک نگاه کافی است",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                ThemeDotsSwitch()
             }
         }
 
-        // ── ۱) تارگت ویزیتور — دونات سه‌بعدی سبز نئونی ──────────────────────
-        item { TargetCard(target, todaySales, progress) }
+        // ── ۱) نبض امروز — دونات دوحلقه (تارگت بیرونی + سینک داخلی) ────────
+        item { PulseCard(target, todaySales, progress, pending, sentToday, syncRatio) }
 
-        // ── ۲) بدهی مشتریان — بلافاصله پس از تارگت ویزیتور ──────────────────
-        item { DebtorsCard(debtors) }
+        // ── ۲) ریسک و فرصت — بدهی‌ها و پرفروش‌ها کنار هم ───────────────────
+        item { RiskAndWinCard(debtors, tops) }
 
-        // ── ۳) فاکتورهای در صف ارسال — دونات سه‌بعدی طلایی ──────────────────
-        item { PendingCard(pending, sentToday, syncRatio) }
-
-        // ── ۴) فروش هفتگی — چارت ستونی سه‌بعدی + جدول سلطنتی ────────────────
+        // ── ۳) فروش هفتگی — نمودار سه‌بعدی فشرده + چیپ‌های هوشمند ──────────
         item { WeeklyCard(weekly) }
 
-        // ── ۵) پرفروش‌ترین‌های شما — نشان‌های رتبه سه‌بعدی ──────────────────
-        item { TopSellersCard(tops) }
-
-        // ── ۶) مشتریان نیازمند پیگیری (افت خرید) ────────────────────────────
+        // ── ۴) مشتریان نیازمند پیگیری (افت خرید) ────────────────────────────
         item {
             RoyalHeader(
                 text = "مشتریان نیازمند پیگیری (افت خرید)",
@@ -175,302 +171,353 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
     }
 }
 
-// ═════════════════════════ بخش‌ها ═════════════════════════
-
-/** کارت تارگت ویزیتور — دونات پیشرفت سه‌بعدی + آمار رنگی هماهنگ. */
-@Composable
-private fun TargetCard(target: Long, todaySales: Long, progress: Float) {
-    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
-        Column {
-            RoyalHeader(text = "تارگت ویزیتور امروز", icon = Icons.Filled.Flag)
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                NeonDonutChart(
-                    progress = progress,
-                    centerValue = "${(progress * 100).toInt()}٪".toFaDigits(),
-                    centerLabel = "پیشرفت",
-                    size = 148.dp
-                )
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    StatRow("هدف روزانه", target.toFaPrice(), NeonPurple)
-                    StatRow("فروش امروز", todaySales.toFaPrice(), NeonGreen)
-                    StatRow(
-                        "مانده تا هدف",
-                        (target - todaySales).coerceAtLeast(0).toFaPrice(),
-                        if (todaySales >= target) NeonGreen else Gold
-                    )
-                    StatRow(
-                        "وضعیت",
-                        if (progress >= 1f) "هدف محقق شد 🏆"
-                        else "${(progress * 100).toInt()}٪ تکمیل".toFaDigits(),
-                        if (progress >= 1f) NeonGreen else NeonPurple
-                    )
-                }
-            }
-        }
-    }
-}
+// ═════════════════════════ سوییچر تم زنده ═════════════════════════
 
 /**
- * کارت هشدار بدهی مشتریان — جدول سلطنتی سه‌بعدی با نشان رتبه طلایی/نقره‌ای/برنزی،
- * نوار بدهی عمق‌دار سرخ و ردیف جمع طلایی.
+ * نقاط رنگی ۵ پالت — هر نقطه از رنگ جادویی خودِ آن تم ساخته شده
+ * (گرادیان primary → gold آن تم) و با انتخاب، قاب طلایی و چک‌مارک می‌گیرد.
+ * نشسته در گوشه بالای پیشخوان تا با یک لمس، کل برنامه بازرنگ شود.
  */
 @Composable
-private fun DebtorsCard(debtors: List<CustomerEntity>) {
-    val maxDebt = debtors.maxOfOrNull { it.debt }?.coerceAtLeast(1L) ?: 1L
-    val sum = debtors.sumOf { it.debt }
-    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
-        Column {
-            RoyalHeader(text = "هشدار بدهی مشتریان", icon = Icons.Filled.WarningAmber)
-            Spacer(Modifier.height(12.dp))
-            if (debtors.isEmpty()) {
-                Text(
-                    "هیچ مشتری بدهکاری وجود ندارد 🎉",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            } else {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(RoyalSurfaceBrush)
-                        .border(1.dp, RoyalTableBorder, RoundedCornerShape(16.dp))
-                ) {
-                    // سربرگ جدول
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Brush.horizontalGradient(listOf(NeonPurple, NeonPurpleDark)))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TableHead("رتبه", Modifier.weight(0.6f))
-                        TableHead("مشتری", Modifier.weight(1.8f))
-                        TableHead("مانده بدهی", Modifier.weight(1.2f), TextAlign.End)
-                    }
-                    // ردیف‌های بدهکار
-                    debtors.forEachIndexed { i, c ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .background(if (i % 2 == 0) Color(0x10FFFFFF) else Color.Transparent)
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(Modifier.weight(0.6f)) { RankBadge3D(i + 1) }
-                            Column(Modifier.weight(1.8f)) {
-                                Text(
-                                    c.name,
-                                    style = MaterialTheme.typography.labelLarge
-                                        .copy(fontWeight = FontWeight.ExtraBold),
-                                    color = TextPrimary,
-                                    maxLines = 1
-                                )
-                                Text(
-                                    c.city,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary
-                                )
-                                Spacer(Modifier.height(5.dp))
-                                DepthBar(
-                                    fraction = c.debt.toFloat() / maxDebt,
-                                    fillColors = DebtBarColors
-                                )
-                            }
-                            Text(
-                                c.debt.toFaPrice(),
-                                Modifier.weight(1.2f),
-                                color = DangerRed,
-                                style = MaterialTheme.typography.labelMedium
-                                    .copy(fontWeight = FontWeight.ExtraBold),
-                                textAlign = TextAlign.End
-                            )
-                        }
-                    }
-                    // ردیف جمع
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Gold.copy(alpha = 0.10f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "مجموع بدهی این مشتریان",
-                            Modifier.weight(1f),
-                            color = Gold,
-                            style = MaterialTheme.typography.labelMedium
-                                .copy(fontWeight = FontWeight.ExtraBold)
-                        )
-                        Text(
-                            sum.toFaPrice(),
-                            color = Gold,
-                            style = MaterialTheme.typography.labelMedium
-                                .copy(fontWeight = FontWeight.ExtraBold),
-                            textAlign = TextAlign.End
-                        )
-                    }
+private fun ThemeDotsSwitch() {
+    val ctx = LocalContext.current
+    val themeId by ThemeManager.themeId.collectAsState()
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color(0x0DFFFFFF))
+            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            Icons.Filled.Palette,
+            contentDescription = "انتخاب تم",
+            tint = Gold,
+            modifier = Modifier.size(14.dp)
+        )
+        AllPalettes.forEach { pl ->
+            val selected = pl.id == themeId
+            Box(
+                modifier = Modifier
+                    .size(if (selected) 26.dp else 21.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(pl.primary, pl.gold)))
+                    .then(
+                        if (selected) Modifier.border(2.dp, vizitorPalette.goldHighlight, CircleShape)
+                        else Modifier.border(1.dp, Color(0x3DFFFFFF), CircleShape)
+                    )
+                    .clickable { ThemeManager.setTheme(ctx, pl.id) },
+                contentAlignment = Alignment.Center
+            ) {
+                if (selected) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = pl.displayName,
+                        tint = pl.onPrimary,
+                        modifier = Modifier.size(13.dp)
+                    )
                 }
             }
         }
     }
 }
 
-/** کارت صف ارسال — دونات سه‌بعدی طلایی نسبت ارسال‌شده + آمار صف. */
+// ═════════════════════════ کارت نبض امروز ═════════════════════════
+
+/** دونات دوحلقه (تارگت بیرونی + سینک داخلی) + ۶ چیپ آماری فشرده. */
 @Composable
-private fun PendingCard(pending: Int, sentToday: Int, syncRatio: Float) {
+private fun PulseCard(
+    target: Long,
+    todaySales: Long,
+    progress: Float,
+    pending: Int,
+    sentToday: Int,
+    syncRatio: Float
+) {
     GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
         Column {
-            RoyalHeader(text = "فاکتورهای در صف ارسال", icon = Icons.Filled.CloudSync)
-            Spacer(Modifier.height(12.dp))
+            RoyalHeader(text = "نبض امروز در یک نگاه", icon = Icons.Filled.Flag)
+            Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NeonDonutChart(
-                    progress = syncRatio,
-                    centerValue = pending.toFaNumber(),
-                    centerLabel = "در صف",
-                    size = 96.dp,
-                    centerColor = Gold,
-                    progressBrush = Brush.sweepGradient(
-                        colors = listOf(GoldDark, Gold, Color(0xFFFFF3D6), Gold)
-                    )
+                TwinDonutChart(
+                    outerProgress = progress,
+                    innerProgress = syncRatio,
+                    centerValue = "${(progress * 100).toInt()}٪".toFaDigits(),
+                    centerLabel = "تارگت",
+                    size = 122.dp
                 )
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    StatRow("در انتظار ارسال", "${pending.toFaNumber()} فاکتور", Gold)
-                    StatRow("ارسال‌شده امروز", "${sentToday.toFaNumber()} فاکتور", NeonGreen)
-                    StatRow(
-                        "وضعیت",
-                        if (pending == 0) "همه ارسال شد ✅" else "در انتظار شبکه ⏳",
-                        if (pending == 0) NeonGreen else Gold
-                    )
+                    // دونات بیرونی: تارگت — دونات داخلی: سینک
+                    LegendLine(NeonGreen, "حلقه بیرونی: پیشرفت تارگت")
                     Spacer(Modifier.height(4.dp))
+                    LegendLine(Gold, "حلقه داخلی: همگام‌سازی فاکتورها")
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "پس از اتصال، فاکتورها خودکار به سرور آتیران ارسال می‌شوند.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
+                        if (progress >= 1f) "هدف امروز محقق شد 🏆"
+                        else "تا هدف: ${(target - todaySales).coerceAtLeast(0).toFaPrice()}",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = if (progress >= 1f) NeonGreen else Gold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            // ۶ چیپ هوشمند — همه آمار کلیدی در ۳ ردیف فشرده
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatChip("فروش امروز", todaySales.toFaPrice(), NeonGreen, Modifier.weight(1f))
+                StatChip("هدف روزانه", target.toFaPrice(), NeonPurple, Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatChip(
+                    "مانده تا هدف",
+                    (target - todaySales).coerceAtLeast(0).toFaPrice(),
+                    Gold, Modifier.weight(1f)
+                )
+                StatChip(
+                    "پیشرفت",
+                    "${(progress * 100).toInt()}٪".toFaDigits(),
+                    if (progress >= 1f) NeonGreen else NeonPurple, Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatChip("در صف ارسال", "${pending.toFaNumber()} فاکتور", NeonPurple, Modifier.weight(1f))
+                StatChip(
+                    "ارسال‌شده امروز",
+                    "${sentToday.toFaNumber()} فاکتور",
+                    if (pending == 0) NeonGreen else Gold, Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+/** خط راهنمای رنگ: نقطه رنگی + متن خیلی کوچک. */
+@Composable
+private fun LegendLine(color: Color, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(text, style = MaterialTheme.typography.labelSmall, color = TextSecondary, maxLines = 1)
+    }
+}
+
+/** چیپ آماری فشرده — برچسب خاکستری + مقدار رنگی؛ پایه داشبورد «در یک نگاه». */
+@Composable
+private fun StatChip(label: String, value: String, tint: Color, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(tint.copy(alpha = 0.08f))
+            .border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+// ═════════════════════════ کارت ریسک و فرصت ═════════════════════════
+
+/** بدهی‌های بزرگ (خطا) و پرفروش‌ترین‌ها (فرصت) — دو ستون فشرده در یک کارت. */
+@Composable
+private fun RiskAndWinCard(debtors: List<CustomerEntity>, tops: List<TopProduct>) {
+    val maxDebt = debtors.maxOfOrNull { it.debt }?.coerceAtLeast(1L) ?: 1L
+    val sumDebt = debtors.sumOf { it.debt }
+    val maxTotal = tops.maxOfOrNull { it.total }?.coerceAtLeast(1.0) ?: 1.0
+
+    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
+        Column {
+            RoyalHeader(text = "ریسک بدهی ⇄ فرصت فروش", icon = Icons.Filled.WarningAmber)
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // ستون بدهی‌ها
+                Column(Modifier.weight(1f)) {
+                    MiniPanelTitle("بدهی‌های بزرگ", DangerRed)
+                    Spacer(Modifier.height(6.dp))
+                    if (debtors.isEmpty()) {
+                        Text(
+                            "مشتری بدهکاری نیست 🎉",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    } else {
+                        debtors.forEachIndexed { i, c ->
+                            MiniRankRow(
+                                rank = i + 1,
+                                name = c.name,
+                                value = c.debt.toFaPrice(),
+                                valueColor = DangerRed,
+                                fraction = c.debt.toFloat() / maxDebt,
+                                barColors = DebtBarColors
+                            )
+                            if (i < debtors.lastIndex) Spacer(Modifier.height(6.dp))
+                        }
+                        Spacer(Modifier.height(7.dp))
+                        Text(
+                            "جمع: ${sumDebt.toFaPrice()}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Gold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                // تیگره نازک جداکننده
+                Box(
+                    Modifier
+                        .width(1.dp)
+                        .height(96.dp)
+                        .background(Color(0x1FFFFFFF))
+                )
+                // ستون پرفروش‌ها
+                Column(Modifier.weight(1f)) {
+                    MiniPanelTitle("پرفروش‌ترین‌ها", NeonGreen)
+                    Spacer(Modifier.height(6.dp))
+                    if (tops.isEmpty()) {
+                        Text(
+                            "پس از اولین فاکتور ✨",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    } else {
+                        tops.forEachIndexed { i, top ->
+                            MiniRankRow(
+                                rank = i + 1,
+                                name = top.productName,
+                                value = "${top.total.toFaNumber()} واحد",
+                                valueColor = NeonGreen,
+                                fraction = (top.total / maxTotal).toFloat(),
+                                barColors = listOf(NeonPurple, Gold)
+                            )
+                            if (i < tops.lastIndex) Spacer(Modifier.height(6.dp))
+                        }
+                        Spacer(Modifier.height(7.dp))
+                        Text(
+                            "جمع: ${tops.sumOf { it.total }.toFaNumber()} واحد",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Gold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-/** کارت فروش هفتگی — چارت ستونی سه‌بعدی + جدول سلطنتی یکدست. */
+/** سربرگ کوچک ستون — آیکن + متن محکم رنگی. */
+@Composable
+private fun MiniPanelTitle(text: String, tint: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(tint)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** ردیف فوق‌فشرده: نشان رتبه ۲۰dp + نام + نوار ٪ + مقدار. */
+@Composable
+private fun MiniRankRow(
+    rank: Int,
+    name: String,
+    value: String,
+    valueColor: Color,
+    fraction: Float,
+    barColors: List<Color>
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        RankBadge3D(rank = rank, size = 20.dp)
+        Spacer(Modifier.width(6.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                name,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(3.dp))
+            DepthBar(
+                fraction = fraction,
+                fillColors = barColors,
+                height = 4.dp
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            value,
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = valueColor,
+            maxLines = 1
+        )
+    }
+}
+
+// ═════════════════════════ کارت هفتگی فشرده ═════════════════════════
+
+/** چارت ستونی سه‌بعدی خلوت‌تر + ۳ چیپ هوشمند (جمع / بهترین روز / میانگین). */
 @Composable
 private fun WeeklyCard(weekly: List<Pair<String, Long>>) {
+    val sum = weekly.sumOf { it.second }
+    val best = weekly.maxByOrNull { it.second }
+    val avg = if (weekly.isNotEmpty()) sum / weekly.size else 0L
+
     GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
         Column {
-            RoyalHeader(text = "فروش هفتگی (نمودار سه‌بعدی)", icon = Icons.Filled.BarChart)
-            Spacer(Modifier.height(10.dp))
+            RoyalHeader(text = "فروش هفتگی", icon = Icons.Filled.BarChart)
+            Spacer(Modifier.height(8.dp))
             RoyalBarChart(
                 data = weekly,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(140.dp)
             )
-            Spacer(Modifier.height(12.dp))
-            RoyalTable(data = weekly)
-        }
-    }
-}
-
-/**
- * کارت پرفروش‌ترین‌ها — جدول سلطنتی سه‌بعدی با نشان رتبه، نوار سهم عمق‌دار
- * بنفش→طلایی و ردیف جمع.
- */
-@Composable
-private fun TopSellersCard(tops: List<TopProduct>) {
-    val maxTotal = tops.maxOfOrNull { it.total }?.coerceAtLeast(1.0) ?: 1.0
-    val sumTotal = tops.sumOf { it.total }
-    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
-        Column {
-            RoyalHeader(text = "پرفروش‌ترین‌های شما", icon = Icons.Filled.EmojiEvents)
-            Spacer(Modifier.height(12.dp))
-            if (tops.isEmpty()) {
-                Text(
-                    "پس از اولین فاکتور، پرفروش‌ها اینجا می‌درخشند ✨",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatChip("جمع هفته", sum.toFaPrice(), Gold, Modifier.weight(1f))
+                StatChip(
+                    "بهترین روز",
+                    best?.let { "${it.first}: ${it.second.toFaPrice()}" } ?: "—",
+                    NeonGreen, Modifier.weight(1f)
                 )
-            } else {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(RoyalSurfaceBrush)
-                        .border(1.dp, RoyalTableBorder, RoundedCornerShape(16.dp))
-                ) {
-                    // سربرگ جدول
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Brush.horizontalGradient(listOf(NeonPurple, NeonPurpleDark)))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TableHead("رتبه", Modifier.weight(0.6f))
-                        TableHead("کالا", Modifier.weight(1.8f))
-                        TableHead("تعداد فروش", Modifier.weight(1.2f), TextAlign.End)
-                    }
-                    tops.forEachIndexed { i, top ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .background(if (i % 2 == 0) Color(0x10FFFFFF) else Color.Transparent)
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(Modifier.weight(0.6f)) { RankBadge3D(i + 1) }
-                            Column(Modifier.weight(1.8f)) {
-                                Text(
-                                    top.productName,
-                                    style = MaterialTheme.typography.labelLarge
-                                        .copy(fontWeight = FontWeight.ExtraBold),
-                                    color = TextPrimary,
-                                    maxLines = 1
-                                )
-                                Spacer(Modifier.height(5.dp))
-                                DepthBar(
-                                    fraction = (top.total / maxTotal).toFloat(),
-                                    fillColors = ProductBarColors
-                                )
-                            }
-                            Text(
-                                "${top.total.toFaNumber()} واحد",
-                                Modifier.weight(1.2f),
-                                color = NeonGreen,
-                                style = MaterialTheme.typography.labelMedium
-                                    .copy(fontWeight = FontWeight.ExtraBold),
-                                textAlign = TextAlign.End
-                            )
-                        }
-                    }
-                    // ردیف جمع
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Gold.copy(alpha = 0.10f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "مجموع فروش این کالاها",
-                            Modifier.weight(1f),
-                            color = Gold,
-                            style = MaterialTheme.typography.labelMedium
-                                .copy(fontWeight = FontWeight.ExtraBold)
-                        )
-                        Text(
-                            "${sumTotal.toFaNumber()} واحد",
-                            color = Gold,
-                            style = MaterialTheme.typography.labelMedium
-                                .copy(fontWeight = FontWeight.ExtraBold),
-                            textAlign = TextAlign.End
-                        )
-                    }
-                }
+                StatChip("میانگین روزانه", avg.toFaPrice(), NeonPurple, Modifier.weight(1f))
             }
         }
     }
@@ -528,44 +575,6 @@ private fun FollowUpCard(customer: CustomerEntity, onPick: () -> Unit) {
             )
         }
     }
-}
-
-// ═════════════════════════ اجزای مشترک داخلی ═════════════════════════
-
-/** ردیف آمار یکدست — برچسب خاکستری + مقدار رنگی محکم، مقیاس استاندارد تم. */
-@Composable
-private fun StatRow(label: String, value: String, color: Color) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
-            color = color,
-            textAlign = TextAlign.End
-        )
-    }
-}
-
-/** سلول سربرگ جدول سلطنتی — متن سفید محکم، مقیاس یکسان در همه جدول‌ها. */
-@Composable
-private fun TableHead(text: String, modifier: Modifier = Modifier, align: TextAlign = TextAlign.Start) {
-    Text(
-        text,
-        modifier,
-        color = Color.White,
-        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
-        textAlign = align
-    )
 }
 
 // ═════════════════════════ توابع داده ═════════════════════════
