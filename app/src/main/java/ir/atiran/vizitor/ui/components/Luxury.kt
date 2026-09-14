@@ -19,8 +19,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,14 +74,12 @@ fun Modifier.pressScale(target: Float = 0.96f): Modifier {
     return this
         .graphicsLayer { scaleX = scale; scaleY = scale }
         .pointerInput(Unit) {
-            awaitPointerEventScope {
-                while (true) {
-                    // بدون consume تا clickable دکمه همچنان کار کند
-                    awaitFirstDown(requireUnconsumed = false)
-                    pressed = true
-                    waitForUpOrCancellation()
-                    pressed = false
-                }
+            awaitEachGesture {
+                // بدون consume تا clickable دکمه همچنان کار کند
+                awaitFirstDown(requireUnconsumed = false)
+                pressed = true
+                waitForUpOrCancellation()
+                pressed = false
             }
         }
 }
