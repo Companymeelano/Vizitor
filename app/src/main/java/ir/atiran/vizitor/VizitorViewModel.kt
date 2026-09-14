@@ -105,10 +105,20 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
     fun showToast(msg: String) { _toast.value = msg }
 
     // ── اکشن‌های سبد خرید ───────────────────────────────────────────────────
-    fun addToCart(product: ProductEntity) = viewModelScope.launch {
-        repo.addToCart(product)
-        _toast.value = "«${product.name}» به سبد اضافه شد ✅"
+    fun addToCart(product: ProductEntity, qty: Double = 1.0, unitPrice: Long = product.price) =
+        viewModelScope.launch {
+            repo.addToCart(product, qty, unitPrice)
+            _toast.value = "«${product.name}» به سبد سفارش اضافه شد ✅"
+        }
+
+    /** ورود دستی تعداد در سبد. */
+    fun setCartQty(productId: Int, qty: Double) = viewModelScope.launch {
+        repo.setCartQty(productId, qty)
     }
+
+    /** آخرین قیمت فروش کالا به مشتری انتخاب‌شده. */
+    fun lastSalePrice(customerId: Int, productId: Int, onResult: (Long?) -> Unit) =
+        viewModelScope.launch { onResult(repo.lastSalePrice(customerId, productId)) }
 
     fun decrement(productId: Int) = viewModelScope.launch { repo.decrementCart(productId) }
     fun removeFromCart(productId: Int) = viewModelScope.launch { repo.removeFromCart(productId) }

@@ -298,7 +298,7 @@ private fun ProductCard(
                 product.name,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.2.dp,
+                    letterSpacing = 0.2.sp,
                     lineHeight = 21.sp
                 ),
                 maxLines = 2,
@@ -480,9 +480,9 @@ private fun PriceChip(
         modifier = Modifier
             .padding(end = 8.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (selected) Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark))
-                else Color(0x14FFFFFF)
+            .then(
+                if (selected) Modifier.background(Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)))
+                else Modifier.background(Color(0x14FFFFFF))
             )
             .border(
                 width = if (selected) 1.5.dp else 1.dp,
