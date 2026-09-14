@@ -49,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.ui.window.Dialog
 import ir.atiran.vizitor.ui.components.RoyalHeader
 import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
