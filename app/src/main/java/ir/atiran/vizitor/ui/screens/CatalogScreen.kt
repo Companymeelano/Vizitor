@@ -10,6 +10,9 @@
 package ir.atiran.vizitor.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,6 +82,7 @@ fun CatalogScreen(
 ) {
     val products by viewModel.products.collectAsState()
     var query by remember { mutableStateOf("") }
+    var zoomProduct by remember { mutableStateOf<ProductEntity?>(null) }
     val startVoice = rememberVoiceSearch(
         onResult = { query = it; viewModel.showToast("جستجوی صوتی: «$it»") },
         onUnavailable = { viewModel.showToast("ورودی صوتی روی این دستگاه در دسترس نیست 🎙️") }
@@ -117,13 +121,19 @@ fun CatalogScreen(
                 ProductCard(
                     product = product,
                     onAdd = { viewModel.addToCart(product) },
-                    onRemove = { viewModel.decrement(product.id) }
+                    onRemove = { viewModel.decrement(product.id) },
+                    onZoom = { zoomProduct = product }
                 )
             }
 
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                 MilanoFooter()
             }
+        }
+
+        // ── دیالوگ بزرگنمایی تصویر کالا ────────────────────────────────────
+        zoomProduct?.let { p ->
+            ProductZoomDialog(p) { zoomProduct = null }
         }
 
         // ── دکمه فعال‌سازی دوربین — اسکنر بارکد ─────────────────────────────
@@ -174,7 +184,8 @@ private fun SearchField(value: String, onChange: (String) -> Unit) {
 private fun ProductCard(
     product: ProductEntity,
     onAdd: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onZoom: () -> Unit
 ) {
     val inStock = product.stock > 0
     val lowStock = product.stock in 0.0..10.0
@@ -187,7 +198,7 @@ private fun ProductCard(
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // تصویر کالا با جلوه سه‌بعدی
+            // تصویر کالا با جلوه سه‌بعدی — کلیک = بزرگنمایی
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -197,13 +208,24 @@ private fun ProductCard(
                         Brush.verticalGradient(
                             listOf(Color(0x22B04BF8), Color(0x08FFFFFF))
                         )
-                    ),
+                    )
+                    .clickable(onClick = onZoom),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     product.imageEmoji,
                     fontSize = 40.sp,
                     textAlign = TextAlign.Center
+                )
+                // نشان بزرگنمایی
+                Icon(
+                    Icons.Filled.ZoomIn,
+                    contentDescription = "بزرگنمایی",
+                    tint = Color.White.copy(alpha = 0.75f),
+                    modifier = Modifier
+                        .size(16.dp)
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
                 )
                 if (product.isVip) {
                     Text(
@@ -256,11 +278,24 @@ private fun ProductCard(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                product.price.toFaPrice(),
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    color = NeonGreen
+                "واحد: ${product.unit} | بسته: ${product.packSize.toFaNumber()}تایی",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth()) {
+                Text(
+                    "فروش ۱: ${product.price.toFaPrice()}",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = NeonGreen
+                    )
                 )
+            }
+            Text(
+                "فروش ۲: ${(if (product.price2 > 0) product.price2 else product.price).toFaPrice()}",
+                style = MaterialTheme.typography.labelSmall,
+                color = Gold
             )
 
             Spacer(Modifier.height(8.dp))
@@ -293,6 +328,69 @@ private fun ProductCard(
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "افزودن به سبد", modifier = Modifier.size(20.dp))
                 }
+            }
+        }
+    }
+}
+
+/**
+ * دیالوگ بزرگنمایی کالا — تصویر بزرگ و مشخصات کامل (واحد/بسته/قیمت‌ها).
+ */
+@Composable
+private fun ProductZoomDialog(product: ProductEntity, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(ir.atiran.vizitor.ui.theme.DarkSlateElevated)
+                .goldBorder(RoundedCornerShape(28.dp))
+        ) {
+            Column(Modifier.padding(18.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(210.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0x33B04BF8), Color(0x0AFFFFFF))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(product.imageEmoji, fontSize = 110.sp)
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(product.name, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "${product.groupName} | بارکد: ${product.code}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    Text("واحد شمارش: ${product.unit}", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    Text("تعداد در بسته: ${product.packSize.toFaNumber()}",
+                        style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    Text("قیمت فروش ۱: ${product.price.toFaPrice()}",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall.copy(color = NeonGreen, fontWeight = FontWeight.ExtraBold))
+                    Text("قیمت فروش ۲: ${(if (product.price2 > 0) product.price2 else product.price).toFaPrice()}",
+                        style = MaterialTheme.typography.titleSmall.copy(color = Gold, fontWeight = FontWeight.ExtraBold))
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (product.stock > 0) "موجودی زنده: ${product.stock.toFaNumber()} ${product.unit}" else "ناموجود",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (product.stock > 0) NeonGreen else DangerRed
+                )
+                Spacer(Modifier.height(12.dp))
+                NeonGreenButton(text = "بستن", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
             }
         }
     }

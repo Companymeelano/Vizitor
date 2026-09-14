@@ -62,6 +62,11 @@ object InvoiceShare {
         right.color = MUTED
         c.drawText("مشتری: ${invoice.customerName}", W - MARGIN.toFloat(), y, right)
         y += 60f
+        if (invoice.note.isNotBlank()) {
+            right.color = GOLD; right.textSize = 32f
+            c.drawText("توضیحات: ${invoice.note}", W - MARGIN.toFloat(), y, right)
+            y += 60f
+        }
 
         // جداکننده طلایی
         val gold = Paint().apply { color = GOLD; strokeWidth = 3f }
@@ -161,6 +166,7 @@ object InvoiceShare {
             append("<h1 style=\"color:#B8860B\">آتیران ویزیتور — فاکتور فروش</h1>")
             append("<p>شماره: ${invoice.serverId ?: invoice.id} | تاریخ: ${invoice.createdAt.toFaDate()}</p>")
             append("<p>مشتری: ${invoice.customerName}</p>")
+            if (invoice.note.isNotBlank()) append("<p><b>توضیحات:</b> ${invoice.note}</p>")
             append("<table border=\"1\" cellpadding=\"6\" style=\"border-collapse:collapse;width:100%\">")
             append("<tr style=\"background:#f0e6c8\"><th>کالا</th><th>تعداد</th><th>فی</th><th>جمع</th></tr>")
             items.forEach {
@@ -182,6 +188,7 @@ object InvoiceShare {
         val text = buildString {
             appendLine("🧾 فاکتور فروش آتیران ویزیتور")
             appendLine("مشتری: ${invoice.customerName}")
+            if (invoice.note.isNotBlank()) appendLine("توضیحات: ${invoice.note}")
             appendLine("تاریخ: ${invoice.createdAt.toFaDate()}")
             items.forEach { appendLine("• ${it.productName} × ${it.quantity} = ${it.lineTotal.toFaPrice()}") }
             appendLine("کسورات: ${invoice.discount.toFaPrice()}")

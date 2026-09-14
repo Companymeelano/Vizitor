@@ -104,7 +104,8 @@ class VizitorRepository(private val context: Context) {
     suspend fun issueInvoice(
         customer: CustomerEntity?,
         signaturePng: ByteArray?,
-        cashSettlement: Boolean
+        cashSettlement: Boolean,
+        note: String = ""
     ): InvoiceEntity {
         val items = db.cart().getAll()
         require(items.isNotEmpty()) { "سبد سفارش خالی است" }
@@ -120,7 +121,8 @@ class VizitorRepository(private val context: Context) {
                 grossAmount = gross,
                 discount = discount,
                 finalAmount = gross - discount,
-                signatureBase64 = sig
+                signatureBase64 = sig,
+                note = note
             )
         )
         db.invoices().insertItems(
@@ -160,7 +162,7 @@ class VizitorRepository(private val context: Context) {
                     cfg.apiKey,
                     InvoiceHeaderRequest(
                         invoice.customerId, invoice.grossAmount, invoice.discount,
-                        invoice.finalAmount, invoice.signatureBase64, items
+                        invoice.finalAmount, invoice.signatureBase64, invoice.note, items
                     )
                 )
                 if (res.success && res.data != null) {
@@ -183,7 +185,10 @@ class VizitorRepository(private val context: Context) {
             val cat = api.getCatalog(cfg.apiKey)
             if (cat.success && cat.data != null) {
                 db.products().upsertAll(cat.data.map {
-                    ProductEntity(it.id, it.code, it.name, it.groupName, it.price, it.stock, isVip = it.isVip)
+                    ProductEntity(
+                        it.id, it.code, it.name, it.groupName, it.price, it.stock,
+                        isVip = it.isVip, unit = it.unit, packSize = it.packSize, price2 = it.price2
+                    )
                 })
                 pulled += cat.data.size
             }
@@ -195,7 +200,8 @@ class VizitorRepository(private val context: Context) {
                 db.customers().upsertAll(cus.data.map {
                     CustomerEntity(
                         it.id, it.code, it.name, it.groupName, it.city, it.address, it.phone,
-                        it.lat, it.lng, it.creditOk, it.isVip, it.lastPurchaseDays, it.dropPercent
+                        it.lat, it.lng, it.creditOk, it.isVip, it.lastPurchaseDays, it.dropPercent,
+                        it.debt
                     )
                 })
                 pulled += cus.data.size

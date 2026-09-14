@@ -110,10 +110,11 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
     fun issueInvoice(
         signaturePng: ByteArray?,
         cashSettlement: Boolean,
+        note: String = "",
         onDone: (InvoiceEntity) -> Unit
     ) = viewModelScope.launch {
         try {
-            val invoice = repo.issueInvoice(_selectedCustomer.value, signaturePng, cashSettlement)
+            val invoice = repo.issueInvoice(_selectedCustomer.value, signaturePng, cashSettlement, note)
             _selectedCustomer.value = null
             onDone(invoice)
             // تلاش ارسال آنی؛ در صورت شکست، فاکتور در صف سینک می‌ماند

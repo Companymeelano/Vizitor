@@ -88,7 +88,10 @@ function action_catalog(): never
                 ISNULL(p.GroupName, N'عمومی') AS group_name,
                 CAST(p.Price AS BIGINT) AS price,
                 CAST(ISNULL(p.Stock, 0) AS FLOAT) AS stock,
-                CAST(ISNULL(p.IsVip, 0) AS BIT) AS is_vip
+                CAST(ISNULL(p.IsVip, 0) AS BIT) AS is_vip,
+                ISNULL(p.UnitName, N'کیلو') AS unit,
+                ISNULL(p.PackSize, 1) AS pack_size,
+                CAST(ISNULL(p.Price2, p.Price) AS BIGINT) AS price2
             FROM " . TBL_PRODUCTS . " p
             WHERE p.IsActive = 1 AND p.UpdatedAt >= :since
             ORDER BY p.Name";
@@ -120,6 +123,7 @@ function action_customers(): never
                 ISNULL(c.Lng, 0)       AS lng,
                 CAST(ISNULL(c.CreditOk, 1) AS BIT) AS credit_ok,
                 CAST(ISNULL(c.IsVip, 0) AS BIT)    AS is_vip,
+                CAST(ISNULL(c.Balance, 0) AS BIGINT) AS debt,
                 ISNULL(DATEDIFF(DAY, c.LastPurchaseDate, GETDATE()), 999) AS last_purchase_days,
                 -- درصد افت خرید: مقایسه میانگین ۹۰ روز اخیر با ۹۰ روز پیش از آن
                 ISNULL(CAST(
@@ -195,6 +199,7 @@ function action_submit_invoice(): never
     $discount   = (int)    ($body['discount']     ?? 0);
     $final      = (int)    ($body['final_amount'] ?? 0);
     $signature  = isset($body['signature']) ? (string) $body['signature'] : null;
+    $note       = isset($body['note']) ? mb_substr((string) $body['note'], 0, 500) : '';
     $items      = $body['items'] ?? [];
 
     if ($customerId <= 0)       respond(false, 'مشتری معتبر نیست', null, 422);
@@ -233,10 +238,10 @@ function action_submit_invoice(): never
         // ── ۱) درج هدر فاکتور ───────────────────────────────────────────
         $headerSql = 'INSERT INTO ' . TBL_SALES_HEADER . '
                 (CustomerId, GrossAmount, Discount, FinalAmount, SalesmanCode,
-                 SignatureImg, Status, CreatedAt)
+                 SignatureImg, Note, Status, CreatedAt)
             VALUES
                 (:cid, :gross, :discount, :final, :salesman,
-                 :sig, N\'PENDING\', GETDATE());
+                 :sig, :note, N\'PENDING\', GETDATE());
             SELECT CAST(SCOPE_IDENTITY() AS BIGINT) AS new_id';
 
         $headerStmt = $pdo->prepare($headerSql);
@@ -247,6 +252,7 @@ function action_submit_invoice(): never
             ':final'    => $final,
             ':salesman' => SALESMAN_CODE,
             ':sig'      => $signature !== null && $signature !== '' ? base64_decode($signature, true) ?: null : null,
+            ':note'     => $note,
         ]);
         $invoiceId = (int) $headerStmt->fetch()['new_id'];
 

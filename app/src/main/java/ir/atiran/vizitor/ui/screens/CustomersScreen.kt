@@ -12,6 +12,15 @@ package ir.atiran.vizitor.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import ir.atiran.vizitor.util.toFaPrice
+import ir.atiran.vizitor.util.toFaDate
+import ir.atiran.vizitor.data.local.SeedData
+import ir.atiran.vizitor.data.local.InvoiceEntity
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import ir.atiran.vizitor.ui.components.rememberVoiceSearch
@@ -82,6 +91,8 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
     var optimized by remember { mutableStateOf(false) }
     var showMap by remember { mutableStateOf(true) }
     var query by remember { mutableStateOf("") }
+    var statementCustomer by remember { mutableStateOf<CustomerEntity?>(null) }
+    val invoices by viewModel.invoices.collectAsState()
     val startVoice = rememberVoiceSearch(
         onResult = { query = it; viewModel.showToast("جستجوی صوتی مشتری: «$it»") },
         onUnavailable = { viewModel.showToast("ورودی صوتی روی این دستگاه در دسترس نیست 🎙️") }
@@ -186,12 +197,83 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
                     viewModel.showToast(
                         "مشتری «${customer.name}» برای فاکتور انتخاب شد؛ از دکمه مرکزی سبد استفاده کنید 🛒"
                     )
-                }
+                },
+                onStatement = { statementCustomer = customer }
             )
         }
 
         item { MilanoFooter() }
     }
+
+    statementCustomer?.let { c ->
+        StatementDialog(c, invoices) { statementCustomer = null }
+    }
+}
+
+private data class Txn(val date: Long, val title: String, val amount: Long, val credit: Boolean)
+
+/**
+ * دیالوگ گردش حساب مشتری — فاکتورها (بدهکار) + واریزها (بستانکار) + مانده.
+ */
+@Composable
+private fun StatementDialog(
+    customer: CustomerEntity,
+    invoices: List<InvoiceEntity>,
+    onDismiss: () -> Unit
+) {
+    val txns = remember(customer, invoices) {
+        val debits = invoices
+            .filter { it.customerId == customer.id }
+            .map { Txn(it.createdAt, "فاکتور ${it.serverId ?: ("#" + it.id)}", it.finalAmount, false) }
+        val credits = SeedData.payments
+            .filter { it.customerId == customer.id }
+            .map { Txn(System.currentTimeMillis() - it.daysAgo * 86_400_000L, "واریز / پرداخت", it.amount, true) }
+        (debits + credits).sortedByDescending { it.date }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("گردش حساب: ${customer.name}") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            ) {
+                Text(
+                    "مانده فعلی: ${customer.debt.toFaPrice()}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (customer.debt > 0) DangerRed else NeonGreen
+                )
+                Spacer(Modifier.height(10.dp))
+                if (txns.isEmpty()) {
+                    Text("گردشی ثبت نشده است.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                }
+                txns.forEach { t ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(t.title, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                t.date.toFaDate(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                        }
+                        Text(
+                            (if (t.credit) "+" else "-") + t.amount.toFaPrice(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (t.credit) NeonGreen else DangerRed
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("بستن") } }
+    )
 }
 
 /** فاصله هاورساین (کیلومتر) برای بهینه‌سازی مسیر توزیع. */
@@ -211,7 +293,8 @@ private fun CustomerCard(
     order: Int?,
     onCall: () -> Unit,
     onNavigate: () -> Unit,
-    onPick: () -> Unit
+    onPick: () -> Unit,
+    onStatement: () -> Unit
 ) {
     GlassCard(
         modifier = Modifier
@@ -289,6 +372,31 @@ private fun CustomerCard(
                         contentColor = Gold
                     )
                 ) { Icon(Icons.Filled.NearMe, contentDescription = "مسیریابی") }
+            }
+            Spacer(Modifier.height(8.dp))
+            // ── گردش حساب مشتری ──────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Gold.copy(alpha = 0.12f))
+                    .clickable(onClick = onStatement)
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Filled.ReceiptLong,
+                    contentDescription = "گردش حساب",
+                    tint = Gold,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "گردش حساب مشتری | مانده: ${customer.debt.toFaPrice()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (customer.debt > 0) DangerRed else NeonGreen
+                )
             }
         }
     }

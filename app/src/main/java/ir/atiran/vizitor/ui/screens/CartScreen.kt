@@ -98,6 +98,7 @@ fun CartScreen(viewModel: VizitorViewModel) {
     val aiSuggestion by viewModel.aiSuggestion.collectAsState()
     val aiLoading by viewModel.aiLoading.collectAsState()
     var cashSettlement by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
 
     val discount = viewModel.computeDiscount(gross, cashSettlement)
     val finalAmount = gross - discount
@@ -163,6 +164,24 @@ fun CartScreen(viewModel: VizitorViewModel) {
                     }
                 }
             }
+        }
+
+        // ── توضیحات ویزیتور (درج در پیش‌فاکتور فروش آتیران) ─────────────────
+        item {
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = { Text("توضیحات ویزیتور (برای پیش‌فاکتور)") },
+                placeholder = { Text("مثال: تحویل قبل از پنجشنبه، کارتن‌های پسته بدون مغز باز…") },
+                minLines = 2,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = NeonPurple,
+                    unfocusedBorderColor = Color(0x33FFFFFF),
+                    focusedLabelColor = NeonPurple,
+                    cursorColor = NeonPurple
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         // ── اقلام فاکتور ────────────────────────────────────────────────────
@@ -321,9 +340,10 @@ fun CartScreen(viewModel: VizitorViewModel) {
                 enabled = items.isNotEmpty(),
                 onClick = {
                     val png = if (hasSignature) renderSignature(signaturePaths) else null
-                    viewModel.issueInvoice(png, cashSettlement) { invoice ->
+                    viewModel.issueInvoice(png, cashSettlement, note) { invoice ->
                         signaturePaths.clear()
                         hasSignature = false
+                        note = 
                         goldBurst = true // ❄️✨ افکت یخ/باران طلایی
                         viewModel.showToast(
                             "فاکتور ${invoice.id.toFaNumber()} صادر شد ✅ " +

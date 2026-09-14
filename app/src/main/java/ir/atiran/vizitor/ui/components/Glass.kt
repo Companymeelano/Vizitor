@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import ir.atiran.vizitor.ui.theme.DarkSlateElevated
 import ir.atiran.vizitor.ui.theme.GlassBorder
 import ir.atiran.vizitor.ui.theme.GlassFill
 import ir.atiran.vizitor.ui.theme.GlassHighlight
@@ -39,16 +40,35 @@ fun Modifier.glassPanel(
     borderWidth: Dp = 1.dp,
     fill: Color = GlassFill
 ): Modifier = this
+    // افکت جدید «مخملِ شفق»: سطح جامد عمیق + هاله‌های نور ثابت (به‌جای شیشه‌ای)
     .clip(shape)
-    .background(fill, shape)
-    .background(
-        brush = Brush.verticalGradient(
-            colors = listOf(GlassHighlight, Color.Transparent),
-            startY = 0f,
-            endY = 220f
-        ),
-        shape = shape
-    )
+    .background(DarkSlateElevated, shape)
+    .drawBehind {
+        // هاله بنفش سلطنتی (گوشه بالا)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0x26B04BF8), Color.Transparent),
+                center = Offset(size.width * 0.92f, size.height * 0.02f),
+                radius = size.width * 0.95f
+            )
+        )
+        // هاله زمردی (گوشه پایین)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0x1A2BFF88), Color.Transparent),
+                center = Offset(size.width * 0.05f, size.height * 1.05f),
+                radius = size.width * 0.85f
+            )
+        )
+        // خط نور استودیویی بالای سطح
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(Color(0x14FFFFFF), Color.Transparent),
+                startY = 0f,
+                endY = size.height * 0.35f
+            )
+        )
+    }
     .border(borderWidth, borderColor, shape)
 
 /** کارت شیشه‌ای آماده استفاده با پدینگ داخلی استاندارد. */

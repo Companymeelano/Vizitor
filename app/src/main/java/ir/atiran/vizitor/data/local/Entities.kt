@@ -20,10 +20,13 @@ data class ProductEntity(
     val code: String,              // کد کالا / بارکد
     val name: String,
     val groupName: String,         // گروه کالا
-    val price: Long,               // قیمت فروش (ریال)
+    val price: Long,               // قیمت فروش ۱ (ریال)
     val stock: Double,             // موجودی زنده (Live Stock)
     val imageEmoji: String = "📦",
     val isVip: Boolean = false,
+    val unit: String = "کیلو",     // واحد شمارش کالا
+    val packSize: Int = 1,         // تعداد/وزن داخل هر بسته
+    val price2: Long = 0,          // قیمت فروش ۲ (۰ = مشابه فروش ۱)
     val updatedAt: Long = System.currentTimeMillis()
 )
 
@@ -42,7 +45,8 @@ data class CustomerEntity(
     val creditOk: Boolean = true,  // نشانگر وضعیت اعتباری (سبز/قرمز)
     val isVip: Boolean = false,
     val lastPurchaseDaysAgo: Int = 0,
-    val purchaseDropPercent: Int = 0 // درصد افت خرید — مبنای لیست پیگیری
+    val purchaseDropPercent: Int = 0, // درصد افت خرید — مبنای لیست پیگیری
+    val debt: Long = 0                // مانده بدهی مشتری (ریال)
 )
 
 /** هدر فاکتور — آینه جدول SalesHeader. */
@@ -57,7 +61,8 @@ data class InvoiceEntity(
     val finalAmount: Long,         // مبلغ نهایی
     val status: InvoiceStatus = InvoiceStatus.PENDING,
     val createdAt: Long = System.currentTimeMillis(),
-    val signatureBase64: String? = null // امضای دیجیتال مشتری (PNG)
+    val signatureBase64: String? = null, // امضای دیجیتال مشتری (PNG)
+    val note: String = ""                // توضیحات ویزیتور برای پیش‌فاکتور
 )
 
 enum class InvoiceStatus { PENDING, SYNCED, FAILED }

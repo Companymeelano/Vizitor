@@ -3,7 +3,6 @@
  *  Vizitor — آتیران ویزیتور | تب ۱: پیشخوان من (Smart Dashboard)
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
- *  نمودار دایره‌ای تارگت روزانه (سبز نئونی) + پورسانت لحظه‌ای +
  *  لیست هوشمند مشتریان نیازمند پیگیری بر اساس افت خرید
  * ═══════════════════════════════════════════════════════════════════════════
  */
@@ -31,6 +30,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.filled.BarChart
+import ir.atiran.vizitor.ui.components.RoyalBarChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,9 +69,13 @@ import ir.atiran.vizitor.util.toFaPrice
 @Composable
 fun DashboardScreen(viewModel: VizitorViewModel) {
     val todaySales by viewModel.todaySales.collectAsState()
-    val commission by viewModel.commission.collectAsState()
     val followUp by viewModel.followUpCustomers.collectAsState()
     val pending by viewModel.pendingCount.collectAsState()
+
+    val invoices by viewModel.invoices.collectAsState()
+    val debtorsAll by viewModel.customers.collectAsState()
+    val weekly = remember(invoices, todaySales) { buildWeekly(invoices, todaySales) }
+    val debtors = remember(debtorsAll) { debtorsAll.sortedByDescending { it.debt }.take(3) }
 
     val target = viewModel.dailyTarget
     val progress = if (target > 0) (todaySales.toFloat() / target).coerceIn(0f, 1f) else 0f
@@ -95,7 +101,7 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
             MedalBanner(progress = progress, remaining = (target - todaySales).coerceAtLeast(0))
         }
 
-        // ── ردیف تارگت + پورسانت ────────────────────────────────────────────
+        // ── ردیف تارگت روزانه ───────────────────────────────────────────────
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 GlassCard(
@@ -126,28 +132,11 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // ویجت پورسانت لحظه‌ای
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(94.dp)
-                            .neonGreenSurface()
-                    ) {
-                        Column(Modifier.fillMaxSize()) {
-                            Text("پورسانت لحظه‌ای", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                commission.toFaPrice(),
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                                color = NeonGreen
-                            )
-                        }
-                    }
                     // ویجت فاکتورهای در انتظار سینک
                     GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(94.dp)
+                            .weight(1f)
                     ) {
                         Column(Modifier.fillMaxSize()) {
                             Text("در صف ارسال", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
@@ -162,6 +151,25 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
                 }
             }
         }
+
+        // ── چارت ستونی سه‌بعدی فروش هفتگی ──────────────────────────────────
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    SectionTitle(text = "فروش هفتگی (نمودار سه‌بعدی)", icon = Icons.Filled.BarChart)
+                    Spacer(Modifier.height(6.dp))
+                    RoyalBarChart(
+                        data = weekly,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(170.dp)
+                    )
+                }
+            }
+        }
+
+        // ── سه مشتری با بیشترین بدهکاری ────────────────────────────────────
+        item { DebtorsCard(debtors) }
 
         // ── ویجت پرفروش‌ترین‌ها (از فاکتورهای محلی / سال مالی) ────────────────
         item {
@@ -356,6 +364,87 @@ private fun TopSellersCard(tops: List<ir.atiran.vizitor.data.local.TopProduct>) 
                         "${top.total.toFaNumber()} واحد",
                         style = MaterialTheme.typography.labelSmall,
                         color = NeonGreen
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** ساخت داده هفتگی چارت ستونی (۷ روز اخیر؛ در نبود داده، دمو). */
+private fun buildWeekly(
+    invoices: List<ir.atiran.vizitor.data.local.InvoiceEntity>,
+    todaySales: Long
+): List<Pair<String, Long>> {
+    val labels = arrayOf("ش", "ی", "د", "س", "چ", "پ", "ج")
+    val out = mutableListOf<Pair<String, Long>>()
+    for (back in 6 downTo 0) {
+        val c = java.util.Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            add(java.util.Calendar.DAY_OF_YEAR, -back)
+        }
+        val start = (c.clone() as java.util.Calendar).apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val end = start + 86_400_000L
+        var sum = invoices.filter { it.createdAt in start until end }.sumOf { it.finalAmount }
+        if (sum == 0L && back == 0) sum = todaySales
+        out += labels[c.get(java.util.Calendar.DAY_OF_WEEK) % 7] to sum
+    }
+    return if (out.all { it.second == 0L }) {
+        // داده نمایشی برای پیش‌نمایش جذاب چارت
+        listOf(32, 45, 28, 61, 52, 74, 40).mapIndexed { i, v -> out[i].first to v * 1_000_000L }
+    } else out
+}
+
+/**
+ * کارت سه مشتری با بیشترین بدهکاری — حاشیه قرمز/طلایی و مبالغ برجسته.
+ */
+@Composable
+private fun DebtorsCard(debtors: List<ir.atiran.vizitor.data.local.CustomerEntity>) {
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .goldBorder()
+    ) {
+        Column {
+            SectionTitle(text = "هشدار بدهی — بیشترین مانده حساب", icon = Icons.Filled.WarningAmber)
+            Spacer(Modifier.height(8.dp))
+            if (debtors.all { it.debt <= 0 }) {
+                Text(
+                    "هیچ مشتری بدهکاری وجود ندارد 🎉",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+            debtors.filter { it.debt > 0 }.forEachIndexed { i, c ->
+                Row(
+                    modifier = Modifier.padding(vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        (i + 1).toFaNumber(),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = DangerRed
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(c.name, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                        Text(
+                            c.city,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                    Text(
+                        c.debt.toFaPrice(),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = DangerRed
+                        )
                     )
                 }
             }

@@ -24,7 +24,10 @@ data class ProductDto(
     @SerializedName("group_name") val groupName: String,
     @SerializedName("price") val price: Long,
     @SerializedName("stock") val stock: Double,
-    @SerializedName("is_vip") val isVip: Boolean
+    @SerializedName("is_vip") val isVip: Boolean,
+    @SerializedName("unit") val unit: String = "کیلو",
+    @SerializedName("pack_size") val packSize: Int = 1,
+    @SerializedName("price2") val price2: Long = 0
 )
 
 data class CustomerDto(
@@ -40,7 +43,8 @@ data class CustomerDto(
     @SerializedName("credit_ok") val creditOk: Boolean,
     @SerializedName("is_vip") val isVip: Boolean,
     @SerializedName("last_purchase_days") val lastPurchaseDays: Int,
-    @SerializedName("drop_percent") val dropPercent: Int
+    @SerializedName("drop_percent") val dropPercent: Int,
+    @SerializedName("debt") val debt: Long = 0
 )
 
 data class SalMaliRowDto(
@@ -57,6 +61,7 @@ data class InvoiceHeaderRequest(
     @SerializedName("discount") val discount: Long,
     @SerializedName("final_amount") val finalAmount: Long,
     @SerializedName("signature") val signatureBase64: String?,
+    @SerializedName("note") val note: String = "",
     @SerializedName("items") val items: List<InvoiceLineRequest>
 )
 
