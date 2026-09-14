@@ -298,7 +298,7 @@ fun ChatScreen(viewModel: VizitorViewModel) {
             isAdmin = isAdmin,
             isBlocked = m.senderUsername in blocked,
             onPin = { pin ->
-                viewModel.pinChatMessage(m.id, pinned)
+                viewModel.pinChatMessage(m.id, pin)
             },
             onDelete = { viewModel.deleteChatMessage(m.id) },
             onBlock = {
@@ -316,7 +316,8 @@ fun ChatScreen(viewModel: VizitorViewModel) {
             isAdmin = isAdmin,
             onToggleLeft = { ChatPrefs.setGroupLocked(context, it) },
             onToggleHide = { ChatPrefs.setHideContact(context, it) },
-            onUnlockAdmin = { ok ->
+            onUnlockAdmin = { code ->
+                val ok = code.trim() == "1234"
                 if (ok) ChatPrefs.setAdmin(context, true)
                 ok
             },
