@@ -53,8 +53,7 @@ fun NeonPurpleButton(
         modifier = modifier.height(56.dp),
         shape = RoundedCornerShape(18.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-        elevation = ButtonDefaults.elevation(defaultElevation = 10.dp)
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
     ) {
         androidx.compose.foundation.layout.Box(
             modifier = Modifier

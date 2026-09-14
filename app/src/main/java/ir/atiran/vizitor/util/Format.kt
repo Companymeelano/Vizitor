@@ -31,6 +31,8 @@ fun Long.toFaPrice(): String =
 fun Long.toFaNumber(): String =
     DecimalFormat("#,###", latinSymbols).format(this).toFaDigits()
 
+fun Int.toFaNumber(): String = toLong().toFaNumber()
+
 fun Double.toFaNumber(): String =
     DecimalFormat("#,###.##", latinSymbols).format(this).toFaDigits().replace('.', '٫')
 
@@ -57,7 +59,7 @@ fun Long.toFaTime(): String {
 private fun gregorianToJalali(gy: Int, gm: Int, gd: Int): Triple<Int, Int, Int> {
     val gdm = intArrayOf(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
     val gy2 = if (gm > 2) gy + 1 else gy
-    var days = 355666L + (365L * gy) + ((gy2 + 3) / 4) - ((gy2 + 99) / 100) +
+    var days = 355666 + (365 * gy) + ((gy2 + 3) / 4) - ((gy2 + 99) / 100) +
             ((gy2 + 399) / 400) + gd + gdm[gm - 1]
     var jy = -1595 + (33 * (days / 12053))
     days %= 12053

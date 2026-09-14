@@ -47,7 +47,7 @@ fun NeonDonutChart(
         colors = listOf(Color(0xFF0FBF62), NeonGreen, Color(0xFFB8FFD9), NeonGreen)
     )
 ) {
-    val animated by produceState(initialValue = 0f, targetValue = progress) {
+    val animated by produceState(initialValue = 0f, key1 = progress) {
         var current = 0f
         val step = (progress - current) / 40f
         while (current < progress) {

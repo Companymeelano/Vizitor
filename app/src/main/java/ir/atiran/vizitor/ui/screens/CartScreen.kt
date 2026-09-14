@@ -11,7 +11,7 @@ package ir.atiran.vizitor.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.Paint
-import android.graphics.Path
+import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
