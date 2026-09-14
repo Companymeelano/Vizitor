@@ -343,7 +343,7 @@ fun CartScreen(viewModel: VizitorViewModel) {
                     viewModel.issueInvoice(png, cashSettlement, note) { invoice ->
                         signaturePaths.clear()
                         hasSignature = false
-                        note = 
+                        note = ""
                         goldBurst = true // ❄️✨ افکت یخ/باران طلایی
                         viewModel.showToast(
                             "فاکتور ${invoice.id.toFaNumber()} صادر شد ✅ " +
