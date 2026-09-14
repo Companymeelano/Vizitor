@@ -39,12 +39,13 @@ to this project's gradle.properties.
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
@@ -52,12 +53,12 @@ to this project's gradle.properties.
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
 > Task :app:compressDebugAssets
-> Task :app:mergeDebugStartupProfile
-> Task :app:mergeDebugJniLibFolders
-> Task :app:processDebugManifestForPackage
-> Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugStartupProfile
+> Task :app:kspDebugKotlin
 > Task :app:mergeExtDexDebug
+> Task :app:mergeDebugJniLibFolders
 > Task :app:mergeLibDexDebug
 > Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
@@ -67,16 +68,11 @@ to this project's gradle.properties.
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libbarhopper_v3.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so.
 
-> Task :app:kspDebugKotlin
-
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:34:40 Unresolved reference 'FastOutSlowIn'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:193:19 Cannot infer type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:213:53 Unresolved reference 'FastOutSlowIn'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:341:17 Unresolved reference 'Icon'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:394:22 Unresolved reference 'background'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:401:26 Unresolved reference 'background'.
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:402:29 Unresolved reference 'Brush'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury.kt:188:38 None of the following candidates is applicable:
+fun BasicText(text: AnnotatedString, modifier: Modifier = ..., style: TextStyle = ..., onTextLayout: ((TextLayoutResult) -> Unit)? = ..., overflow: TextOverflow = ..., softWrap: Boolean = ..., maxLines: Int = ..., minLines: Int = ..., inlineContent: Map<String, InlineTextContent> = ..., color: ColorProducer? = ...): Unit
+fun BasicText(text: String, modifier: Modifier = ..., style: TextStyle = ..., onTextLayout: ((TextLayoutResult) -> Unit)? = ..., overflow: TextOverflow = ..., softWrap: Boolean = ..., maxLines: Int = ..., minLines: Int = ..., color: ColorProducer? = ...): Unit
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/atiran/vizitor/ui/screens/ReportsScreen.kt:343:17 Unresolved reference 'Icon'.
 
 FAILURE: Build failed with an exception.
 
@@ -285,5 +281,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 3m 27s
+BUILD FAILED in 3m 5s
 32 actionable tasks: 31 executed, 1 up-to-date
