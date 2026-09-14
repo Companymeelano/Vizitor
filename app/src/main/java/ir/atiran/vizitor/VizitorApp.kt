@@ -10,6 +10,7 @@ package ir.atiran.vizitor
 
 import android.app.Application
 import ir.atiran.vizitor.data.repository.VizitorRepository
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.data.sync.SyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,9 @@ class VizitorApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // موتور گرافیک سازگار: تشخیص قدرت دستگاه و تنظیم خودکار سطح جلوه‌ها
+        // تا اجرای برنامه روی هیچ گوشی‌ای (اقتصادی تا پرچمدار) هنگ نداشته باشد
+        VizitorPerf.detect(this)
         val repository = VizitorRepository(this)
         // کاشت داده نمونه برای اولین اجرا (حالت دمو تا اتصال سرور واقعی)
         appScope.launch { repository.ensureSeeded() }

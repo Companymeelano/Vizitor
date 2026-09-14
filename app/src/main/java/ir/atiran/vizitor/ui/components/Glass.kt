@@ -46,6 +46,8 @@ import ir.atiran.vizitor.ui.theme.DarkSlateElevated
 import ir.atiran.vizitor.ui.theme.GlassBorder
 import ir.atiran.vizitor.ui.theme.GlassFill
 import ir.atiran.vizitor.ui.theme.GlassHighlight
+import ir.atiran.vizitor.perf.GfxLevel
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.ui.theme.vizitorPalette
 import kotlin.math.sin
 import kotlin.random.Random
@@ -96,15 +98,18 @@ fun GlassCard(
     content: @Composable BoxScope.() -> Unit
 ) {
     // ✨ ورود سینمایی: محو + بالاآمدن + بزرگ‌نمایی ملایم (یک‌بار، سبک و روان)
-    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    // در حالت گرافیکی «سبک» (گوشی‌های اقتصادی) کاملاً حذف می‌شود تا لگ صفر شود.
+    val enter = remember { androidx.compose.animation.core.Animatable(if (VizitorPerf.entranceFx) 0f else 1f) }
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        enter.animateTo(
-            1f,
-            androidx.compose.animation.core.tween(
-                durationMillis = 450,
-                easing = androidx.compose.animation.core.FastOutSlowInEasing
+        if (enter.value < 1f) {
+            enter.animateTo(
+                1f,
+                androidx.compose.animation.core.tween(
+                    durationMillis = if (VizitorPerf.level == GfxLevel.HIGH) 450 else 300,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
             )
-        )
+        }
     }
     Box(
         modifier = modifier
@@ -140,6 +145,15 @@ fun Modifier.shimmerBorder(
     width: Dp = 1.5.dp,
     periodMs: Int = 3400
 ): Modifier {
+    // حالت سازگار: روی میان‌رده و پایین‌تر، حاشیه نور ثابت (بدون انیمیشن دائمی)
+    if (!VizitorPerf.listFx) {
+        val p0 = vizitorPalette
+        return this.border(
+            width,
+            Brush.linearGradient(listOf(p0.primary, p0.goldHighlight, p0.primary)),
+            shape
+        )
+    }
     val transition = rememberInfiniteTransition(label = "shimmerBorder")
     val t by transition.animateFloat(
         initialValue = -0.35f,
@@ -204,6 +218,53 @@ fun Modifier.dashboardBackdrop(): Modifier {
     val bgDeep = DarkSlateDeep
     val p = vizitorPalette
     val dust = GlassFill
+
+    // ── حالت سبک (گوشی‌های اقتصادی): بکگراند کاملاً استاتیک و فوق‌سبک ──
+    // بدون هیچ انیمیشن دائمی — فقط یک‌بار رسم گرادیان و یک موج ثابت.
+    if (!VizitorPerf.screenFx) {
+        val sheenTop = p.goldHighlight
+        val waveColor = p.primary
+        return this.drawBehind {
+            val w = size.width
+            val h = size.height
+            drawRect(brush = Brush.verticalGradient(listOf(bgDeep, bg, bg)))
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(sheenTop.copy(alpha = 0.04f), Color.Transparent),
+                    startY = 0f,
+                    endY = h * 0.35f
+                )
+            )
+            val baseY = h * 0.30f
+            val amp = h * 0.045f
+            val path = Path()
+            path.moveTo(-40f, baseY)
+            val segments = 6
+            for (s in 1..segments) {
+                val x = -40f + (w + 80f) * s / segments
+                val y = baseY + sin(s * 1.05f) * amp
+                val prevX = -40f + (w + 80f) * (s - 1) / segments
+                val prevY = baseY + sin((s - 1) * 1.05f) * amp
+                path.quadraticTo((prevX + x) / 2f, prevY + (prevY - y) * 0.35f, x, y)
+            }
+            path.lineTo(w + 40f, h + 40f)
+            path.lineTo(-40f, h + 40f)
+            path.close()
+            drawPath(
+                path = path,
+                brush = Brush.verticalGradient(
+                    colors = listOf(waveColor.copy(alpha = 0.05f), Color.Transparent),
+                    startY = baseY - amp,
+                    endY = baseY + h * 0.35f
+                )
+            )
+            drawRoundRect(color = dust, topLeft = Offset.Zero, size = size, cornerRadius = CornerRadius.Zero)
+        }
+    }
+
+    // سطوح «متعادل» و «کامل» — پرچمدارها پرتو نور و غبار کامل می‌گیرند
+    val beamEnabledLevel = VizitorPerf.beams
+    val dustCountLevel = VizitorPerf.stardustCount
 
     val transition = rememberInfiniteTransition(label = "silk")
     val phase by transition.animateFloat(
@@ -293,8 +354,8 @@ fun Modifier.dashboardBackdrop(): Modifier {
             )
         }
 
-        // ۴) غبار طلایی چشمک‌زن
-        stardust.forEach { star ->
+        // ۴) غبار طلایی چشمک‌زن — تعداد سازگار با قدرت دستگاه
+        if (dustCountLevel > 0) stardust.take(dustCountLevel).forEach { star ->
             val tw = (sin(twinkle * star.speed + star.x * 12f) + 1f) / 2f
             val alpha = 0.10f + tw * 0.45f
             val cx = star.x * w

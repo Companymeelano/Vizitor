@@ -23,7 +23,6 @@ import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.ui.components.RoyalHeader
 import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
 import ir.atiran.vizitor.ui.components.auroraFrame
-import ir.atiran.vizitor.ui.components.PriceTag3D
 import ir.atiran.vizitor.ui.components.royalBorder
 import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import ir.atiran.vizitor.util.parseAmount
@@ -51,8 +50,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.ProductEntity
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.ui.components.GlassCard
 import ir.atiran.vizitor.ui.components.NeonGreenButton
 import ir.atiran.vizitor.ui.components.MicButton
@@ -231,7 +234,11 @@ private fun SearchField(value: String, onChange: (String) -> Unit) {
     }
 }
 
-/** کارت کالای شیشه‌ای با افکت سه‌بعدی و دکمه‌های شناور + و -. */
+/**
+ * کارت کالای نسل جدید — صحنه نمایش هاله‌دار + پنل قیمت‌های سه‌بعدی
+ * (فروش ۱ / فروش ۲ کنار هم + قیمت مصرف‌کننده به‌صورت قهرمان با قاب طلایی)
+ * + جزییات کالا یکدست (کد، گروه، واحد، بسته) + دکمه‌های شناور + و -.
+ */
 @Composable
 private fun ProductCard(
     product: ProductEntity,
@@ -241,35 +248,85 @@ private fun ProductCard(
 ) {
     val inStock = product.stock > 0
     val lowStock = product.stock in 0.0..10.0
+    val stockColor = if (inStock) if (lowStock) Gold else NeonGreen else DangerRed
 
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .tilt3D(maxTilt = 12f)
+            .tilt3D(maxTilt = 10f, enabled = VizitorPerf.listFx)
             .then(if (product.isVip) Modifier.goldBorder() else Modifier),
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // تصویر کالا با جلوه سه‌بعدی — کلیک = بزرگنمایی
+            // ═══ صحنه نمایش کالا — هاله طلایی پشت محصول + نشان‌های وضعیت ═══
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(74.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .height(94.dp)
+                    .clip(RoundedCornerShape(18.dp))
                     .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0x22B04BF8), Color(0x08FFFFFF))
-                        )
+                        Brush.verticalGradient(listOf(Color(0x26B04BF8), Color(0x09FFFFFF)))
                     )
                     .clickable(onClick = onZoom)
-                    .auroraFrame(RoundedCornerShape(16.dp)),
+                    .auroraFrame(RoundedCornerShape(18.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    product.imageEmoji,
-                    fontSize = 40.sp,
-                    textAlign = TextAlign.Center
+                // هاله نور طلایی نرم پشت ایموجی
+                Box(
+                    modifier = Modifier
+                        .size(62.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(listOf(Color(0x2EFFD166), Color.Transparent))
+                        )
                 )
+                Text(product.imageEmoji, fontSize = 42.sp, textAlign = TextAlign.Center)
+                // نشان موجودی (بالا-انتهای صحنه)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(7.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(stockColor)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = when {
+                            !inStock -> "ناموجود"
+                            lowStock -> "رو به اتمام: ${product.stock.toFaNumber()}"
+                            else -> "موجود: ${product.stock.toFaNumber()}"
+                        },
+                        color = Color(0xFF0B1220),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                // نشان VIP (بالا-ابتدای صحنه)
+                if (product.isVip) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(7.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFFFFD166))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.WorkspacePremium,
+                            contentDescription = null,
+                            tint = Color(0xFF4A3400),
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            "VIP",
+                            color = Color(0xFF4A3400),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
                 // نشان بزرگنمایی
                 Icon(
                     Icons.Filled.ZoomIn,
@@ -278,21 +335,8 @@ private fun ProductCard(
                     modifier = Modifier
                         .size(16.dp)
                         .align(Alignment.BottomEnd)
-                        .padding(4.dp)
+                        .padding(5.dp)
                 )
-                if (product.isVip) {
-                    Text(
-                        "VIP",
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(6.dp)
-                            .clip(CircleShape)
-                            .background(Gold)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                        color = Color.Black,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold)
-                    )
-                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -308,62 +352,39 @@ private fun ProductCard(
                 overflow = TextOverflow.Ellipsis,
                 minLines = 2
             )
-            Text(
-                product.groupName,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${product.groupName} | کد: ${product.code}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // موجودی زنده (Live Stock)
+            // ═══ پنل قیمت‌های سه‌بعدی ═══
+            PricePanel(product)
+
+            Spacer(Modifier.height(7.dp))
+            // جزئیات کالا — واحد شمارش و بسته‌بندی
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Outlined.Inventory2,
                     contentDescription = null,
-                    tint = if (inStock) if (lowStock) Gold else NeonGreen else DangerRed,
-                    modifier = Modifier.size(14.dp)
+                    tint = TextSecondary,
+                    modifier = Modifier.size(12.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    if (inStock) "موجودی: ${product.stock.toFaNumber()}" else "ناموجود",
+                    "واحد: ${product.unit} • هر بسته: ${product.packSize.toFaNumber()} عدد",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (inStock) if (lowStock) Gold else NeonGreen else DangerRed
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                "واحد شمارش: ${product.unit}  •  هر بسته: ${product.packSize.toFaNumber()} عدد",
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary
-            )
-            Spacer(Modifier.height(6.dp))
-            PriceTag3D(
-                label = "فروش ۱",
-                price = product.price,
-                face = Brush.linearGradient(listOf(Color(0xFF8CFFCB), Color(0xFF17D877))),
-                edge = Color(0xFF0B7A44),
-                textColor = Color.Black,
-                modifier = Modifier.fillMaxWidth()
-            )
-            PriceTag3D(
-                label = "فروش ۲",
-                price = if (product.price2 > 0) product.price2 else product.price,
-                face = Brush.linearGradient(listOf(Color(0xFFFFE29A), Color(0xFFF0B23C))),
-                edge = Color(0xFF8F6414),
-                textColor = Color.Black,
-                modifier = Modifier.fillMaxWidth()
-            )
-            PriceTag3D(
-                label = "مصرف‌کننده",
-                price = if (product.consumerPrice > 0) product.consumerPrice else product.price,
-                face = Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)),
-                edge = Color(0xFF2C0B4E),
-                textColor = Color.White,
-                modifier = Modifier.fillMaxWidth()
-            )
 
             Spacer(Modifier.height(8.dp))
 
@@ -378,7 +399,8 @@ private fun ProductCard(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(NeonPurple.copy(alpha = 0.25f)),
+                        .border(1.dp, NeonPurple.copy(alpha = 0.45f), CircleShape)
+                        .background(NeonPurple.copy(alpha = 0.22f)),
                     colors = IconButtonDefaults.iconButtonColors(contentColor = NeonPurple)
                 ) {
                     Icon(Icons.Filled.Remove, contentDescription = "کاهش", modifier = Modifier.size(18.dp))
@@ -390,12 +412,153 @@ private fun ProductCard(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(NeonGreen.copy(alpha = 0.9f)),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.Black)
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF8CFFCB), NeonGreen))
+                        )
+                        .border(1.dp, Color(0x8CFFFFFF), CircleShape),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFF0B3520))
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "افزودن به سبد", modifier = Modifier.size(20.dp))
                 }
             }
+        }
+    }
+}
+
+/**
+ * پنل قیمت‌های کالا — فروش ۱ و فروش ۲ در دو سکّه سه‌بعدی کنار هم
+ * و قیمت مصرف‌کننده به‌صورت نوار قهرمان با قاب طلایی در انتهای پنل.
+ */
+@Composable
+private fun PricePanel(product: ProductEntity) {
+    val sale1 = product.price
+    val sale2 = if (product.price2 > 0) product.price2 else product.price
+    val consumer = if (product.consumerPrice > 0) product.consumerPrice else product.price
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0x0DFFFFFF))
+            .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(16.dp))
+            .padding(8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Sell,
+                contentDescription = null,
+                tint = Gold,
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                "قیمت‌های کالا (ریال)",
+                style = MaterialTheme.typography.labelSmall,
+                color = Gold
+            )
+        }
+        Spacer(Modifier.height(7.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            PriceCoin(
+                label = "فروش ۱",
+                price = sale1,
+                face = listOf(Color(0xFF8CFFCB), Color(0xFF17D877)),
+                edge = Color(0xFF0B7A44),
+                textColor = Color(0xFF0A3521),
+                modifier = Modifier.weight(1f)
+            )
+            PriceCoin(
+                label = "فروش ۲",
+                price = sale2,
+                face = listOf(Color(0xFFFFE29A), Color(0xFFF0B23C)),
+                edge = Color(0xFF8F6414),
+                textColor = Color(0xFF4A3400),
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Spacer(Modifier.height(7.dp))
+        // قیمت مصرف‌کننده — قهرمان پنل با قاب طلایی
+        Box(Modifier.fillMaxWidth()) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .offset(y = 2.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF2C0B4E))
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)))
+                    .border(1.dp, Gold.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "قیمت مصرف‌کننده",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.92f),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    consumer.toFaPrice(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFFFFE29A)
+                )
+            }
+        }
+    }
+}
+
+/** سکّه قیمت سه‌بعدی — لبه عمق زیرین + رویه گرادیانی + برچسب و مبلغ. */
+@Composable
+private fun PriceCoin(
+    label: String,
+    price: Long,
+    face: List<Color>,
+    edge: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        Box(
+            Modifier
+                .matchParentSize()
+                .offset(y = 2.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(edge.copy(alpha = 0.8f))
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Brush.verticalGradient(face))
+                .border(1.dp, Color(0x38FFFFFF), RoundedCornerShape(12.dp))
+                .padding(horizontal = 8.dp, vertical = 5.dp)
+        ) {
+            Text(
+                label,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor.copy(alpha = 0.8f)
+            )
+            Text(
+                price.toFaPrice(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = textColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.GoldDark
 import ir.atiran.vizitor.ui.theme.NeonGreen
@@ -71,16 +72,19 @@ fun NeonPurpleButton(
     val shape = RoundedCornerShape(26.dp)
     val p = vizitorPalette
     val face = 58.dp
-    // نور تنفسی — تپش ملایم هاله زیر دکمه ✨
-    val breathe by rememberInfiniteTransition(label = "glowPulse").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2300, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowPulseV"
-    )
+    // نور تنفسی — تپش ملایم هاله زیر دکمه ✨ (سطح «کامل»؛ در غیر این‌صورت ثابت و بدون هنگ)
+    val breathe = if (VizitorPerf.listFx) {
+        val b by rememberInfiniteTransition(label = "glowPulse").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2300, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "glowPulseV"
+        )
+        b
+    } else 0.55f
     val glowColor = p.primary.copy(alpha = 0.24f + breathe * 0.16f)
     Box(
         modifier = modifier
@@ -178,15 +182,18 @@ fun NeonGreenButton(
     val shape = RoundedCornerShape(22.dp)
     val p = vizitorPalette
     val face = 50.dp
-    val breathe2 by rememberInfiniteTransition(label = "glowPulse2").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2300, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowPulse2V"
-    )
+    val breathe2 = if (VizitorPerf.listFx) {
+        val b by rememberInfiniteTransition(label = "glowPulse2").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2300, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "glowPulse2V"
+        )
+        b
+    } else 0.55f
     val glowColor = p.accent.copy(alpha = 0.22f + breathe2 * 0.14f)
     Box(
         modifier = modifier

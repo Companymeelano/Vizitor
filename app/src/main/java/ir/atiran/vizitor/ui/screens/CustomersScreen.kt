@@ -1,10 +1,11 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Vizitor — آتیران ویزیتور | تب ۴: گشت‌زنی (CRM & Routing)
+ *  Vizitor — آتیران ویزیتور | تب ۴: مشتری (CRM & Routing)
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
- *  لیست مشتریان با نشانگر وضعیت اعتباری (سبز/قرمز)، تماس، مسیریابی
- *  شهری از طریق API نقشه‌ها و بهینه‌سازی مسیر توزیع بر اساس فاصله
+ *  کارت‌های مشتری ارتقایافته (آواتار تو‌حلقه، پنل اطلاعات، اکشن‌های کوچک)،
+ *  نشانگر وضعیت اعتباری (سبز/قرمز)، تماس، مسیریابی شهری از طریق API نقشه‌ها
+ *  و بهینه‌سازی مسیر توزیع بر اساس فاصله. نقشه ابتدای صفحه حذف شد.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.ui.screens
@@ -25,7 +26,6 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import ir.atiran.vizitor.ui.components.rememberVoiceSearch
 import ir.atiran.vizitor.ui.components.ShimmerGoldText
-import ir.atiran.vizitor.ui.components.MiniRouteMap
 import ir.atiran.vizitor.ui.components.MicButton
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -33,19 +33,25 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -61,9 +67,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Message
@@ -71,6 +80,7 @@ import androidx.compose.material.icons.filled.Sms
 import ir.atiran.vizitor.ui.components.RoyalHeader
 import ir.atiran.vizitor.ui.components.royalBorder
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.CustomerEntity
@@ -78,7 +88,6 @@ import ir.atiran.vizitor.ui.components.GlassCard
 import ir.atiran.vizitor.ui.components.MilanoFooter
 import ir.atiran.vizitor.ui.components.NeonGreenButton
 import ir.atiran.vizitor.ui.components.StatusChip
-import ir.atiran.vizitor.ui.components.StatusDot
 import ir.atiran.vizitor.ui.components.goldBorder
 import ir.atiran.vizitor.ui.theme.AccentText
 import ir.atiran.vizitor.ui.theme.DangerRed
@@ -97,7 +106,6 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
     val customers by viewModel.customers.collectAsState()
     val context = LocalContext.current
     var optimized by remember { mutableStateOf(false) }
-    var showMap by remember { mutableStateOf(true) }
     var query by remember { mutableStateOf("") }
     var statementCustomer by remember { mutableStateOf<CustomerEntity?>(null) }
     val invoices by viewModel.invoices.collectAsState()
@@ -125,9 +133,9 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
     ) {
         item {
             Column {
-                ShimmerGoldText("گشت‌زنی")
+                ShimmerGoldText("مشتری")
                 Text(
-                    "مدیریت مسیر ویزیت و وضعیت اعتباری مشتریان",
+                    "مدیریت مشتریان، وضعیت اعتبار و مسیریابی هوشمند فروش",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
@@ -138,38 +146,17 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
                     MicButton(onClick = { startVoice() })
                 }
                 Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NeonGreenButton(
-                        text = if (optimized) "مسیر بهینه شد ✅ (ترتیب پیش‌فرض)" else "بهینه‌سازی مسیر توزیع",
-                        icon = Icons.Filled.Route,
-                        onClick = { optimized = !optimized },
-                        modifier = Modifier.weight(1f)
-                    )
-                    NeonGreenButton(
-                        text = if (showMap) "پنهان‌کردن نقشه" else "نقشه داخلی",
-                        icon = Icons.Filled.NearMe,
-                        onClick = { showMap = !showMap }
-                    )
-                }
-            }
-        }
-
-        // ── نقشه داخلی با نشانگرهای طلایی و مسیر بهینه ────────────────────────
-        if (showMap) {
-            item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    MiniRouteMap(
-                        customers = list,
-                        route = list,
-                        myLat = myLat,
-                        myLng = myLng
-                    )
-                }
+                NeonGreenButton(
+                    text = if (optimized) "مسیر بهینه شد ✅ (بازگشت به ترتیب پیش‌فرض)" else "بهینه‌سازی مسیر ویزیت بر اساس نزدیکی جغرافیایی",
+                    icon = Icons.Filled.Route,
+                    onClick = { optimized = !optimized },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
         item {
-            RoyalHeader(text = "مشتریان منطقه", icon = Icons.Filled.NearMe)
+            RoyalHeader(text = "مشتریان منطقه", icon = Icons.Filled.People)
         }
 
         items(list, key = { it.id }) { customer ->
@@ -300,6 +287,11 @@ private fun distanceKm(lat1: Double, lng1: Double, lat2: Double, lng2: Double): 
     return 2 * r * atan2(sqrt(a), sqrt(1 - a))
 }
 
+/**
+ * کارت مشتری نسل جدید: آواتار تو‌حلقه با نشان اعتبار و ترتیب ویزیت،
+ * پنل اطلاعات یکدست (نشانی / تماس / آخرین خرید / مانده حساب)،
+ * اکشن اصلی برجسته و اکشن‌های کوچک سه‌تایی (پیامک، مانده، گردش حساب).
+ */
 @Composable
 private fun CustomerCard(
     customer: CustomerEntity,
@@ -311,42 +303,88 @@ private fun CustomerCard(
     onSms: () -> Unit,
     onSmsBalance: () -> Unit
 ) {
+    val statusColor = if (customer.creditOk) NeonGreen else DangerRed
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .royalBorder()
+            .then(if (customer.isVip) Modifier.goldBorder() else Modifier)
     ) {
         Column {
+            // ═══ ردیف هویت: آواتار تو‌حلقه + نام + چیپ وضعیت ═══
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // آواتار سلطنتی با حرف اول نام
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)))
-                        .border(1.dp, Gold.copy(alpha = 0.7f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        customer.name.firstOrNull()?.toString() ?: "؟",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
-                    )
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (order != null) {
+                Box(contentAlignment = Alignment.Center) {
+                    // آواتار سلطنتی با حلقه خارجی ظریف
+                    Box(
+                        modifier = Modifier
+                            .size(58.dp)
+                            .clip(CircleShape)
+                            .background(Gold.copy(alpha = 0.14f))
+                            .border(1.dp, Gold.copy(alpha = 0.45f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)))
+                                .border(1.dp, Gold.copy(alpha = 0.8f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                "${order.toFaNumber()}. ",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = Gold,
-                                fontWeight = FontWeight.ExtraBold
+                                customer.name.firstOrNull()?.toString() ?: "؟",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
                             )
                         }
+                    }
+                    // نقطه وضعیت اعتبار روی حلقه آواتار
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 1.dp, y = 1.dp)
+                            .size(15.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF0B1220))
+                            .border(1.dp, Color(0xFF0B1220), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(statusColor)
+                                .shadow(4.dp, CircleShape, ambientColor = statusColor, spotColor = statusColor)
+                        )
+                    }
+                    // نشان طلایی ترتیب ویزیت (پس از بهینه‌سازی مسیر)
+                    if (order != null) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .offset(x = (-2).dp, y = (-2).dp)
+                                .size(21.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(Color(0xFFFFF3D6), Gold)))
+                                .border(1.dp, Color.White.copy(alpha = 0.65f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                order.toFaNumber(),
+                                color = Color(0xFF4A3400),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold)
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             customer.name,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         if (customer.isVip) {
                             Spacer(Modifier.width(6.dp))
@@ -358,24 +396,86 @@ private fun CustomerCard(
                             )
                         }
                     }
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        "${customer.city}، ${customer.address}",
-                        style = MaterialTheme.typography.bodySmall,
+                        "گروه ${customer.groupName} • کد ${customer.code}",
+                        style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary,
-                        maxLines = 1
-                    )
-                    Text(
-                        "گروه: ${customer.groupName} | کد: ${customer.code}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 StatusChip(
                     text = if (customer.creditOk) "مجاز" else "مسدود",
-                    color = if (customer.creditOk) NeonGreen else DangerRed
+                    color = statusColor
                 )
             }
+
             Spacer(Modifier.height(10.dp))
+
+            // ═══ پنل اطلاعات مشتری ═══
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0x0DFFFFFF))
+                    .border(1.dp, Color(0x24FFFFFF), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                InfoLine(
+                    icon = Icons.Filled.LocationOn,
+                    tint = Gold,
+                    text = "${customer.city} — ${customer.address}"
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        InfoLine(
+                            icon = Icons.Filled.Call,
+                            tint = NeonPurple,
+                            text = customer.phone
+                        )
+                    }
+                    Box(Modifier.weight(1f)) {
+                        InfoLine(
+                            icon = Icons.Filled.DateRange,
+                            tint = AccentText,
+                            text = "آخرین خرید: ${customer.lastPurchaseDaysAgo.toFaNumber()} روز پیش"
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                // کپسول مانده حساب — نمای فوری سلامت مالی مشتری
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(statusColor.copy(alpha = 0.11f))
+                        .border(1.dp, statusColor.copy(alpha = 0.30f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.AccountBalanceWallet,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        if (customer.debt > 0) "مانده حساب: ${customer.debt.toFaPrice()}"
+                        else "حساب تسویه است ✅",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = statusColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // ═══ اکشن اصلی: صدور فاکتور + تماس + مسیریابی ═══
             Row {
                 NeonGreenButton(
                     text = "صدور فاکتور برای این مشتری",
@@ -385,7 +485,10 @@ private fun CustomerCard(
                 Spacer(Modifier.width(8.dp))
                 IconButton(
                     onClick = onCall,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, NeonPurple.copy(alpha = 0.5f), CircleShape),
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = NeonPurple.copy(alpha = 0.2f),
                         contentColor = NeonPurple
@@ -394,72 +497,74 @@ private fun CustomerCard(
                 Spacer(Modifier.width(8.dp))
                 IconButton(
                     onClick = onNavigate,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, Gold.copy(alpha = 0.5f), CircleShape),
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = Gold.copy(alpha = 0.2f),
                         contentColor = Gold
                     )
                 ) { Icon(Icons.Filled.NearMe, contentDescription = "مسیریابی") }
             }
+
             Spacer(Modifier.height(8.dp))
-            // ── پیامک مستقیم + ارسال مانده حساب ────────────────────────────
-            Row {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(NeonGreen.copy(alpha = 0.12f))
-                        .clickable(onClick = onSms)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Sms, contentDescription = "پیامک", tint = NeonGreen, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("پیامک به مشتری", style = MaterialTheme.typography.labelMedium, color = NeonGreen)
-                }
-                Spacer(Modifier.width(8.dp))
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(NeonPurple.copy(alpha = 0.15f))
-                        .clickable(onClick = onSmsBalance)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Message, contentDescription = "ارسال مانده", tint = NeonPurple, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("مانده حساب با پیامک", style = MaterialTheme.typography.labelMedium, color = AccentText)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            // ── گردش حساب مشتری ──────────────────────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Gold.copy(alpha = 0.12f))
-                    .clickable(onClick = onStatement)
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Filled.ReceiptLong,
-                    contentDescription = "گردش حساب",
-                    tint = Gold,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    "گردش حساب مشتری | مانده: ${customer.debt.toFaPrice()}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (customer.debt > 0) DangerRed else NeonGreen
-                )
+
+            // ═══ اکشن‌های کوچک: پیامک | مانده | گردش حساب ═══
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MiniActionChip("پیامک", Icons.Filled.Sms, NeonGreen, Modifier.weight(1f), onSms)
+                MiniActionChip("مانده", Icons.Filled.Message, NeonPurple, Modifier.weight(1f), onSmsBalance)
+                MiniActionChip("گردش حساب", Icons.Filled.ReceiptLong, Gold, Modifier.weight(1f), onStatement)
             }
         }
+    }
+}
+
+/** سطر اطلاعات کوچک: آیکن رنگی در گوی ملایم + متن. */
+@Composable
+private fun InfoLine(icon: ImageVector, tint: Color, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(12.dp))
+        }
+        Spacer(Modifier.width(7.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** چیپ اکشن کوچک زیر کارت (پیامک / مانده / گردش حساب). */
+@Composable
+private fun MiniActionChip(
+    label: String,
+    icon: ImageVector,
+    tint: Color,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(tint.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = if (tint == NeonPurple) AccentText else tint)
     }
 }
 

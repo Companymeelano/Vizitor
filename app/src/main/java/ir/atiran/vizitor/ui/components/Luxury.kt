@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import ir.atiran.vizitor.ui.theme.GoldDark
+import ir.atiran.vizitor.perf.VizitorPerf
 
 /**
  * حلقه طلایی گرادیانی دور سطوح — امضای بصری نسخه لاکچری.
@@ -156,6 +157,8 @@ fun Modifier.shineSweep(
     periodMs: Int = 3400,
     highlightAlpha: Float = 0.22f
 ): Modifier {
+    // حالت سازگار: روی میان‌رده و پایین‌تر جاروب نور دائمی حذف می‌شود (بدون هنگ)
+    if (!VizitorPerf.listFx) return this
     val transition = rememberInfiniteTransition(label = "shine")
     val progress by transition.animateFloat(
         initialValue = -0.35f,
@@ -228,6 +231,19 @@ fun ShimmerGoldText(
     text: String,
     modifier: Modifier = Modifier
 ) {
+    // حالت «سبک»: عنوان طلایی ثابت — بدون انیمیشن دائمی (ضدهنگ)
+    if (!VizitorPerf.screenFx) {
+        androidx.compose.material3.Text(
+            text = text,
+            modifier = modifier,
+            style = MaterialTheme.typography.displaySmall.copy(
+                brush = Brush.horizontalGradient(
+                    listOf(Gold, vizitorPalette.goldHighlight, Gold)
+                )
+            )
+        )
+        return
+    }
     var widthPx by remember { mutableFloatStateOf(1f) }
     val transition = rememberInfiniteTransition(label = "titleShine")
     val phase by transition.animateFloat(
@@ -309,6 +325,15 @@ val RoyalSurfaceBrush: Brush
  */
 @Composable
 fun Modifier.royalBorder(shape: Shape = RoundedCornerShape(22.dp)): Modifier {
+    // حالت سازگار: روی میان‌رده و پایین‌تر، قاب نور ثابت (یک stroke گرادیانی، بدون انیمیشن)
+    if (!VizitorPerf.listFx) {
+        val p0 = vizitorPalette
+        return this.border(
+            width = 1.5.dp,
+            brush = Brush.linearGradient(listOf(p0.primary, p0.accentText, p0.gold)),
+            shape = shape
+        )
+    }
     val transition = rememberInfiniteTransition(label = "royalShimmer")
     val t by transition.animateFloat(
         initialValue = -0.35f,
@@ -377,6 +402,12 @@ fun RoyalHeader(text: String, icon: ImageVector? = null, modifier: Modifier = Mo
  */
 @Composable
 fun Modifier.auroraFrame(shape: Shape = RoundedCornerShape(16.dp)): Modifier {
+    // حالت سازگار: روی میان‌رده و پایین‌تر قاب ثابتِ دو‌رنگِ زیبا (بدون انیمیشن دائمی)
+    if (!VizitorPerf.listFx) {
+        val cP = NeonPurple
+        val cG = Gold
+        return this.border(2.dp, Brush.linearGradient(listOf(cP, cG)), shape)
+    }
     val transition = rememberInfiniteTransition()
     val phase by transition.animateFloat(
         initialValue = 0f,

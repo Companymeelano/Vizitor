@@ -4,7 +4,7 @@
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
  *  تب ۱: پیشخوان من | تب ۲: ویترین کالا | تب ۳: سبد سفارش (FAB مرکزی)
- *  تب ۴: گشت‌زنی | تب ۵: گزارشات و تنظیمات
+ *  تب ۴: مشتری | تب ۵: گزارشات و تنظیمات
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.ui.navigation
@@ -41,7 +41,7 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.TravelExplore
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -81,6 +81,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ir.atiran.vizitor.VizitorViewModel
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.ui.components.dashboardBackdrop
 import ir.atiran.vizitor.ui.screens.CartScreen
 import ir.atiran.vizitor.ui.screens.CatalogScreen
@@ -113,7 +114,7 @@ private val rightTabs = listOf(
 )
 
 private val leftTabs = listOf(
-    TabItem(Routes.CUSTOMERS, "گشت‌زنی", Icons.Filled.TravelExplore),
+    TabItem(Routes.CUSTOMERS, "مشتری", Icons.Filled.Person),
     TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Settings)
 )
 
@@ -206,7 +207,7 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
 
 /**
  * نوار ناوبری پایین شیشه‌ای:
- * [پیشخوان][ویترین] — (FAB مرکزی: سبد سفارش) — [گشت‌زنی][گزارشات]
+ * [پیشخوان][ویترین] — (FAB مرکزی: سبد سفارش) — [مشتری][گزارشات]
  */
 @Composable
 private fun VizitorBottomBar(
@@ -268,14 +269,17 @@ private fun VizitorBottomBar(
         }
 
         // ── دکمه مرکزی شناور (FAB) — تب ۳: سبد سفارش ────────────────────────
-        // قوس نور طلایی که دور FAB در مدار می‌چرخد ✨
-        val orbitTransition = rememberInfiniteTransition(label = "fabOrbit")
-        val orbitAngle by orbitTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(animation = tween(3000, easing = LinearEasing)),
-            label = "orbitAngle"
-        )
+        // قوس نور طلایی که دور FAB در مدار می‌چرخد ✨ (در حالت «سبک» ثابت)
+        val orbitAngle = if (VizitorPerf.screenFx) {
+            val orbitTransition = rememberInfiniteTransition(label = "fabOrbit")
+            val a by orbitTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(animation = tween(3000, easing = LinearEasing)),
+                label = "orbitAngle"
+            )
+            a
+        } else 35f
         val ringGold = Gold
         Box(
             modifier = Modifier

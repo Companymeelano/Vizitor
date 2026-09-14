@@ -68,6 +68,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.InvoiceEntity
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.data.local.InvoiceStatus
 import ir.atiran.vizitor.data.repository.ServerConfig
 import ir.atiran.vizitor.ui.components.GlassCard
@@ -286,7 +287,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
-                        "آتیران ویزیتور — نسخه ۲٫۰٫۰",
+                        "آتیران ویزیتور — نسخه ۲٫۱٫۰",
                         style = MaterialTheme.typography.titleMedium,
                         color = Gold
                     )
@@ -298,6 +299,21 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Speed,
+                            contentDescription = null,
+                            tint = NeonGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "موتور گرافیک سازگار: «${VizitorPerf.level.faLabel}» — تنظیم خودکار بر اساس قدرت گوشی شما (بدون هنگ)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NeonGreen
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "لایسنس: تجاری — تمامی حقوق برای مجموعه آتیران محفوظ است. © ۱۴۰۴",

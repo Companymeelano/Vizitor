@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.toArgb
 import ir.atiran.vizitor.ui.theme.DonutTrack
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonGreenDark
@@ -86,16 +87,19 @@ fun NeonDonutChart(
     // رنگ‌های تم — خوانده شده در کانتکست کامپوزبل پیش از ورود به Canvas
     val haloColor = NeonPurple.copy(alpha = 0.10f)
     val tickColor = Gold
-    // مدار چرخان تیک‌های طلایی ✨ (حرکت ابدی، خیلی آهسته)
-    val tickOrbit by rememberInfiniteTransition(label = "tickOrbit").animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(18000, easing = LinearEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
-        ),
-        label = "tickOrbitV"
-    )
+    // مدار چرخان تیک‌های طلایی ✨ (حرکت ابدی، خیلی آهسته) — در حالت «سبک» ثابت
+    val tickOrbit = if (VizitorPerf.screenFx) {
+        val o by rememberInfiniteTransition(label = "tickOrbit").animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(18000, easing = LinearEasing),
+                repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+            ),
+            label = "tickOrbitV"
+        )
+        o
+    } else 0f
     val animated by produceState(initialValue = 0f, key1 = progress) {
         var current = 0f
         val step = progress / 40f
@@ -205,13 +209,15 @@ fun RoyalBarChart(
     val cBarTop = vizitorPalette.accentText
     val cLabelArgb = TextSecondary.toArgb()
     val cValueArgb = Gold.toArgb()
-    // رشد فنری ستون‌ها هنگام ورود 🌱 (یک‌بار، بدون هزینه ماندگار)
-    val grow = remember { androidx.compose.animation.core.Animatable(0f) }
+    // رشد فنری ستون‌ها هنگام ورود 🌱 (یک‌بار — در حالت «سبک» بدون انیمیشن)
+    val grow = remember { androidx.compose.animation.core.Animatable(if (VizitorPerf.entranceFx) 0f else 1f) }
     LaunchedEffect(Unit) {
-        grow.animateTo(
-            1f,
-            androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = 240f)
-        )
+        if (grow.value < 1f) {
+            grow.animateTo(
+                1f,
+                androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = 240f)
+            )
+        }
     }
     Canvas(modifier = modifier) {
         if (data.isEmpty()) return@Canvas
