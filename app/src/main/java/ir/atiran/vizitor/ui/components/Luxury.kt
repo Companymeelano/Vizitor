@@ -238,6 +238,10 @@ fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
         progress.animateTo(1f, tween(1200))
         onFinished()
     }
+    // رنگ‌های تم — کپچر در کانتکست کامپوزبل پیش از Canvas
+    val cGold = Gold
+    val cPrimary = NeonPurple
+    val cBright = vizitorPalette.goldHighlight
     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
         val cx = size.width / 2f
         val cy = size.height / 2f
@@ -251,9 +255,9 @@ fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
             val y = cy + sin(angle) * dist * 0.8f + p * p * 120f
             val sz = ((3 + (i % 4) * 2).dp.toPx()) * (1f - p * 0.5f)
             val color = when (i % 3) {
-                0 -> Gold
-                1 -> ir.atiran.vizitor.ui.theme.NeonPurple
-                else -> Color(0xFFFFF7CF)
+                0 -> cGold
+                1 -> cPrimary
+                else -> cBright
             }
             drawRect(color = color, topLeft = Offset(x, y), size = Size(sz, sz), alpha = 1f - p)
         }
