@@ -31,7 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.graphicsLayer
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -130,7 +131,8 @@ fun Modifier.topGloss(shape: RoundedCornerShape = RoundedCornerShape(20.dp)): Mo
     this.background(
         brush = Brush.verticalGradient(
             colors = listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.02f), Color.Transparent),
-            colorStops = floatArrayOf(0f, 0.42f, 0.6f)
+            startY = 0f,
+            endY = 260f
         ),
         shape = shape
     )

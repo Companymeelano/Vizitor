@@ -191,7 +191,7 @@ fun MilanoFooter(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Developed by Milano Technical Team, Milad Yaghoobi",
-            brush = Brush.horizontalGradient(listOf(GoldDark, Gold, Color(0xFFFFF1BF), Gold)),
+            color = Gold,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             textAlign = TextAlign.Center
         )

@@ -7,6 +7,7 @@
 package ir.atiran.vizitor
 
 import android.os.Bundle
+import androidx.core.splashscreen.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,7 +24,7 @@ import ir.atiran.vizitor.ui.theme.VizitorTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // اسپلش‌اسکرین لاکچری پیش از محتوای اصلی
-        androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
