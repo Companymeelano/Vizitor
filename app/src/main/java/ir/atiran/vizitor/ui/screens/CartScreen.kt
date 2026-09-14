@@ -50,6 +50,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
+import ir.atiran.vizitor.util.parseAmount
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -212,7 +216,8 @@ fun CartScreen(viewModel: VizitorViewModel) {
                     } else viewModel.showToast("موجودی کافی نیست ❌")
                 },
                 onRemove = { viewModel.decrement(item.productId) },
-                onDelete = { viewModel.removeFromCart(item.productId) }
+                onDelete = { viewModel.removeFromCart(item.productId) },
+                onSetQty = { q -> viewModel.setCartQty(item.productId, q) }
             )
         }
 
@@ -370,7 +375,8 @@ private fun CartLine(
     item: CartItemEntity,
     onAdd: () -> Unit,
     onRemove: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onSetQty: (Double) -> Unit
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -400,13 +406,28 @@ private fun CartLine(
                     .background(NeonPurple.copy(alpha = 0.25f)),
                 colors = IconButtonDefaults.iconButtonColors(contentColor = NeonPurple)
             ) { Icon(Icons.Filled.Remove, contentDescription = "کمتر", modifier = Modifier.size(16.dp)) }
-            Spacer(Modifier.width(8.dp))
-            Text(
-                item.quantity.toFaNumber(),
-                style = MaterialTheme.typography.titleMedium,
-                fontSize = 16.sp
+            Spacer(Modifier.width(6.dp))
+            var qtyText by remember(item.quantity) { mutableStateOf(item.quantity.toFaNumber()) }
+            OutlinedTextField(
+                value = qtyText,
+                onValueChange = { v ->
+                    qtyText = v
+                    v.parseAmount()?.let { q -> onSetQty(q) }
+                },
+                modifier = Modifier.width(66.dp),
+                singleLine = true,
+                textStyle = MaterialTheme.typography.titleSmall.copy(
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.ExtraBold
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = NeonPurple,
+                    unfocusedBorderColor = Color(0x33FFFFFF),
+                    cursorColor = NeonPurple
+                )
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             IconButton(
                 onClick = onAdd,
                 modifier = Modifier

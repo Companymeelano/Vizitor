@@ -77,6 +77,15 @@ interface InvoiceDao {
     @Query("SELECT * FROM invoices WHERE id = :invoiceId LIMIT 1")
     suspend fun getById(invoiceId: Long): InvoiceEntity?
 
+    /** آخرین قیمت فروش یک کالا به یک مشتری (برای پیشنهاد قیمت هوشمند). */
+    @Query(
+        "SELECT ii.unitPrice FROM invoice_items ii " +
+        "INNER JOIN invoices i ON i.id = ii.invoiceId " +
+        "WHERE i.customerId = :customerId AND ii.productId = :productId " +
+        "ORDER BY i.createdAt DESC LIMIT 1"
+    )
+    suspend fun lastUnitPrice(customerId: Int, productId: Int): Long?
+
     @Query("SELECT * FROM invoice_items WHERE invoiceId = :invoiceId")
     suspend fun getItems(invoiceId: Long): List<InvoiceItemEntity>
 

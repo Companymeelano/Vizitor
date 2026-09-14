@@ -37,6 +37,30 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.ImageVector
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import ir.atiran.vizitor.ui.theme.Gold
+import ir.atiran.vizitor.ui.theme.NeonGreen
+import ir.atiran.vizitor.ui.theme.NeonPurple
+import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
@@ -233,5 +257,88 @@ fun GoldBurstOverlay(active: Boolean, onFinished: () -> Unit) {
             }
             drawRect(color = color, topLeft = Offset(x, y), size = Size(sz, sz), alpha = 1f - p)
         }
+    }
+}
+
+// ════════════════════════ تم سلطنتی بنفش (نسخه ۱٫۵٫۰) ════════════════════════
+
+/** گرادیان سطح سلطنتی بنفش برای کارت‌ها و جدول‌ها. */
+val RoyalSurfaceBrush = Brush.verticalGradient(listOf(Color(0xFF1E1133), Color(0xFF130B20)))
+
+/** قاب سلطنتی: حاشیه گرادیانی بنفش → یاسی → طلایی. */
+fun Modifier.royalBorder(shape: Shape = RoundedCornerShape(22.dp)): Modifier = this.border(
+    width = 1.5.dp,
+    brush = Brush.linearGradient(listOf(NeonPurple, Color(0xFFE3BFFF), Gold)),
+    shape = shape
+)
+
+/** سرتیتر سلطنتی بخش‌ها — آیکون در گوی بنفش + متن گرادیانی درخشان. */
+@Composable
+fun RoyalHeader(text: String, icon: ImageVector? = null, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)))
+                .border(1.dp, Color(0x55FFFFFF), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            icon?.let {
+                Icon(it, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.ExtraBold,
+                brush = Brush.horizontalGradient(listOf(Color(0xFFF3E8FF), NeonPurple, Gold))
+            )
+        )
+    }
+}
+
+/**
+ * قاب «شفق قطبی» دور تصویر کالا: حاشیه گرادیانی متحرک (بنفش ↔ طلایی ↔ سبز)
+ * با هاله نرم بیرونی — بسیار چشم‌نواز ولی سبک و روان.
+ */
+@Composable
+fun Modifier.auroraFrame(shape: Shape = RoundedCornerShape(16.dp)): Modifier {
+    val transition = rememberInfiniteTransition()
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+    return this.drawWithContent {
+        drawContent()
+        val t = (1f + kotlin.math.sin(phase * 2f * Math.PI.toFloat())) / 2f
+        val colors = listOf(
+            lerp(NeonPurple, Gold, t),
+            lerp(Gold, NeonGreen, t),
+            lerp(NeonGreen, NeonPurple, t)
+        )
+        val stroke = 3.dp.toPx()
+        val inset = stroke / 2f
+        drawRoundRect(
+            brush = Brush.linearGradient(colors),
+            topLeft = Offset(inset, inset),
+            size = Size(size.width - stroke, size.height - stroke),
+            cornerRadius = CornerRadius(16.dp.toPx()),
+            style = Stroke(stroke)
+        )
+        // هاله نرم بیرونی قاب
+        drawRoundRect(
+            brush = Brush.linearGradient(colors),
+            topLeft = Offset.Zero,
+            size = size,
+            cornerRadius = CornerRadius(20.dp.toPx()),
+            style = Stroke(stroke * 3f),
+            alpha = 0.16f
+        )
     }
 }

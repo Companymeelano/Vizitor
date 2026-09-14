@@ -69,14 +69,35 @@ class VizitorRepository(private val context: Context) {
     }
 
     // ── سبد خرید ────────────────────────────────────────────────────────────
-    suspend fun addToCart(product: ProductEntity, qty: Double = 1.0) {
+    suspend fun addToCart(product: ProductEntity, qty: Double = 1.0, unitPrice: Long = product.price) {
         val current = db.cart().getAll().firstOrNull { it.productId == product.id }
         val newQty = ((current?.quantity ?: 0.0) + qty).coerceAtMost(product.stock)
         if (newQty <= 0) return
         db.cart().upsert(
-            CartItemEntity(product.id, product.name, product.price, newQty, product.stock)
+            CartItemEntity(product.id, product.name, unitPrice, newQty, product.stock)
         )
     }
+
+    /** تنظیم مستقیم تعداد قلم در سبد (ورود دستی عدد). */
+    suspend fun setCartQty(productId: Int, qty: Double) {
+        val item = db.cart().getAll().firstOrNull { it.productId == productId } ?: return
+        if (qty <= 0) {
+            db.cart().deleteByProduct(productId)
+            return
+        }
+        db.cart().upsert(item.copy(quantity = qty.coerceAtMost(item.stock)))
+    }
+
+    /** آخرین قیمت فروش یک کالا به مشتری (از فاکتورهای محلی). */
+    suspend fun lastSalePrice(customerId: Int, productId: Int): Long? =
+        db.invoices().lastUnitPrice(customerId, productId)
+
+    /**
+     * سطح قیمت پیش‌فرض بر اساس گروه مشتری:
+     * مشتریان عمده → قیمت فروش ۲ ، سایر گروه‌ها → قیمت فروش ۱.
+     */
+    fun defaultPriceLevel(groupName: String): Int =
+        if (groupName.contains("عمده") && !groupName.contains("نیمه")) 2 else 1
 
     suspend fun decrementCart(productId: Int) {
         val item = db.cart().getAll().firstOrNull { it.productId == productId } ?: return

@@ -10,6 +10,22 @@
 package ir.atiran.vizitor.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.input.KeyboardType
+import ir.atiran.vizitor.data.local.CustomerEntity
+import ir.atiran.vizitor.ui.components.RoyalHeader
+import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
+import ir.atiran.vizitor.ui.components.auroraFrame
+import ir.atiran.vizitor.ui.components.royalBorder
+import ir.atiran.vizitor.ui.theme.NeonPurpleDark
+import ir.atiran.vizitor.util.parseAmount
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.foundation.clickable
@@ -84,6 +100,19 @@ fun CatalogScreen(
     val products by viewModel.products.collectAsState()
     var query by remember { mutableStateOf("") }
     var zoomProduct by remember { mutableStateOf<ProductEntity?>(null) }
+    var addProduct by remember { mutableStateOf<ProductEntity?>(null) }
+    val selectedCustomer by viewModel.selectedCustomer.collectAsState()
+
+    // آخرین قیمت فروش کالای انتخابی به مشتری انتخابی
+    var lastPrice by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(addProduct) {
+        lastPrice = null
+        val pr = addProduct
+        val cu = selectedCustomer
+        if (pr != null && cu != null) {
+            viewModel.lastSalePrice(cu.id, pr.id) { lastPrice = it }
+        }
+    }
     val startVoice = rememberVoiceSearch(
         onResult = { query = it; viewModel.showToast("جستجوی صوتی: «$it»") },
         onUnavailable = { viewModel.showToast("ورودی صوتی روی این دستگاه در دسترس نیست 🎙️") }
@@ -121,7 +150,7 @@ fun CatalogScreen(
             items(filtered, key = { it.id }) { product ->
                 ProductCard(
                     product = product,
-                    onAdd = { viewModel.addToCart(product) },
+                    onAdd = { addProduct = product },
                     onRemove = { viewModel.decrement(product.id) },
                     onZoom = { zoomProduct = product }
                 )
@@ -135,6 +164,25 @@ fun CatalogScreen(
         // ── دیالوگ بزرگنمایی تصویر کالا ────────────────────────────────────
         zoomProduct?.let { p ->
             ProductZoomDialog(p) { zoomProduct = null }
+        }
+
+        // ── دیالوگ افزودن هوشمند به سبد (تعداد دستی + انتخاب قیمت) ─────────
+        addProduct?.let { pr ->
+            AddToCartDialog(
+                product = pr,
+                customer = selectedCustomer,
+                initialLevel = viewModel.priceLevelFor(selectedCustomer),
+                lastPrice = lastPrice,
+                onSaveVisitorLevel = { viewModel.setDefaultPriceLevel(it) },
+                onConfirm = { qty, price ->
+                    viewModel.addToCart(pr, qty, price)
+                    viewModel.showToast(
+                        "«${pr.name}» × ${qty.toFaNumber()} با قیمت انتخابی به سبد اضافه شد ✅"
+                    )
+                    addProduct = null
+                },
+                onDismiss = { addProduct = null }
+            )
         }
 
         // ── دکمه فعال‌سازی دوربین — اسکنر بارکد ─────────────────────────────
@@ -210,7 +258,8 @@ private fun ProductCard(
                             listOf(Color(0x22B04BF8), Color(0x08FFFFFF))
                         )
                     )
-                    .clickable(onClick = onZoom),
+                    .clickable(onClick = onZoom)
+                    .auroraFrame(RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -247,7 +296,11 @@ private fun ProductCard(
 
             Text(
                 product.name,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.2.dp,
+                    lineHeight = 21.sp
+                ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 minLines = 2
@@ -279,25 +332,42 @@ private fun ProductCard(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                "واحد: ${product.unit} | بسته: ${product.packSize.toFaNumber()}تایی",
-                style = MaterialTheme.typography.labelSmall,
+                "واحد شمارش: ${product.unit}  •  هر بسته: ${product.packSize.toFaNumber()} عدد",
+                style = MaterialTheme.typography.labelMedium,
                 color = TextSecondary
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(5.dp))
             Row(Modifier.fillMaxWidth()) {
                 Text(
-                    "فروش ۱: ${product.price.toFaPrice()}",
-                    style = MaterialTheme.typography.labelSmall.copy(
+                    "فروش ۱",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = TextSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    product.price.toFaPrice(),
+                    style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.ExtraBold,
                         color = NeonGreen
                     )
                 )
             }
-            Text(
-                "فروش ۲: ${(if (product.price2 > 0) product.price2 else product.price).toFaPrice()}",
-                style = MaterialTheme.typography.labelSmall,
-                color = Gold
-            )
+            Spacer(Modifier.height(2.dp))
+            Row(Modifier.fillMaxWidth()) {
+                Text(
+                    "فروش ۲",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = TextSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    (if (product.price2 > 0) product.price2 else product.price).toFaPrice(),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Gold
+                    )
+                )
+            }
 
             Spacer(Modifier.height(8.dp))
 
@@ -392,6 +462,282 @@ private fun ProductZoomDialog(product: ProductEntity, onDismiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(12.dp))
                 NeonGreenButton(text = "بستن", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+/** چیپ انتخاب سطح قیمت (فروش ۱ / فروش ۲) با ظاهر سلطنتی بنفش. */
+@Composable
+private fun PriceChip(
+    label: String,
+    price: Long,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .padding(end = 8.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (selected) Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark))
+                else Color(0x14FFFFFF)
+            )
+            .border(
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) Gold else Color(0x33FFFFFF),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                label,
+                color = if (!enabled) Color(0xFF5A6270) else if (selected) Color.White else TextSecondary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+            Text(
+                price.toFaPrice(),
+                color = if (!enabled) Color(0xFF5A6270) else if (selected) Gold else TextSecondary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
+/**
+ * دیالوگ افزودن هوشمند به سبد:
+ *  — ورود دستی تعداد (تایپ عدد) + دکمه‌های ±
+ *  — انتخاب قیمت فروش ۱ یا ۲ با پیش‌فرض هوشمند (گروه مشتری / تنظیم ویزیتور)
+ *  — نمایش آخرین قیمت فروش به مشتری انتخاب‌شده و امکان اعمال آن
+ *  — ویرایش دستی قیمت نهایی
+ */
+@Composable
+private fun AddToCartDialog(
+    product: ProductEntity,
+    customer: CustomerEntity?,
+    initialLevel: Int,
+    lastPrice: Long?,
+    onSaveVisitorLevel: (Int) -> Unit,
+    onConfirm: (Double, Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var qtyText by remember { mutableStateOf("1") }
+    var level by remember { mutableStateOf(initialLevel) }
+    var manual by remember { mutableStateOf(false) }
+    var manualText by remember { mutableStateOf("") }
+
+    val hasPrice2 = product.price2 > 0
+    val levelPrice = if (level == 2 && hasPrice2) product.price2 else product.price
+    val qty = qtyText.parseAmount() ?: 0.0
+    val finalPrice = if (manual) (manualText.parseAmount() ?: levelPrice) else levelPrice
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(26.dp))
+                .background(RoyalSurfaceBrush)
+                .royalBorder(RoundedCornerShape(26.dp))
+        ) {
+            Column(Modifier.padding(18.dp)) {
+                RoyalHeader(text = "افزودن به سبد فروش", icon = Icons.Filled.Add)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "${product.imageEmoji} ${product.name}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold)
+                )
+                Text(
+                    "واحد: ${product.unit} • هر بسته: ${product.packSize.toFaNumber()} عدد • موجودی: ${product.stock.toFaNumber()}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
+
+                Spacer(Modifier.height(12.dp))
+                Text("تعداد / مقدار:", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { qtyText = ((qty + 1).coerceAtMost(product.stock)).toLong().toString() },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = NeonPurple.copy(alpha = 0.25f),
+                            contentColor = NeonPurple
+                        )
+                    ) { Icon(Icons.Filled.Add, contentDescription = "بیشتر") }
+                    OutlinedTextField(
+                        value = qtyText,
+                        onValueChange = { qtyText = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 8.dp),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.ExtraBold
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NeonPurple,
+                            unfocusedBorderColor = Color(0x33FFFFFF),
+                            cursorColor = NeonPurple
+                        )
+                    )
+                    IconButton(
+                        onClick = { qtyText = (qty - 1).coerceAtLeast(0.0).toLong().toString() },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = Color(0x1AFFFFFF),
+                            contentColor = TextSecondary
+                        )
+                    ) { Icon(Icons.Filled.Remove, contentDescription = "کمتر") }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Text("سطح قیمت:", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                Spacer(Modifier.height(6.dp))
+                Row {
+                    PriceChip(
+                        label = "قیمت فروش ۱",
+                        price = product.price,
+                        selected = level == 1,
+                        enabled = true
+                    ) { level = 1; manual = false }
+                    PriceChip(
+                        label = "قیمت فروش ۲",
+                        price = if (hasPrice2) product.price2 else product.price,
+                        selected = level == 2,
+                        enabled = hasPrice2
+                    ) { level = 2; manual = false }
+                }
+                if (!hasPrice2) {
+                    Text(
+                        "این کالا قیمت فروش ۲ ندارد؛ همان فروش ۱ محاسبه می‌شود.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                }
+                TextButton(onClick = { onSaveVisitorLevel(level) }) {
+                    Text(
+                        "ذخیره «فروش $level» به‌عنوان پیش‌فرض همیشگی من",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeonPurple
+                    )
+                }
+
+                if (lastPrice != null && customer != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Gold.copy(alpha = 0.10f))
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "آخرین قیمت فروش به ${customer.name}:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                            Text(
+                                lastPrice.toFaPrice(),
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Gold
+                                )
+                            )
+                        }
+                        TextButton(onClick = { manual = true; manualText = lastPrice.toString() }) {
+                            Text("اعمال همین قیمت", color = Gold)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("ویرایش دستی قیمت واحد", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            if (manual) "قیمت دلخواه فعال است" else "بر اساس سطح انتخابی بالا",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    }
+                    Switch(
+                        checked = manual,
+                        onCheckedChange = {
+                            manual = it
+                            if (it && manualText.isBlank()) manualText = levelPrice.toString()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = NeonPurple
+                        )
+                    )
+                }
+                if (manual) {
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = manualText,
+                        onValueChange = { manualText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("قیمت دلخواه هر واحد (ریال)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Gold,
+                            cursorColor = Gold,
+                            focusedLabelColor = Gold
+                        )
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    Text(
+                        "قیمت نهایی هر واحد:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        finalPrice.toFaPrice(),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = NeonGreen
+                        )
+                    )
+                }
+                Row(Modifier.fillMaxWidth()) {
+                    Text(
+                        "جمع این قلم:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        (finalPrice.toBigDecimal() * qty.toBigDecimal()).toLong().toFaPrice(),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Gold
+                        )
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+                NeonGreenButton(
+                    text = "افزودن به سبد 🛒",
+                    onClick = { if (qty > 0) onConfirm(qty.coerceAtMost(product.stock), finalPrice) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                    Text("انصراف", color = TextSecondary)
+                }
             }
         }
     }

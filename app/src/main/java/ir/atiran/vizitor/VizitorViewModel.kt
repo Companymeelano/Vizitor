@@ -32,6 +32,22 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = VizitorRepository(app)
 
+    // ── تنظیمات ویزیتور (سطح قیمت پیش‌فرض) — ذخیره ماندگار ───────────────
+    private val prefs = app.getSharedPreferences("vizitor_prefs", android.content.Context.MODE_PRIVATE)
+
+    private val _priceLevel = MutableStateFlow(prefs.getInt("default_price_level", 1))
+    /** سطح قیمت پیش‌فرض ویزیتور: ۱ = فروش ۱ | ۲ = فروش ۲ */
+    val defaultPriceLevel: StateFlow<Int> = _priceLevel.asStateFlow()
+
+    fun setDefaultPriceLevel(level: Int) {
+        prefs.edit().putInt("default_price_level", level).apply()
+        _priceLevel.value = level
+    }
+
+    /** سطح قیمت پیش‌فرض برای یک مشتری (بر اساس گروه؛ در نبود مشتری، تنظیم ویزیتور). */
+    fun priceLevelFor(customer: CustomerEntity?): Int =
+        customer?.let { repo.defaultPriceLevel(it.groupName) } ?: _priceLevel.value
+
     // ── فلوهای عمومی ─────────────────────────────────────────────────────────
     val products = repo.products.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val customers = repo.customers.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -102,7 +118,7 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
     fun findProductByBarcode(code: String, onResult: (ProductEntity?) -> Unit) =
         viewModelScope.launch {
             val p = repo.findByBarcode(code)
-            if (p != null) repo.addToCart(p)
+            if (p != null) repo.addToCart(p, 1.0, p.price)
             onResult(p)
         }
 

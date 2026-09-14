@@ -62,6 +62,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
+import ir.atiran.vizitor.ui.theme.NeonPurpleDark
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Sms
+import ir.atiran.vizitor.ui.components.RoyalHeader
+import ir.atiran.vizitor.ui.components.royalBorder
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.VizitorViewModel
@@ -69,7 +79,6 @@ import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.ui.components.GlassCard
 import ir.atiran.vizitor.ui.components.MilanoFooter
 import ir.atiran.vizitor.ui.components.NeonGreenButton
-import ir.atiran.vizitor.ui.components.SectionTitle
 import ir.atiran.vizitor.ui.components.StatusChip
 import ir.atiran.vizitor.ui.components.StatusDot
 import ir.atiran.vizitor.ui.components.goldBorder
@@ -161,7 +170,7 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
         }
 
         item {
-            SectionTitle(text = "مشتریان منطقه", icon = Icons.Filled.NearMe)
+            RoyalHeader(text = "مشتریان منطقه", icon = Icons.Filled.NearMe)
         }
 
         items(list, key = { it.id }) { customer ->
@@ -198,7 +207,12 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
                         "مشتری «${customer.name}» برای فاکتور انتخاب شد؛ از دکمه مرکزی سبد استفاده کنید 🛒"
                     )
                 },
-                onStatement = { statementCustomer = customer }
+                onStatement = { statementCustomer = customer },
+                onSms = { openSmsApp(context, customer.phone, "") },
+                onSmsBalance = {
+                    openSmsApp(context, customer.phone, balanceSmsMessage(customer))
+                    viewModel.showToast("متن مانده حساب برای ارسال پیامکی آماده شد 📨")
+                }
             )
         }
 
@@ -294,17 +308,32 @@ private fun CustomerCard(
     onCall: () -> Unit,
     onNavigate: () -> Unit,
     onPick: () -> Unit,
-    onStatement: () -> Unit
+    onStatement: () -> Unit,
+    onSms: () -> Unit,
+    onSmsBalance: () -> Unit
 ) {
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (customer.isVip) Modifier.goldBorder() else Modifier)
+            .royalBorder()
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // نشانگر وضعیت اعتباری (سبز/قرمز)
-                StatusDot(if (customer.creditOk) NeonGreen else DangerRed)
+                // آواتار سلطنتی با حرف اول نام
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)))
+                        .border(1.dp, Gold.copy(alpha = 0.7f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        customer.name.firstOrNull()?.toString() ?: "؟",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                    )
+                }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -318,7 +347,7 @@ private fun CustomerCard(
                         }
                         Text(
                             customer.name,
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold)
                         )
                         if (customer.isVip) {
                             Spacer(Modifier.width(6.dp))
@@ -372,6 +401,39 @@ private fun CustomerCard(
                         contentColor = Gold
                     )
                 ) { Icon(Icons.Filled.NearMe, contentDescription = "مسیریابی") }
+            }
+            Spacer(Modifier.height(8.dp))
+            // ── پیامک مستقیم + ارسال مانده حساب ────────────────────────────
+            Row {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(NeonGreen.copy(alpha = 0.12f))
+                        .clickable(onClick = onSms)
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Sms, contentDescription = "پیامک", tint = NeonGreen, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("پیامک به مشتری", style = MaterialTheme.typography.labelMedium, color = NeonGreen)
+                }
+                Spacer(Modifier.width(8.dp))
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(NeonPurple.copy(alpha = 0.15f))
+                        .clickable(onClick = onSmsBalance)
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Message, contentDescription = "ارسال مانده", tint = NeonPurple, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("مانده حساب با پیامک", style = MaterialTheme.typography.labelMedium, color = Color(0xFFE3BFFF))
+                }
             }
             Spacer(Modifier.height(8.dp))
             // ── گردش حساب مشتری ──────────────────────────────────────────
@@ -433,4 +495,28 @@ private fun CustomerSearchField(value: String, onChange: (String) -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+
+/**
+ * ساخت متن پیامک مانده حساب با قالب مشخص، تاریخ روز و اطلاعات ضروری —
+ * هوشمندانه حداکثر در حد ۳ بخش پیامکی (≤ ۱۸۰ نویسه) کوتاه می‌شود.
+ */
+private fun balanceSmsMessage(c: CustomerEntity): String {
+    val date = System.currentTimeMillis().toFaDate()
+    val status = if (c.debt > 0)
+        "خواهشمند است نسبت به تسویه حساب اقدام فرمایید."
+    else
+        "حساب شما تسویه است؛ از همراهی شما سپاسگزاریم."
+    val msg = "سلام ${c.name} عزیز؛ مانده حساب شما نزد آجیل و خشکبار آتیران در تاریخ $date مبلغ ${c.debt.toFaPrice()} ریال می‌باشد. $status — آتیران"
+    return msg.take(180)
+}
+
+/** باز کردن اپ پیامک گوشی با شماره و متن آماده (بدون نیاز به مجوز). */
+private fun openSmsApp(context: android.content.Context, phone: String, body: String) {
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.parse("smsto:$phone")
+        putExtra("sms_body", body)
+    }
+    runCatching { context.startActivity(intent) }
 }

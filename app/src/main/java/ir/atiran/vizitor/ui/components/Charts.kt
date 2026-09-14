@@ -36,6 +36,20 @@ import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.text.style.TextAlign
+import ir.atiran.vizitor.ui.theme.NeonPurpleDark
+import ir.atiran.vizitor.ui.theme.TextPrimary
+import ir.atiran.vizitor.util.toFaNumber
+import ir.atiran.vizitor.util.toFaPrice
 import kotlin.math.min
 
 /**
@@ -73,6 +87,12 @@ fun NeonDonutChart(
             val tl = Offset(pad, pad)
             val sweep = 360f * animated.coerceIn(0f, 1f)
 
+            // ۰) هاله بنفش سلطنتی پشت نمودار
+            drawCircle(
+                color = NeonPurple.copy(alpha = 0.10f),
+                radius = min(this.size.width, this.size.height) / 2f - 1f,
+                style = Stroke(42f)
+            )
             // ۱) سایه عمق (حس سه‌بعدی) — حلقه تاریک کمی پایین‌تر
             drawArc(
                 color = Color(0xFF04060A),
@@ -170,30 +190,67 @@ fun RoyalBarChart(
 
             // بازتاب زیر مبنا
             drawRoundRect(
-                color = NeonPurple.copy(alpha = 0.12f),
+                color = NeonPurple.copy(alpha = 0.14f),
                 topLeft = Offset(x, base + 5f),
                 size = Size(barW, min(hVal * 0.22f, 16f)),
                 cornerRadius = CornerRadius(6f)
             )
-            // بدنه ستون (گرادیان طلا → بنفش)
+            // ستون مکعبی سه‌بعدی سلطنتی
             if (hVal > 4f) {
+                val depth = 9f
+                // وجه کناری تیره (عمق)
+                drawPath(
+                    Path().apply {
+                        moveTo(x + barW, y)
+                        lineTo(x + barW + depth, y - depth * 0.6f)
+                        lineTo(x + barW + depth, base - depth * 0.6f)
+                        lineTo(x + barW, base)
+                        close()
+                    },
+                    Color(0xFF38115F)
+                )
+                // وجه اصلی — گرادیان بنفش سلطنتی
                 drawRoundRect(
                     brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFFFFE9A8), Gold, NeonPurple.copy(alpha = 0.85f)),
+                        colors = listOf(Color(0xFFE3BFFF), NeonPurple, NeonPurpleDark),
                         startY = y, endY = base
                     ),
                     topLeft = Offset(x, y),
                     size = Size(barW, hVal),
-                    cornerRadius = CornerRadius(10f)
+                    cornerRadius = CornerRadius(7f)
                 )
-                // درپوش بیضوی براق (حس استوانه سه‌بعدی)
+                // وجه بالایی روشن‌تر
+                drawPath(
+                    Path().apply {
+                        moveTo(x, y)
+                        lineTo(x + depth, y - depth * 0.6f)
+                        lineTo(x + barW + depth, y - depth * 0.6f)
+                        lineTo(x + barW, y)
+                        close()
+                    },
+                    Color(0xFFF0DCFF)
+                )
+                // درپوش طلایی درخشان
                 drawOval(
-                    brush = Brush.verticalGradient(
-                        listOf(Color(0xFFFFF7CF), Gold)
-                    ),
-                    topLeft = Offset(x, y - 7f),
-                    size = Size(barW, 14f)
+                    brush = Brush.verticalGradient(listOf(Color(0xFFFFF3D6), Gold)),
+                    topLeft = Offset(x + barW * 0.14f, y - 8f),
+                    size = Size(barW * 0.72f, 12f)
                 )
+                // مقدار بالای ستون
+                if (v > 0) {
+                    drawContext.canvas.nativeCanvas.drawText(
+                        v.compactFa(),
+                        x + barW / 2f,
+                        y - 16f,
+                        android.graphics.Paint().apply {
+                            color = android.graphics.Color.parseColor("#FFD166")
+                            textSize = 24f
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            isAntiAlias = true
+                            isFakeBoldText = true
+                        }
+                    )
+                }
             }
             // برچسب روز
             drawContext.canvas.nativeCanvas.drawText(
@@ -217,5 +274,90 @@ fun StatusDot(color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier.size(12.dp)) {
         drawCircle(color = color.copy(alpha = 0.25f), radius = this.size.minDimension / 2f)
         drawCircle(color = color, radius = this.size.minDimension / 4f)
+    }
+}
+
+/** نمایش فشرده اعداد بزرگ برای برچسب ستون‌ها (م = میلیون ریال). */
+private fun Long.compactFa(): String =
+    if (this >= 1_000_000L) "${(this / 1_000_000L).toFaNumber()} م"
+    else if (this >= 1000L) "${(this / 1000L).toFaNumber()} هـ"
+    else this.toFaNumber()
+
+/**
+ * جدول سلطنتی فروش هفتگی — سربرگ گرادیانی بنفش، ردیف‌های زبرا با نوار سهم،
+ * و ردیف جمع طلایی.
+ */
+@Composable
+fun RoyalTable(data: List<Pair<String, Long>>, modifier: Modifier = Modifier) {
+    val total = data.sumOf { it.second }.coerceAtLeast(1L)
+    val max = data.maxOf { it.second }.coerceAtLeast(1L)
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(RoyalSurfaceBrush)
+            .border(1.dp, Color(0x33B04BF8), RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(Brush.horizontalGradient(listOf(NeonPurple, NeonPurpleDark)))
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Text("روز", Modifier.weight(0.7f), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+            Text("فروش روز", Modifier.weight(1.9f), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+            Text("سهم", Modifier.weight(0.9f), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, textAlign = TextAlign.End)
+        }
+        data.forEachIndexed { i, (day, v) ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(if (i % 2 == 0) Color(0x10FFFFFF) else Color.Transparent)
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(day, Modifier.weight(0.7f), color = Color(0xFFE9D5FF), fontWeight = FontWeight.Bold)
+                Column(Modifier.weight(1.9f)) {
+                    Text(
+                        v.toFaPrice(),
+                        color = TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color(0x1AFFFFFF))
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth((v.toFloat() / max).coerceIn(0.04f, 1f))
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(Brush.horizontalGradient(listOf(NeonPurple, Gold)))
+                        )
+                    }
+                }
+                Text(
+                    "${(v * 100 / total).toFaNumber()}٪",
+                    Modifier.weight(0.9f),
+                    color = Gold,
+                    textAlign = TextAlign.End,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            }
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(Gold.copy(alpha = 0.10f))
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Text("جمع هفته", Modifier.weight(0.7f), color = Gold, fontWeight = FontWeight.ExtraBold)
+            Text(total.toFaPrice(), Modifier.weight(1.9f), color = Gold, fontWeight = FontWeight.ExtraBold)
+            Text("۱۰۰٪", Modifier.weight(0.9f), color = Gold, textAlign = TextAlign.End, fontWeight = FontWeight.ExtraBold)
+        }
     }
 }

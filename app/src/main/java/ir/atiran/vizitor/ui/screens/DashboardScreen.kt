@@ -33,6 +33,9 @@ import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.filled.BarChart
 import ir.atiran.vizitor.ui.components.RoyalBarChart
+import ir.atiran.vizitor.ui.components.RoyalHeader
+import ir.atiran.vizitor.ui.components.RoyalTable
+import ir.atiran.vizitor.ui.components.royalBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -109,6 +112,7 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
                     modifier = Modifier
                         .weight(1.2f)
                         .height(200.dp)
+                        .royalBorder()
                 ) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
@@ -138,6 +142,7 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
+                            .royalBorder()
                     ) {
                         Column(Modifier.fillMaxSize()) {
                             Text("در صف ارسال", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
@@ -155,16 +160,18 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
 
         // ── چارت ستونی سه‌بعدی فروش هفتگی ──────────────────────────────────
         item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
+            GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
                 Column {
-                    SectionTitle(text = "فروش هفتگی (نمودار سه‌بعدی)", icon = Icons.Filled.BarChart)
+                    RoyalHeader(text = "فروش هفتگی (نمودار سه‌بعدی)", icon = Icons.Filled.BarChart)
                     Spacer(Modifier.height(6.dp))
                     RoyalBarChart(
                         data = weekly,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(170.dp)
+                            .height(185.dp)
                     )
+                    Spacer(Modifier.height(10.dp))
+                    RoyalTable(data = weekly)
                 }
             }
         }
@@ -179,7 +186,7 @@ fun DashboardScreen(viewModel: VizitorViewModel) {
 
         // ── لیست هوشمند مشتریان نیازمند پیگیری (افت خرید) ───────────────────
         item {
-            SectionTitle(
+            RoyalHeader(
                 text = "مشتریان نیازمند پیگیری (افت خرید)",
                 icon = Icons.Filled.TrendingUp
             )
@@ -326,9 +333,9 @@ private fun FollowUpCard(customer: CustomerEntity, onPick: () -> Unit) {
  */
 @Composable
 private fun TopSellersCard(tops: List<ir.atiran.vizitor.data.local.TopProduct>) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
         Column {
-            SectionTitle(
+            RoyalHeader(
                 text = "پرفروش‌ترین‌های شما",
                 icon = Icons.Filled.EmojiEvents
             )
@@ -409,10 +416,10 @@ private fun DebtorsCard(debtors: List<ir.atiran.vizitor.data.local.CustomerEntit
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .goldBorder()
+            .royalBorder()
     ) {
         Column {
-            SectionTitle(text = "هشدار بدهی — بیشترین مانده حساب", icon = Icons.Filled.WarningAmber)
+            RoyalHeader(text = "هشدار بدهی — بیشترین مانده حساب", icon = Icons.Filled.WarningAmber)
             Spacer(Modifier.height(8.dp))
             if (debtors.all { it.debt <= 0 }) {
                 Text(

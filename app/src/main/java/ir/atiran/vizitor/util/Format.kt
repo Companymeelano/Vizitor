@@ -80,3 +80,20 @@ private fun gregorianToJalali(gy: Int, gm: Int, gd: Int): Triple<Int, Int, Int> 
     }
     return Triple(jy, jm, jd)
 }
+
+/**
+ * تبدیل متن ورودی کاربر (ارقام فارسی/عربی/لاتین، ممیز ٫ یا / یا ,)
+ * به عدد اعشاری — برای ورود دستی تعداد و قیمت.
+ */
+fun String.parseAmount(): Double? {
+    val norm = map { c ->
+        when {
+            c in '۰'..'۹' -> ('0' + (c - '۰'))
+            c in '٠'..'٩' -> ('0' + (c - '٠'))
+            c == '٫' || c == '/' || c == ',' -> '.'
+            else -> c
+        }
+    }.joinToString("").filter { it.isDigit() || it == '.' }
+    if (norm.isEmpty() || norm == ".") return null
+    return norm.toDoubleOrNull()
+}
