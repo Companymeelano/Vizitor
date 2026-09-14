@@ -3,8 +3,8 @@
  *  Vizitor — آتیران ویزیتور | ناوبری اصلی + نوار پایین ۵ تایی با FAB مرکزی
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
- *  تب ۱: پیشخوان من | تب ۲: ویترین کالا | تب ۳: سبد سفارش (FAB مرکزی)
- *  تب ۴: مشتری | تب ۵: گزارشات و تنظیمات
+ *  تب ۱: پیشخوان من | تب ۲: ویترین کالا | تب ۳: گفتگو | تب ۴: سبد سفارش (FAB مرکزی)
+ *  تب ۵: مشتری | تب ۶: گزارشات و تنظیمات
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.ui.navigation
@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -112,7 +113,8 @@ data class TabItem(val route: String, val label: String, val icon: ImageVector)
 
 private val rightTabs = listOf(
     TabItem(Routes.DASHBOARD, "پیشخوان", Icons.Filled.Dashboard),
-    TabItem(Routes.CATALOG, "ویترین", Icons.Filled.Storefront)
+    TabItem(Routes.CATALOG, "ویترین", Icons.Filled.Storefront),
+    TabItem(Routes.CHAT, "گفتگو", Icons.Filled.Message)
 )
 
 private val leftTabs = listOf(
@@ -176,12 +178,7 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
                 .padding(innerPadding)
                 .dashboardBackdrop()
         ) {
-            composable(Routes.DASHBOARD) {
-                DashboardScreen(
-                    viewModel = viewModel,
-                    onOpenChat = { navController.navigate(Routes.CHAT) }
-                )
-            }
+            composable(Routes.DASHBOARD) { DashboardScreen(viewModel) }
             // ── اتاق گفتگوی ویزیتورها (v2.3.0) ─────────────────────────────
             composable(Routes.CHAT) { ChatScreen(viewModel) }
             composable(Routes.CATALOG) {

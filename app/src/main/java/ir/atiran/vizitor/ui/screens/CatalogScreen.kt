@@ -1,6 +1,7 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Vizitor — آتیران ویزیتور | تب ۲: ویترین کالا (3D Catalog)
+ *  Vizitor — آتیران ویزیتور | تب ۲: ویترین کالا (3D Catalog) v2.4.0
+ *  نمایش تکیه‌رویی (تک‌ستونه) با کارت پهن: صحنه بزرگ‌تر + مشخصات کریستالی
  *  Developed by Milano Technical Team, Milad Yaghoobi
  *  ─────────────────────────────────────────────────────────────────────────
  *  کارت‌های شیشه‌ای با افکت سه‌بعدی، دکمه‌های شناور + و -،
@@ -42,9 +43,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -131,18 +131,16 @@ fun CatalogScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+        LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 110.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+            item {
                 Column {
                     ShimmerGoldText("ویترین کالا")
                     Text(
-                        "کاتالوگ زنده با موجودی لحظه‌ای",
+                        "کاتالوگ زنده با موجودی لحظه‌ای — نمایش تک‌ردیفه واضح",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
@@ -165,9 +163,7 @@ fun CatalogScreen(
                 )
             }
 
-            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                MilanoFooter()
-            }
+            item { MilanoFooter() }
         }
 
         // ── دیالوگ بزرگنمایی تصویر کالا ────────────────────────────────────
@@ -238,9 +234,9 @@ private fun SearchField(value: String, onChange: (String) -> Unit) {
 }
 
 /**
- * کارت کالای نسل جدید — صحنه نمایش هاله‌دار + پنل قیمت‌های سه‌بعدی
- * (فروش ۱ / فروش ۲ کنار هم + قیمت مصرف‌کننده به‌صورت قهرمان با قاب طلایی)
- * + جزییات کالا یکدست (کد، گروه، واحد، بسته) + دکمه‌های شناور + و -.
+ * کارت کالای v2.4.0 — چیدمان پهن تک‌ردیفه:
+ * صحنه نمایش هاله‌دار ۱۱۶dp کنار بدنه مشخصات کریستالی (چیپ‌های موجودی/واحد/بسته)
+ * + پنل قیمت‌های سه‌بعدی کامل + استپر زنده با نشانگر «در سبد: N».
  */
 @Composable
 private fun ProductCard(
@@ -259,16 +255,15 @@ private fun ProductCard(
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .tilt3D(maxTilt = 10f, enabled = VizitorPerf.listFx)
+            .tilt3D(maxTilt = 7f, enabled = VizitorPerf.listFx)
             .then(if (product.isVip) Modifier.goldBorder() else Modifier),
         shape = RoundedCornerShape(24.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // ═══ صحنه نمایش کالا — گرادیان از پالت تم + هاله طلایی ═══
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // ═══ صحنه نمایش کالا — مربع بزرگ، گرادیان تم + هاله طلایی ═══
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(94.dp)
+                    .size(118.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .background(
                         Brush.verticalGradient(
@@ -279,88 +274,89 @@ private fun ProductCard(
                     .auroraFrame(RoundedCornerShape(18.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                // هاله نور طلایی نرم پشت ایموجی — از رنگ طلای تم فعال
                 Box(
                     modifier = Modifier
-                        .size(62.dp)
+                        .size(72.dp)
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(listOf(p.gold.copy(alpha = 0.24f), Color.Transparent))
                         )
                 )
-                Text(product.imageEmoji, fontSize = 42.sp, textAlign = TextAlign.Center)
-                // نشان موجودی (بالا-انتهای صحنه)
+                Text(product.imageEmoji, fontSize = 52.sp, textAlign = TextAlign.Center)
+                // نشان موجودی (داخل صحنه، بالا-انتها)
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(7.dp)
+                        .padding(6.dp)
                         .clip(RoundedCornerShape(50))
                         .background(stockColor)
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = when {
                             !inStock -> "ناموجود"
-                            lowStock -> "رو به اتمام: ${product.stock.toFaNumber()}"
-                            else -> "موجود: ${product.stock.toFaNumber()}"
+                            lowStock -> "کم: ${product.stock.toFaNumber()}"
+                            else -> "${product.stock.toFaNumber()}"
                         },
                         color = Color(0xFF0B1220),
-                        fontSize = 9.sp,
+                        fontSize = 8.5.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                 }
-                // نشان VIP (بالا-ابتدای صحنه)
+                // نشان VIP (داخل صحنه، بالا-ابتدا)
                 if (product.isVip) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(7.dp)
+                            .padding(6.dp)
                             .clip(RoundedCornerShape(50))
                             .background(Color(0xFFFFD166))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                            .padding(horizontal = 7.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Filled.WorkspacePremium,
                             contentDescription = null,
                             tint = Color(0xFF4A3400),
-                            modifier = Modifier.size(11.dp)
+                            modifier = Modifier.size(10.dp)
                         )
-                        Spacer(Modifier.width(3.dp))
+                        Spacer(Modifier.width(2.dp))
                         Text(
                             "VIP",
                             color = Color(0xFF4A3400),
-                            fontSize = 9.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
                 }
-                // نشان بزرگنمایی
+                // نشان بزرگنمایی (داخل صحنه، پایین-انتها)
                 Icon(
                     Icons.Filled.ZoomIn,
                     contentDescription = "بزرگنمایی",
                     tint = Color.White.copy(alpha = 0.75f),
                     modifier = Modifier
-                        .size(16.dp)
+                        .size(15.dp)
                         .align(Alignment.BottomEnd)
                         .padding(5.dp)
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.width(10.dp))
 
-            Text(
-                product.name,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.2.sp,
-                    lineHeight = 21.sp
-                ),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                minLines = 2
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // ═══ بدنه مشخصات کریستالی ═══
+            Column(modifier = Modifier.weight(1f)) {
+                // نام کالا — بزرگ و خوانا
+                Text(
+                    product.name,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.2.sp,
+                        lineHeight = 21.sp
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(2.dp))
                 Text(
                     "${product.groupName} | کد: ${product.code}",
                     style = MaterialTheme.typography.labelSmall,
@@ -368,90 +364,103 @@ private fun ProductCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(5.dp))
 
-            // ═══ پنل قیمت‌های سه‌بعدی ═══
-            PricePanel(product)
-
-            Spacer(Modifier.height(7.dp))
-            // جزئیات کالا — واحد شمارش و بسته‌بندی
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Outlined.Inventory2,
-                    contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(12.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "واحد: ${product.unit} • هر بسته: ${product.packSize.toFaNumber()} عدد",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // ═══ استپر زنده: تعداد فعلی این کالا در سبد، بین دو دکمه ═══
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onRemove,
-                    enabled = inStock,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .border(1.dp, NeonPurple.copy(alpha = 0.45f), CircleShape)
-                        .background(NeonPurple.copy(alpha = 0.22f)),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = NeonPurple)
-                ) {
-                    Icon(Icons.Filled.Remove, contentDescription = "کاهش", modifier = Modifier.size(18.dp))
-                }
-                // نمایش زنده تعداد در سبد (وقتی صفر: طلایی «·»)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 6.dp)
-                        .height(30.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (qtyInCart > 0) Gold.copy(alpha = 0.14f) else Color(0x0FFFFFFF))
-                        .border(
-                            1.dp,
-                            if (qtyInCart > 0) Gold.copy(alpha = 0.45f) else Color(0x22FFFFFF),
-                            RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        if (qtyInCart > 0) "در سبد: ${qtyInCart.toFaNumber()}" else "·",
-                        fontSize = if (qtyInCart > 0) 10.5.sp else 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (qtyInCart > 0) Gold else TextSecondary,
-                        maxLines = 1
+                // چیپ‌های مشخصات واضح: موجودی/واحد/بسته
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    SpecChip(
+                        text = if (inStock) "موجودی: ${product.stock.toFaNumber()}" else "ناموجود",
+                        tint = stockColor
                     )
+                    SpecChip(text = "واحد: ${product.unit}", tint = NeonPurple)
+                    SpecChip(text = "بسته: ${product.packSize.toFaNumber()}", tint = TextSecondary)
                 }
-                IconButton(
-                    onClick = onAdd,
-                    enabled = inStock,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(listOf(Color(0xFF8CFFCB), NeonGreen))
-                        )
-                        .border(1.dp, Color(0x8CFFFFFF), CircleShape),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFF0B3520))
+
+                Spacer(Modifier.height(6.dp))
+
+                // ═══ پنل قیمت‌های سه‌بعدی ═══
+                PricePanel(product)
+
+                Spacer(Modifier.height(6.dp))
+
+                // ═══ استپر زنده با نشانگر در سبد ═══
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "افزودن به سبد", modifier = Modifier.size(20.dp))
+                    IconButton(
+                        onClick = onRemove,
+                        enabled = inStock,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .border(1.dp, NeonPurple.copy(alpha = 0.45f), CircleShape)
+                            .background(NeonPurple.copy(alpha = 0.22f)),
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = NeonPurple)
+                    ) {
+                        Icon(Icons.Filled.Remove, contentDescription = "کاهش", modifier = Modifier.size(16.dp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 6.dp)
+                            .height(28.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (qtyInCart > 0) Gold.copy(alpha = 0.14f) else Color(0x0FFFFFFF))
+                            .border(
+                                1.dp,
+                                if (qtyInCart > 0) Gold.copy(alpha = 0.45f) else Color(0x22FFFFFF),
+                                RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (qtyInCart > 0) "در سبد: ${qtyInCart.toFaNumber()}" else "·",
+                            fontSize = if (qtyInCart > 0) 10.5.sp else 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (qtyInCart > 0) Gold else TextSecondary,
+                            maxLines = 1
+                        )
+                    }
+                    IconButton(
+                        onClick = onAdd,
+                        enabled = inStock,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(listOf(Color(0xFF8CFFCB), NeonGreen))
+                            )
+                            .border(1.dp, Color(0x8CFFFFFF), CircleShape),
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFF0B3520))
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "افزودن به سبد", modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
+    }
+}
+
+/** چیپ مشخصات کوچک واضح — رنگ طبق معنا (تکذیب/کیفی/خنثی). */
+@Composable
+private fun SpecChip(text: String, tint: Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(tint.copy(alpha = 0.10f))
+            .border(1.dp, tint.copy(alpha = 0.30f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 7.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text,
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.Bold,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

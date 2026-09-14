@@ -134,25 +134,54 @@ fun DashboardScreen(
                     )
                 }
                 Spacer(Modifier.width(10.dp))
-                // ورود سریع به اتاق گفتگوی ویزیتورها (v2.3.0) — حباب طلایی همگام با تم
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(Gold.copy(alpha = 0.13f))
-                        .border(1.dp, Gold.copy(alpha = 0.45f), CircleShape)
-                        .clickable(onClick = onOpenChat),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Message,
-                        contentDescription = "اتاق گفتگو",
-                        tint = Gold,
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
                 ThemeDotsSwitch()
+            }
+        }
+
+        // ── نوار امضای لوکس میلانو (هویت برند — با رشد تایپوگرافی) ─────────
+        item {
+            val p = vizitorPalette
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0x0CFFFFFF))
+                    .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
+                    .padding(vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    Modifier
+                        .width(46.dp)
+                        .height(1.2.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color.Transparent, p.gold.copy(alpha = 0.85f))
+                            )
+                        )
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "آتیران ویزیتور — امضای لوکس میلانو ✨",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.6.sp
+                    ),
+                    color = Gold,
+                    maxLines = 1
+                )
+                Spacer(Modifier.width(10.dp))
+                Box(
+                    Modifier
+                        .width(46.dp)
+                        .height(1.2.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(p.gold.copy(alpha = 0.85f), Color.Transparent)
+                            )
+                        )
+                )
             }
         }
 
@@ -219,6 +248,17 @@ private fun ThemeDotsSwitch() {
             tint = Gold,
             modifier = Modifier.size(14.dp)
         )
+        // ۷) پیش‌نمایش نام تم انتخابی — برچسب زنده کنار نقاط رنگی
+        AllPalettes.firstOrNull { it.id == themeId }?.let { cur ->
+            Text(
+                cur.displayName,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Gold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         AllPalettes.forEach { pl ->
             val selected = pl.id == themeId
             Box(

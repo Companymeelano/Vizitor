@@ -15,6 +15,7 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import ir.atiran.vizitor.util.toFaPrice
 import ir.atiran.vizitor.util.toFaDate
+import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.data.local.SeedData
 import ir.atiran.vizitor.data.local.InvoiceEntity
 import androidx.compose.material3.TextButton
@@ -90,10 +91,15 @@ import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.RoyalHeader
 import ir.atiran.vizitor.ui.components.RoyalSurfaceBrush
 import ir.atiran.vizitor.ui.components.royalBorder
+import ir.atiran.vizitor.ui.components.tilt3D
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.VizitorViewModel
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import ir.atiran.vizitor.R
 import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.ui.components.GlassCard
 import ir.atiran.vizitor.ui.components.MilanoFooter
@@ -106,6 +112,7 @@ import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.NeonGreen
 import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.util.toFaNumber
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -447,13 +454,72 @@ private fun CustomerCard(
     onSmsBalance: () -> Unit
 ) {
     val statusColor = if (customer.creditOk) NeonGreen else DangerRed
+    val p = vizitorPalette
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
+            // پارالاکس لمسی — کارت هنگام لمس به‌ظاهر می‌چرخد (گیت با VizitorPerf)
+            .tilt3D(maxTilt = 6f, enabled = VizitorPerf.listFx)
             // تک‌قاب دقیق: VIP فقط قاب طلایی، عادی فقط قاب سلطنتی — بدون تداخل/بیرون‌زدگی
             .then(if (customer.isVip) Modifier.goldBorder() else Modifier.royalBorder())
     ) {
         Column {
+            // ═══ بنر لوکس «پخش عمده آجیل و خشکبار» — تنتِ زنده از پالت تم ═══
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(78.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.nuts_premium),
+                    contentDescription = "پخش عمده آجیل و خشکبار",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().height(78.dp)
+                )
+                // تنتِ رنگی موج‌دار از رنگ‌های تم فعال — همرنگ با انتخاب کاربر
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(78.dp)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    p.primary.copy(alpha = 0.55f),
+                                    Color(0x33000000),
+                                    p.gold.copy(alpha = 0.38f)
+                                )
+                            )
+                        )
+                )
+                // خط هیرلاین طلایی نازک در لبه پایین بنر (امضای لوکس)
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.2.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color.Transparent, p.gold.copy(alpha = 0.7f), Color.Transparent)
+                            )
+                        )
+                )
+                Text(
+                    "پخش عمده آجیل و خشکبار ✨",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFFFFFFFF),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0x8C0B1220))
+                        .padding(horizontal = 9.dp, vertical = 2.dp)
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
             // ═══ ردیف هویت: آواتار تو‌حلقه + نام + چیپ وضعیت ═══
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(contentAlignment = Alignment.Center) {

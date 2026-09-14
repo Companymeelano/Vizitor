@@ -25,6 +25,8 @@ object ChatPrefs {
     private const val KEY_HIDE_CONTACT = "hide_contact"
     private const val KEY_LOCKED = "group_locked"
     private const val KEY_BLOCKED = "blocked_users"
+    private const val KEY_ADMIN_USER = "admin_user"
+    private const val KEY_ADMIN_PASS = "admin_pass"
 
     private val _fullName = MutableStateFlow("")
     val fullName: StateFlow<String> = _fullName.asStateFlow()
@@ -45,6 +47,13 @@ object ChatPrefs {
 
     fun init(context: Context) {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        // مقداردهی اولیه حساب مدیریت در اولین اجرا
+        if (!p.contains(KEY_ADMIN_USER)) {
+            p.edit()
+                .putString(KEY_ADMIN_USER, "admin")
+                .putString(KEY_ADMIN_PASS, "admin")
+                .apply()
+        }
         _fullName.value = p.getString(KEY_FULL_NAME, "") ?: ""
         _phone.value = p.getString(KEY_PHONE, "") ?: ""
         _username.value = p.getString(KEY_USERNAME, "") ?: ""
@@ -71,6 +80,22 @@ object ChatPrefs {
         val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_PASSWORD, "") ?: ""
         return saved.isNotEmpty() && saved == password
+    }
+
+    /** بررسی اعتبار مدیر گفتگو (نام‌کاربری/رمز مدیر). */
+    fun verifyAdmin(context: Context, user: String, pass: String): Boolean {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val u = p.getString(KEY_ADMIN_USER, "admin") ?: "admin"
+        val w = p.getString(KEY_ADMIN_PASS, "admin") ?: "admin"
+        return user.trim() == u && pass == w
+    }
+
+    /** تغییر رمز مدیر پس از ورود. */
+    fun changeAdminPassword(context: Context, newPass: String): Boolean {
+        if (newPass.length < 4) return false
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_ADMIN_PASS, newPass).apply()
+        return true
     }
 
     fun setAdmin(context: Context, v: Boolean) {

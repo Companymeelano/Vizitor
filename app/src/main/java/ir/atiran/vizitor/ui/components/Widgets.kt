@@ -18,6 +18,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,12 +90,24 @@ fun NeonPurpleButton(
         )
         b
     } else 0.55f
-    val glowColor = p.primary.copy(alpha = 0.24f + breathe * 0.16f)
+    // ✨ حس مغناطیسی: هاله طلایی که هنگام فشار دکمه شعله می‌کشد + هستیک ظریف
+    val pressSrc = remember { MutableInteractionSource() }
+    val isPressed by pressSrc.collectIsPressedAsState()
+    val haptic = LocalHapticFeedback.current
+    val glowColor = p.primary.copy(alpha = (if (isPressed) 0.30f else 0.24f) + breathe * 0.16f)
+    val pressGold = p.gold.copy(alpha = if (isPressed) 0.35f else 0f)
     Box(
         modifier = modifier
             .height(face + 6.dp)
             .press3D(depth = 4.dp)
             .drawBehind {
+                // باریکه طلایی هنگام فشار — ریپل لاکچری
+                if (pressGold.alpha > 0f) {
+                    drawRoundRect(
+                        color = pressGold,
+                        cornerRadius = CornerRadius(30.dp.toPx())
+                    )
+                }
                 // هاله نور تنفسی زیر دکمه (حس شناور و زنده بودن)
                 if (enabled) {
                     drawRoundRect(
@@ -103,7 +120,14 @@ fun NeonPurpleButton(
                     )
                 }
             }
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(
+                enabled = enabled,
+                interactionSource = pressSrc,
+                indication = null
+            ) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
         contentAlignment = Alignment.TopCenter
     ) {
         // لبه عمق فیزیکی (۳بعد واقعی)
@@ -194,12 +218,24 @@ fun NeonGreenButton(
         )
         b
     } else 0.55f
-    val glowColor = p.accent.copy(alpha = 0.22f + breathe2 * 0.14f)
+    // ✨ حس مغناطیسی: هاله طلایی که هنگام فشار دکمه شعله می‌کشد + هستیک ظریف
+    val pressSrc2 = remember { MutableInteractionSource() }
+    val isPressed2 by pressSrc2.collectIsPressedAsState()
+    val haptic2 = LocalHapticFeedback.current
+    val glowColor = p.accent.copy(alpha = (if (isPressed2) 0.28f else 0.22f) + breathe2 * 0.14f)
+    val pressGold2 = p.gold.copy(alpha = if (isPressed2) 0.32f else 0f)
     Box(
         modifier = modifier
             .height(face + 6.dp)
             .press3D(depth = 4.dp)
             .drawBehind {
+                // باریکه طلایی هنگام فشار — ریپل لاکچری
+                if (pressGold2.alpha > 0f) {
+                    drawRoundRect(
+                        color = pressGold2,
+                        cornerRadius = CornerRadius(26.dp.toPx())
+                    )
+                }
                 if (enabled) {
                     drawRoundRect(
                         brush = Brush.radialGradient(
@@ -211,7 +247,14 @@ fun NeonGreenButton(
                     )
                 }
             }
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(
+                enabled = enabled,
+                interactionSource = pressSrc2,
+                indication = null
+            ) {
+                haptic2.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
         contentAlignment = Alignment.TopCenter
     ) {
         // لبه عمق فیزیکی

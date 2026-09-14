@@ -288,7 +288,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
-                        "آتیران ویزیتور — نسخه ۲٫۳٫۰",
+                        "آتیران ویزیتور — نسخه ۲٫۴٫۰",
                         style = MaterialTheme.typography.titleMedium,
                         color = Gold
                     )

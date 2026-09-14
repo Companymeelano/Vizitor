@@ -316,11 +316,12 @@ fun ChatScreen(viewModel: VizitorViewModel) {
             isAdmin = isAdmin,
             onToggleLeft = { ChatPrefs.setGroupLocked(context, it) },
             onToggleHide = { ChatPrefs.setHideContact(context, it) },
-            onUnlockAdmin = { code ->
-                val ok = code.trim() == "1234"
+            onUnlockAdmin = { user, pass ->
+                val ok = ChatPrefs.verifyAdmin(context, user, pass)
                 if (ok) ChatPrefs.setAdmin(context, true)
                 ok
             },
+            onChangePass = { newPass -> ChatPrefs.changeAdminPassword(context, newPass) },
             onToast = viewModel::showToast,
             onDismiss = { showAdmin = false }
         )
@@ -785,7 +786,7 @@ private fun MessageActionDialog(
                     }
                 }
                 if (!isAdmin && !isMine) {
-                    Text("برای عملیات مدیریت، ابتدا «حالت مدیر» را از تنظیمات فعال کنید.", color = TextSecondary)
+                    Text("برای این پیام گزینه‌ای در دسترس نیست.", color = TextSecondary)
                 }
             }
         },
@@ -795,7 +796,7 @@ private fun MessageActionDialog(
 
 // ═════════════════════════ دیالوگ تنظیمات مدیر ═════════════════════════
 
-/** تنظیمات اتاق گفتگو — قفل موقت، عدم نمایش شماره/آیدی و فعال‌سازی حالت مدیر. */
+/** مدیریت اتاق گفتگو — ورود بی‌پروا (بدون هیچ نشانه)، قفل موقت، عدم نمایش آیدی، تغییر رمز. */
 @Composable
 private fun AdminSheetDialog(
     groupLocked: Boolean,
@@ -803,27 +804,40 @@ private fun AdminSheetDialog(
     isAdmin: Boolean,
     onToggleLeft: (Boolean) -> Unit,
     onToggleHide: (Boolean) -> Unit,
-    onUnlockAdmin: (String) -> Boolean,
+    onUnlockAdmin: (String, String) -> Boolean,
+    onChangePass: (String) -> Boolean,
     onToast: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var code by remember { mutableStateOf("") }
+    var u by remember { mutableStateOf("") }
+    var w by remember { mutableStateOf("") }
+    var showChangePass by remember { mutableStateOf(false) }
+    var np1 by remember { mutableStateOf("") }
+    var np2 by remember { mutableStateOf("") }
+    var badLogin by remember { mutableStateOf(false) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("تنظیمات اتاق گفتگو") },
+        title = { Text("مدیریت اتاق گفتگو") },
         text = {
             Column {
-                Text(
-                    "مدیریت این گفتگو توسط مدیر انجام می‌شود — گزینه‌های زیر فقط در «حالت مدیر» قابل تغییرند.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
-                )
-                Spacer(Modifier.height(8.dp))
                 if (!isAdmin) {
+                    // فرم ورود مدیر — کاملاً بی‌نشانه
                     OutlinedTextField(
-                        value = code,
-                        onValueChange = { code = it },
-                        label = { Text("کد دسترسی مدیر (پیش‌فرض: 1234)") },
+                        value = u,
+                        onValueChange = { u = it; badLogin = false },
+                        label = { Text("نام کاربری") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Gold, cursorColor = Gold, focusedLabelColor = Gold
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = w,
+                        onValueChange = { w = it; badLogin = false },
+                        label = { Text("رمز ورود") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -832,34 +846,89 @@ private fun AdminSheetDialog(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.height(6.dp))
-                    TextButton(onClick = {
-                        val ok = onUnlockAdmin(code)
-                        onToast(if (ok) "حالت مدیر فعال شد 👑" else "کد مدیر نادرست است ❌")
-                        code = ""
-                    }) {
-                        Text("فعال‌سازی حالت مدیر", color = Gold)
+                    if (badLogin) {
+                        Text(
+                            "نام کاربری یا رمز نادرست است ❌",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = DangerRed,
+                            modifier = Modifier.padding(top = 5.dp)
+                        )
                     }
+                    Spacer(Modifier.height(8.dp))
+                    NeonGreenButton(
+                        text = "ورود به مدیریت",
+                        onClick = {
+                            val ok = onUnlockAdmin(u.trim(), w)
+                            if (!ok) { badLogin = true } else { onToast("حالت مدیر فعال شد 👑") }
+                            u = ""; w = ""
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 } else {
                     Text("👑 حالت مدیر فعال است", color = NeonGreen, style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(8.dp))
+                    AdminSwitchRow(
+                        title = "قفل موقت گروه",
+                        subtitle = "تا باز شدن، هیچ‌کس نمی‌تواند پیام بفرستد",
+                        icon = if (groupLocked) Icons.Filled.Lock else Icons.Filled.LockOpen,
+                        checked = groupLocked,
+                        enabled = true,
+                        onChange = onToggleLeft
+                    )
+                    AdminSwitchRow(
+                        title = "عدم نمایش شماره/آیدی ویزیتورها",
+                        subtitle = "در پیام‌ها فقط عنوان «ویزیتور آتیران» نمایش داده می‌شود",
+                        icon = Icons.Filled.Face,
+                        checked = hideContact,
+                        enabled = true,
+                        onChange = onToggleHide
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    TextButton(onClick = { showChangePass = !showChangePass }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (showChangePass) "بستن فرم تغییر رمز" else "تغییر رمز مدیر 🔑", color = Gold)
+                    }
+                    if (showChangePass) {
+                        OutlinedTextField(
+                            value = np1,
+                            onValueChange = { np1 = it },
+                            label = { Text("رمز جدید مدیر (حداقل ۴ نویسه)") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Password),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Gold, cursorColor = Gold, focusedLabelColor = Gold
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = np2,
+                            onValueChange = { np2 = it },
+                            label = { Text("تکرار رمز جدید") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Password),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Gold, cursorColor = Gold, focusedLabelColor = Gold
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        NeonGreenButton(
+                            text = "ذخیره رمز جدید ✅",
+                            onClick = {
+                                val m = when {
+                                    np1.length < 4 -> "رمز باید حداقل ۴ نویسه باشد ❌"
+                                    np1 != np2 -> "تکرار رمز یکسان نیست ❌"
+                                    onChangePass(np1) -> { showChangePass = false; np1 = ""; np2 = ""; "رمز مدیر تغییر کرد ✅" }
+                                    else -> "خطا در ذخیره رمز ❌"
+                                }
+                                onToast(m)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
-                Spacer(Modifier.height(10.dp))
-                AdminSwitchRow(
-                    title = "قفل موقت گروه",
-                    subtitle = "تا باز شدن، هیچ‌کس نمی‌تواند پیام بفرستد",
-                    icon = if (groupLocked) Icons.Filled.Lock else Icons.Filled.LockOpen,
-                    checked = groupLocked,
-                    enabled = isAdmin,
-                    onChange = onToggleLeft
-                )
-                AdminSwitchRow(
-                    title = "عدم نمایش شماره/آیدی ویزیتورها",
-                    subtitle = "در پیام‌ها فقط عنوان «ویزیتور آتیران» نمایش داده می‌شود",
-                    icon = Icons.Filled.Face,
-                    checked = hideContact,
-                    enabled = isAdmin,
-                    onChange = onToggleHide
-                )
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("بستن") } }

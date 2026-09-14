@@ -237,6 +237,8 @@ fun ShimmerGoldText(
             text = text,
             modifier = modifier,
             style = MaterialTheme.typography.displaySmall.copy(
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.3.sp,
                 brush = Brush.horizontalGradient(
                     listOf(Gold, vizitorPalette.goldHighlight, Gold)
                 )
@@ -258,6 +260,8 @@ fun ShimmerGoldText(
     val sweep = widthPx * 0.35f
     val startX = -sweep + phase * (widthPx + sweep * 2f)
     val style = MaterialTheme.typography.displaySmall.copy(
+        fontWeight = FontWeight.ExtraBold,
+        letterSpacing = 0.3.sp,
         brush = Brush.horizontalGradient(
             colors = listOf(Gold, vizitorPalette.goldHighlight, Gold),
             startX = startX,
