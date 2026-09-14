@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.graphics.Brush
@@ -302,7 +303,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Filled.Speed,
+                            Icons.Filled.Smartphone,
                             contentDescription = null,
                             tint = NeonGreen,
                             modifier = Modifier.size(16.dp)
