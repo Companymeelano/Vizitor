@@ -24,7 +24,7 @@
 param(
     [string]$InstanceName = 'MSSQLSERVER',   # نام نمونه SQL (پیش‌فرض: نمونه پیش‌فرض)
     [int]   $SqlPort      = 1433,
-    [string]$DbName       = 'Meelano',
+    [string]$DbName       = 'atiran2',
     [string]$DbUser       = '',              # اگر خالی بماند از config.php کنار اسکریپت خوانده می‌شود
     [string]$DbPass       = '',
     [switch]$SafeRestore,                    # اعمال بازگردانی امن رجیستری بدون پرسش

@@ -284,7 +284,7 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "بازگشت به پیش‌فرض سرور میلانو (37.143.148.14:8731)",
+                            "بازگشت به پیش‌فرض سرور میلانو (37.143.147.19:8731)",
                             color = palette.gold
                         )
                     }

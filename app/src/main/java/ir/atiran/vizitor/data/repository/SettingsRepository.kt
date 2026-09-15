@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.map
 private val Context.settingsDataStore by preferencesDataStore(name = "vizitor_settings")
 
 data class ServerConfig(
-    val serverIp: String = "37.143.148.14",
+    val serverIp: String = "37.143.147.19",
     val httpPort: Int = 8731,
     val dbPort: Int = 1433,          // پورت استاندارد SQL Server
     val apiPath: String = "server",

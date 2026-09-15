@@ -21,8 +21,8 @@ android {
         applicationId = "ir.atiran.vizitor"
         minSdk = 24
         targetSdk = 35
-        versionCode = 28
-        versionName = "2.13.4"
+        versionCode = 29
+        versionName = "2.13.5"
         vectorDrawables { useSupportLibrary = true }
     }
 

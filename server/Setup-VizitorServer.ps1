@@ -20,7 +20,7 @@
     ۱۱) تست سرتاسری API: ping با کلید، ۴۰۱ بدون کلید، مسدود بودن config.php
     ۱۲) بررسی دسترس‌پذیری IP عمومی (اطلاعاتی)
 
-  نحوه اجرا (روی خود سرور 37.143.148.14):
+  نحوه اجرا (روی خود سرور 37.143.147.19):
     - راست‌کلیک روی فایل ← Run with PowerShell  (خودش مدیر می‌شود)
     یا از پاورشل مدیر:
       powershell -ExecutionPolicy Bypass -File .\Setup-VizitorServer.ps1
@@ -37,7 +37,7 @@ param(
     [int]   $WebPort      = 8731,                  # پورت وب‌سرویس (همان پورت اپ)
     [string]$PhpRoot      = 'C:\php\php-8.3-nts',  # مسیر نصب PHP در صورت نبودن
     [string]$PhpFamily    = '8.3',                 # خانواده PHP برای نصب تازه
-    [string]$PublicHost   = '37.143.148.14',       # IP عمومی سرور برای تست نهایی
+    [string]$PublicHost   = '37.143.147.19',       # IP عمومی سرور برای تست نهایی
     [int]   $SqlPort      = 1433,                  # پورت SQL Server
     [switch]$SkipDownloads,                        # بدون دانلود از اینترنت (آفلاین)
     [switch]$SkipSqlLoginFix,                      # عدم ساخت/اصلاح خودکار لاگین SQL
