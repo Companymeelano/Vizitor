@@ -91,6 +91,7 @@ import ir.atiran.vizitor.ui.screens.CustomersScreen
 import ir.atiran.vizitor.ui.screens.DashboardScreen
 import ir.atiran.vizitor.ui.screens.ReportsScreen
 import ir.atiran.vizitor.ui.screens.ScannerScreen
+import ir.atiran.vizitor.ui.screens.SplashScreen
 import ir.atiran.vizitor.ui.theme.DarkSlateElevated
 import ir.atiran.vizitor.ui.theme.GlassBorder
 import ir.atiran.vizitor.ui.theme.Gold
@@ -106,6 +107,7 @@ object Routes {
     const val CUSTOMERS = "customers"
     const val REPORTS = "reports"
     const val CHAT = "chat"
+    const val SPLASH = "splash"
     const val SCANNER = "scanner"
 }
 
@@ -172,12 +174,22 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.DASHBOARD,
+            startDestination = Routes.SPLASH,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .dashboardBackdrop()
         ) {
+            // صفحه ورود لوکس — نام پخش + مدیریت + دکمه ورود تم‌دار (v2.5.0)
+            composable(Routes.SPLASH) {
+                SplashScreen(
+                    onEnter = {
+                        navController.navigate(Routes.DASHBOARD) {
+                            popUpTo(Routes.SPLASH) { inclusive = true }
+                        }
+                    }
+                )
+            }
             composable(Routes.DASHBOARD) { DashboardScreen(viewModel) }
             // ── اتاق گفتگوی ویزیتورها (v2.3.0) ─────────────────────────────
             composable(Routes.CHAT) { ChatScreen(viewModel) }
@@ -252,22 +264,11 @@ private fun VizitorBottomBar(
                 BottomTab(tab, currentRoute == tab.route, navController)
             }
 
-            // جایگاه خالی برای FAB مرکزی (سبد سفارش)
+            // جایگاه خالی برای FAB مرکزی (سبد سفارش) — بدون برچسب متنی؛ ورود فقط از آیکن سبد
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier.weight(1f).height(80.dp),
                 contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(Modifier.height(30.dp))
-                    Text(
-                        "سبد سفارش",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (currentRoute == Routes.CART) NeonPurple else TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
+            ) { }
 
             leftTabs.forEach { tab ->
                 BottomTab(tab, currentRoute == tab.route, navController)

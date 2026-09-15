@@ -10,6 +10,8 @@
  */
 package ir.atiran.vizitor.ui.screens
 
+import kotlin.math.abs
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -437,6 +439,16 @@ private fun distanceKm(lat1: Double, lng1: Double, lat2: Double, lng2: Double): 
     return 2 * r * atan2(sqrt(a), sqrt(1 - a))
 }
 
+
+/** آواتار ثابت خلاقانهٔ هر مشتری — ۵ چهرهٔ آجیل سه‌بعدی، تخصیص پایدار بر اساس نام. */
+private fun avatarResFor(name: String): Int = when (abs(name.hashCode()) % 5) {
+    0 -> R.drawable.avatar_pistachio
+    1 -> R.drawable.avatar_almond
+    2 -> R.drawable.avatar_cashew
+    3 -> R.drawable.avatar_walnut
+    else -> R.drawable.avatar_fig
+}
+
 /**
  * کارت مشتری نسل جدید: آواتار تو‌حلقه با نشان اعتبار و ترتیب ویزیت،
  * پنل اطلاعات یکدست (نشانی / تماس / آخرین خرید / مانده حساب)،
@@ -523,7 +535,7 @@ private fun CustomerCard(
             // ═══ ردیف هویت: آواتار تو‌حلقه + نام + چیپ وضعیت ═══
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(contentAlignment = Alignment.Center) {
-                    // آواتار سلطنتی با حلقه خارجی ظریف
+                    // آواتار سلطنتی با حلقه خارجی ظریف — تصویر ثابت سه‌بعدی از خانواده آجیل ✨
                     Box(
                         modifier = Modifier
                             .size(58.dp)
@@ -532,20 +544,20 @@ private fun CustomerCard(
                             .border(1.dp, Gold.copy(alpha = 0.45f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
+                        // حلقه داخلی از رنگ‌های تم فعال + چهره سه‌بعدی آجیل (پایدار به ازای مشتری)
+                        Image(
+                            painter = painterResource(avatarResFor(customer.name)),
+                            contentDescription = "آواتار مشتری",
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(50.dp)
                                 .clip(CircleShape)
-                                .background(Brush.linearGradient(listOf(NeonPurple, NeonPurpleDark)))
-                                .border(1.dp, Gold.copy(alpha = 0.8f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                customer.name.firstOrNull()?.toString() ?: "؟",
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
-                            )
-                        }
+                                .border(
+                                    1.5.dp,
+                                    Brush.linearGradient(listOf(p.gold, p.primary)),
+                                    CircleShape
+                                )
+                        )
                     }
                     // نقطه وضعیت اعتبار روی حلقه آواتار
                     Box(

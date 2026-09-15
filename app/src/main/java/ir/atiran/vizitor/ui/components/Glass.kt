@@ -11,6 +11,12 @@
  */
 package ir.atiran.vizitor.ui.components
 
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import ir.atiran.vizitor.R
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -36,6 +42,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
@@ -206,6 +213,21 @@ private val stardust: List<Stardust> = run {
     }
 }
 
+
+/** رسم بافت چرم به‌صورت مرکزی‌پوشان — مثل background-size: cover. */
+private fun DrawScope.drawLeatherCover(leather: ImageBitmap) {
+    val iw = leather.width.toFloat()
+    val ih = leather.height.toFloat()
+    val cover = maxOf(size.width / iw, size.height / ih)
+    val dw = (iw * cover).toInt()
+    val dh = (ih * cover).toInt()
+    drawImage(
+        image = leather,
+        dstOffset = IntOffset(((size.width - dw) / 2f).toInt(), ((size.height - dh) / 2f).toInt()),
+        dstSize = IntSize(dw, dh)
+    )
+}
+
 /**
  * ✨ بکگراند «ابریشم روان» — جایگزین هاله‌های دایره‌ای قدیمی:
  * سه موج ابریشمی بزرگ و کم‌رنگ (رنگ اصلی، طلایی، لهجه) که آرام سر می‌خورند
@@ -218,6 +240,13 @@ fun Modifier.dashboardBackdrop(): Modifier {
     val bgDeep = DarkSlateDeep
     val p = vizitorPalette
     val dust = GlassFill
+    // 🪶 بافت چرم اختصاصی: تم تاریک ← چرم مشکی | تم روشن ← چرم عاج روشن
+    val isDarkBg = p.background.luminance() < 0.5f
+    val leather: ImageBitmap = ImageBitmap.imageResource(
+        if (isDarkBg) R.drawable.leather_dark else R.drawable.leather_light
+    )
+    // پوشش نیمه‌شفاف گرادیان تا چرم نفس بکشد ولی متن‌ها خوانا بمانند
+    val veil = if (isDarkBg) 0.80f else 0.84f
 
     // ── حالت سبک (گوشی‌های اقتصادی): بکگراند کاملاً استاتیک و فوق‌سبک ──
     // بدون هیچ انیمیشن دائمی — فقط یک‌بار رسم گرادیان و یک موج ثابت.
@@ -227,7 +256,17 @@ fun Modifier.dashboardBackdrop(): Modifier {
         return this.drawBehind {
             val w = size.width
             val h = size.height
-            drawRect(brush = Brush.verticalGradient(listOf(bgDeep, bg, bg)))
+            // ۰) بافت چرم زیبا در پایه
+            drawLeatherCover(leather)
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        bgDeep.copy(alpha = veil),
+                        bg.copy(alpha = veil - 0.02f),
+                        bg.copy(alpha = veil + 0.02f)
+                    )
+                )
+            )
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(sheenTop.copy(alpha = 0.04f), Color.Transparent),
@@ -290,8 +329,19 @@ fun Modifier.dashboardBackdrop(): Modifier {
         val w = size.width
         val h = size.height
 
-        // ۱) گرادیان پایه (بالا عمیق‌تر ← پایین روشن‌تر جزئی)
-        drawRect(brush = Brush.verticalGradient(listOf(bgDeep, bg, bg)))
+        // ۰) بافت چرم زیبا در پایه
+        drawLeatherCover(leather)
+
+        // ۱) پرده گرادیان نیمه‌شفاف (بالا عمیق‌تر ← پایین روشن‌تر جزئی) — چرم زیرش دیده می‌شود
+        drawRect(
+            brush = Brush.verticalGradient(
+                listOf(
+                    bgDeep.copy(alpha = veil),
+                    bg.copy(alpha = veil - 0.02f),
+                    bg.copy(alpha = veil + 0.02f)
+                )
+            )
+        )
 
         // ۲) موج‌های ابریشمی روان (بدون دایره!)
         val silkColors = listOf(

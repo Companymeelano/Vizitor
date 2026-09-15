@@ -191,32 +191,16 @@ fun DashboardScreen(
         // ── ۲) ریسک و فرصت — بدهی‌ها و پرفروش‌ها کنار هم ───────────────────
         item { RiskAndWinCard(debtors, tops) }
 
-        // ── ۳) فروش هفتگی — نمودار سه‌بعدی فشرده + چیپ‌های هوشمند ──────────
-        item { WeeklyCard(weekly) }
-
-        // ── ۴) مشتریان نیازمند پیگیری (افت خرید) ────────────────────────────
+        // ── ۳) چارت «مشتریان خرید نکرده» — منطبق بر سبک کارت بدهکاران، دقیقاً زیر آن ──
         item {
-            RoyalHeader(
-                text = "مشتریان نیازمند پیگیری (افت خرید)",
-                icon = Icons.Filled.TrendingUp
+            FollowUpChartCard(
+                followUp = followUp,
+                onPick = { viewModel.selectCustomer(it) }
             )
         }
 
-        if (followUp.isEmpty()) {
-            item {
-                GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
-                    Text(
-                        "همه مشتریان در وضعیت پایدار هستند 🎉",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                }
-            }
-        }
-
-        items(followUp, key = { it.id }) { customer ->
-            FollowUpCard(customer) { viewModel.selectCustomer(customer) }
-        }
+        // ── ۴) فروش هفتگی — نمودار سه‌بعدی فشرده + چیپ‌های هوشمند ──────────
+        item { WeeklyCard(weekly) }
 
         item { MilanoFooter() }
     }
@@ -585,56 +569,77 @@ private fun WeeklyCard(weekly: List<Pair<String, Long>>) {
     }
 }
 
-/** کارت مشتری نیازمند پیگیری — نشان اعتبار، نشان VIP و نوار عمق‌دار شدت افت. */
+/**
+ * چارت «مشتریان خرید نکرده» (افت خرید) — منطبق بر سبک کارت بدهکاران:
+ * نشان رتبه، نام با رنگ متن تم (تیره/روشن هر دو خوانا)، نوار قدرت افت و مقدار ٪.
+ */
 @Composable
-private fun FollowUpCard(customer: CustomerEntity, onPick: () -> Unit) {
-    val drop = customer.purchaseDropPercent.coerceIn(0, 100)
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (customer.isVip) Modifier.goldBorder() else Modifier)
-            .clickable(onClick = onPick)
-    ) {
-        Column(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusDot(if (customer.creditOk) NeonGreen else DangerRed)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun FollowUpChartCard(
+    followUp: List<CustomerEntity>,
+    onPick: (CustomerEntity) -> Unit
+) {
+    val rows = followUp.take(4)
+    val avg = if (followUp.isNotEmpty()) followUp.sumOf { it.purchaseDropPercent } / followUp.size else 0
+    // رنگ‌های پالت فعال — در تم‌های تیره و روشن هر دو به‌خوبی دیده می‌شوند
+    val barColors = listOf(NeonPurple, Gold)
+
+    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
+        Column {
+            RoyalHeader(text = "مشتریان خرید نکرده (افت خرید)", icon = Icons.Filled.TrendingUp)
+            Spacer(Modifier.height(10.dp))
+            if (rows.isEmpty()) {
+                Text(
+                    "همه مشتریان در وضعیت پایدار هستند 🎉",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            } else {
+                rows.forEachIndexed { i, c ->
+                    val drop = c.purchaseDropPercent.coerceIn(0, 100)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onPick(c) }
+                            .padding(vertical = 4.dp, horizontal = 4.dp)
+                    ) {
+                        RankBadge3D(rank = i + 1, size = 20.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                c.name,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            DepthBar(fraction = (drop / 100f).coerceIn(0.06f, 1f), fillColors = barColors, height = 4.dp)
+                        }
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            customer.name,
-                            style = MaterialTheme.typography.titleSmall
-                                .copy(fontWeight = FontWeight.Bold),
-                            color = TextPrimary,
+                            "افت ${drop.toFaNumber()}٪",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = DangerRed,
                             maxLines = 1
                         )
-                        if (customer.isVip) {
-                            Spacer(Modifier.width(6.dp))
-                            Icon(
-                                Icons.Filled.MilitaryTech,
-                                contentDescription = "VIP",
-                                tint = Gold,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
                     }
-                    Spacer(Modifier.height(2.dp))
+                    if (i < rows.lastIndex) Spacer(Modifier.height(4.dp))
+                }
+                Spacer(Modifier.height(8.dp))
+                // جمع‌بندی چارت — خوانا در هر دو خانواده تم
+                Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        "آخرین خرید: ${customer.lastPurchaseDaysAgo.toFaNumber()} روز پیش",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        "مشتری متوقف: ${followUp.size.toFaNumber()} • میانگین افت: ${avg.toFaNumber()}٪",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = Gold,
+                        maxLines = 1
                     )
                 }
-                StatusChip(
-                    text = "افت ${drop.toFaNumber()}٪",
-                    color = DangerRed
-                )
             }
-            Spacer(Modifier.height(10.dp))
-            DepthBar(
-                fraction = drop / 100f,
-                fillColors = DebtBarColors
-            )
         }
     }
 }
