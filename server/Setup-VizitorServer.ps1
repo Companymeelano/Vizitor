@@ -1,4 +1,4 @@
-﻿<#
+﻿﻿<#
 ═══════════════════════════════════════════════════════════════════════════
   Vizitor — آتیران ویزیتور | راه‌اندازی خودکار سرور (Setup-VizitorServer.ps1)
   Developed by Milano Technical Team, Milad Yaghoobi
@@ -40,7 +40,9 @@ param(
     [string]$PublicHost   = '37.143.148.14',       # IP عمومی سرور برای تست نهایی
     [int]   $SqlPort      = 1433,                  # پورت SQL Server
     [switch]$SkipDownloads,                        # بدون دانلود از اینترنت (آفلاین)
-    [switch]$SkipSqlLoginFix                       # عدم ساخت/اصلاح خودکار لاگین SQL
+    [switch]$SkipSqlLoginFix,                      # عدم ساخت/اصلاح خودکار لاگین SQL
+    [switch]$NoSqlRestart,                         # اعمال تنظیمات SQL بدون ری‌استارت سرویس (برای ساعت کاری حسابداری)
+    [switch]$Yes                                   # تأیید خودکار سؤال ری‌استارت سرویس SQL
 )
 
 # ─── آماده‌سازی خروجی UTF-8 ────────────────────────────────────────────────
@@ -82,6 +84,7 @@ $script:Steps         = New-Object System.Collections.Generic.List[object]
 $script:RestartNeeded = $false
 $script:RestartSqlService = $false
 $script:PhpDir = $null
+$script:StoppedDepsList = New-Object System.Collections.Generic.List[string]
 
 function Add-Step([string]$Name, [string]$Status, [string]$Note) {
     $script:Steps.Add([pscustomobject]@{ Step = $Name; Status = $Status; Note = $Note })
@@ -147,6 +150,10 @@ Write-Host '╔═════════════════════�
 Write-Host '║   Vizitor Server Setup — راه‌اندازی خودکار سرور آتیران میلانو   ║' -ForegroundColor Magenta
 Write-Host '╚══════════════════════════════════════════════════════════════╝' -ForegroundColor Magenta
 Write-Host "  سرور: $PublicHost   پورت وب: $WebPort   پورت SQL: $SqlPort" -ForegroundColor DarkGray
+Write-Host ''
+Write-Host '  ⚠ توجه مهم: اگر تنظیمات SQL (مرحله ۸/۹) نیاز به تغییر داشته باشد، سرویس' -ForegroundColor Yellow
+Write-Host '    SQL Server باید یک‌بار ری‌استارت شود و اتصال‌های جاری حسابداری لحظه‌ای قطع می‌شود.' -ForegroundColor Yellow
+Write-Host '    در ساعت اوج کاری از پارامتر -NoSqlRestart استفاده کنید و بعداً خودتان سرویس را ری‌استارت کنید.' -ForegroundColor DarkGray
 
 # ─────────── ۱) فایل‌ها + خواندن config.php ───────────
 Write-StepHeader 1 'فایل‌های سرور و پیکربندی config.php'
@@ -648,20 +655,65 @@ if (-not $sqlIsLocal) {
     }
 }
 
-# ری‌استارت سرویس SQL در صورت نیاز
+# ─────────── ری‌استارت امن سرویس SQL (با تأیید + حفظ سرویس‌های وابسته) ───────────
 if ($script:RestartSqlService -and $script:SqlServiceName -and $sqlIsLocal) {
-    Write-Host '      ری‌استارت سرویس SQL Server برای اعمال تغییرات…' -ForegroundColor Yellow
-    try {
-        Restart-Service -Name $script:SqlServiceName -Force -ErrorAction Stop
-        $waited = 0
-        do {
-            Start-Sleep -Seconds 2; $waited += 2
-            $open = Test-NetConnection -ComputerName 127.0.0.1 -Port $DbPort -InformationLevel Quiet -WarningAction SilentlyContinue
-        } while (-not $open -and $waited -lt 40)
-        if ($open) { Write-Host '      سرویس SQL بالا آمد و پورت پاسخ می‌دهد' -ForegroundColor DarkGray }
-        else       { Write-Host '      ⚠ پورت SQL پس از ری‌استارت پاسخ نداد — سرویس را بررسی کنید' -ForegroundColor Yellow }
-    } catch {
-        Write-Host "      ⚠ ری‌استارت سرویس ناموفق: $($_.Exception.Message)" -ForegroundColor Yellow
+    $svc = $script:SqlServiceName
+    if ($NoSqlRestart) {
+        Step-Warn 'ری‌استارت SQL Server' "تغییرات اعمال شد ولی طبق -NoSqlRestart ری‌استارت نشد — در فرصت مناسب: services.msc ← SQL Server ($svc) ← Restart"
+    } else {
+        $doRestart = $Yes.IsPresent
+        if (-not $doRestart) {
+            try {
+                $ans = Read-Host "      برای اعمال تنظیمات، سرویس $svc باید ری‌استارت شود (اتصال‌های جاری لحظه‌ای قطع می‌شود). ری‌استارت شود؟ [y/N]"
+                $doRestart = ($ans -match '^[yY]')
+            } catch { $doRestart = $false }
+        }
+        if (-not $doRestart) {
+            Step-Warn 'ری‌استارت SQL Server' "طبق انتخاب شما ری‌استارت نشد — تغییرات پس از ری‌استارت دستی سرویس فعال می‌شوند (services.msc ← SQL Server ($svc) ← Restart)"
+        } else {
+            Write-Host "      ری‌استارت امن سرویس $svc (به‌همراه بالا آوردن دوباره سرویس‌های وابسته)…" -ForegroundColor Yellow
+            $stoppedDeps = @()
+            try {
+                # سرویس‌های وابسته در حال اجرا (SQL Agent، سرویس‌های نرم‌افزار حسابداری و…)
+                $deps = @(Get-Service -Name $svc -DependentServices -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Running' })
+                foreach ($d in $deps) {
+                    Write-Host "      توقف موقت سرویس وابسته: $($d.DisplayName)" -ForegroundColor DarkGray
+                    try { Stop-Service -InputObject $d -Force -ErrorAction Stop; $script:StoppedDepsList += $d.Name } catch { }
+                }
+                Restart-Service -Name $svc -ErrorAction Stop
+                $waited = 0
+                $open = $false
+                do {
+                    Start-Sleep -Seconds 2; $waited += 2
+                    $open = Test-NetConnection -ComputerName 127.0.0.1 -Port $DbPort -InformationLevel Quiet -WarningAction SilentlyContinue
+                } while (-not $open -and $waited -lt 60)
+                if ($open) {
+                    Write-Host "      ✔ سرویس $svc بالا آمد و پورت $DbPort پاسخ می‌دهد" -ForegroundColor Green
+                } else {
+                    Write-Host "      ✖ سرویس پس از ۶۰ ثانیه پاسخ نداد! فوری این را بزنید:  Start-Service $svc" -ForegroundColor Red
+                    Write-Host '        و در services.msc وضعیت SQL Server را ببینید (جزئیات خطا: Event Viewer ← Application ← MSSQLSERVER)' -ForegroundColor Yellow
+                }
+            } catch {
+                Write-Host "      ✖ خطا در ری‌استارت: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "        راه‌حل فوری: Start-Service $svc" -ForegroundColor Yellow
+            }
+            # بازگرداندن سرویس‌های وابسته (مهم: بدون این، حسابداری/Agent استپ می‌ماند)
+            foreach ($dn in $script:StoppedDepsList) {
+                try {
+                    Start-Service -Name $dn -ErrorAction Stop
+                    Write-Host "      ✔ سرویس وابسته $dn دوباره استارت شد" -ForegroundColor Green
+                } catch {
+                    Write-Host "      ⚠ سرویس وابسته $dn استارت نشد — دستی بالا بیارید: Start-Service $dn" -ForegroundColor Yellow
+                }
+            }
+            if ($script:StoppedDepsList.Count -eq 0) {
+                $postCheck = Test-NetConnection -ComputerName 127.0.0.1 -Port $DbPort -InformationLevel Quiet -WarningAction SilentlyContinue
+                if ($postCheck) { Step-Fixed 'ری‌استارت SQL Server' "سرویس $svc ری‌استارت شد و پورت $DbPort سالم است" }
+                else            { Step-Fail  'ری‌استارت SQL Server' "سرویس پس از ری‌استارت پاسخ نداد — Start-Service $svc را دستی بزنید" }
+            } else {
+                Step-Fixed 'ری‌استارت SQL Server' "سرویس $svc و $($script:StoppedDepsList.Count) سرویس وابسته مدیریت شد"
+            }
+        }
     }
 }
 
