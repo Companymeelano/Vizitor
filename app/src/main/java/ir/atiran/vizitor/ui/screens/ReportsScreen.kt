@@ -133,6 +133,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             }
         }
 
+
         // ── تاریخچه فاکتورها ────────────────────────────────────────────────
         item { SectionTitle(text = "تاریخچه فاکتورها", icon = Icons.Filled.History) }
 
@@ -377,4 +378,63 @@ private fun InvoiceHistoryRow(invoice: InvoiceEntity, onShare: () -> Unit) {
         }
     }
 }
+
+/**
+ * کارنامه عملکرد ماهانه — رتبه‌بندی مدال برنزی/نقره‌ای/طلایی.
+ */
+
+
+/** دیالوگ اشتراک فاکتور: PDF / Word / تصویر / متن. */
+@Composable
+private fun ShareInvoiceDialog(
+    invoice: InvoiceEntity,
+    viewModel: ir.atiran.vizitor.VizitorViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("اشتراک فاکتور ${invoice.serverId ?: ("#" + invoice.id)}") },
+        text = {
+            Column {
+                ShareOption("📄 فایل PDF") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.sharePdf(context, invoice, items)
+                    }
+                }
+                ShareOption("📝 فایل Word") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.shareWord(context, invoice, items)
+                    }
+                }
+                ShareOption("🖼️ تصویر PNG") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.shareImage(context, invoice, items)
+                    }
+                }
+                ShareOption("📨 متن پیام") {
+                    viewModel.invoiceItems(invoice.id) { items ->
+                        ir.atiran.vizitor.data.share.InvoiceShare.shareText(context, invoice, items)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("بستن") } }
+    )
+}
+
+@Composable
+private fun ShareOption(label: String, onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Text(label, color = NeonGreen, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+/**
+ * کارت انتخاب تم — پنج تم لاکچری (۳ تیره + ۲ روشن) با سواچ رنگی زنده.
+ * انتخاب بلافاصله کل برنامه را بازرنگ می‌کند و ماندگار ذخیره می‌شود.
+ */
+
+
+/** یک ردیف انتخاب تم: سواچ سه‌رنگ (پس‌زمینه/اصلی/طلایی) + نام + نشان انتخاب. */
 
