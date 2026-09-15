@@ -65,11 +65,11 @@ private fun segmentAlpha(progress: Float, start: Float, span: Float): Float =
 private data class Role(val title: String, val avatarRes: Int, val active: Boolean)
 
 private val Roles = listOf(
-    Role("مامور فروش (ویزیتور)", R.drawable.role_visitor, true),
-    Role("مدیریت", R.drawable.role_manager, false),
-    Role("مدیر فروش", R.drawable.role_sales_manager, false),
-    Role("حسابداری", R.drawable.role_accountant, false),
-    Role("انبار و پخش", R.drawable.role_warehouse, false),
+    Role("مامور فروش (ویزیتور)", R.drawable.nut_visitor, true),
+    Role("مدیریت", R.drawable.nut_manager, false),
+    Role("مدیر فروش", R.drawable.nut_sales, false),
+    Role("حسابداری", R.drawable.nut_accountant, false),
+    Role("انبار و پخش", R.drawable.nut_warehouse, false),
     Role("کاربر فروشگاه", R.drawable.role_shopkeeper, false)
 )
 
@@ -221,7 +221,7 @@ fun SplashScreen(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                "سامانه هوشمند ویزیت، ویترین و سفارش‌گیری — نسخه ۲٫۷٫۰",
+                "سامانه هوشمند ویزیت، ویترین و سفارش‌گیری — نسخه ۲٫۸٫۰",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.5.sp, fontWeight = FontWeight.Bold),
                 color = Gold.copy(alpha = 0.9f),
                 textAlign = TextAlign.Center

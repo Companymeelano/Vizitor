@@ -133,11 +133,6 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             }
         }
 
-        // ── پوسته و تم — ۵ تم لاکچری (۳ تیره + ۲ روشن) ──────────────────────
-        item { SectionTitle(text = "پوسته و تم (تیره و روشن لاکچری)", icon = Icons.Filled.Palette) }
-
-        item { ThemePickerCard() }
-
         // ── تاریخچه فاکتورها ────────────────────────────────────────────────
         item { SectionTitle(text = "تاریخچه فاکتورها", icon = Icons.Filled.History) }
 
@@ -157,8 +152,6 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             InvoiceHistoryRow(invoice) { shareTarget = invoice }
         }
 
-        // ── کارنامه عملکرد ماهانه با رتبه مدال ─────────────────────────────
-        item { MonthlyPerformanceCard(invoices, viewModel.dailyTarget) }
 
         // ── پیکربندی سرور ───────────────────────────────────────────────────
         item { SectionTitle(text = "پیکربندی سرور آتیران", icon = Icons.Filled.Dns) }
@@ -288,7 +281,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
-                        "آتیران ویزیتور — نسخه ۲٫۷٫۰",
+                        "آتیران ویزیتور — نسخه ۲٫۸٫۰",
                         style = MaterialTheme.typography.titleMedium,
                         color = Gold
                     )
@@ -385,208 +378,3 @@ private fun InvoiceHistoryRow(invoice: InvoiceEntity, onShare: () -> Unit) {
     }
 }
 
-/**
- * کارنامه عملکرد ماهانه — رتبه‌بندی مدال برنزی/نقره‌ای/طلایی.
- */
-@Composable
-private fun MonthlyPerformanceCard(invoices: List<InvoiceEntity>, dailyTarget: Long) {
-    val cal = java.util.Calendar.getInstance().apply {
-        set(java.util.Calendar.DAY_OF_MONTH, 1)
-        set(java.util.Calendar.HOUR_OF_DAY, 0)
-        set(java.util.Calendar.MINUTE, 0)
-        set(java.util.Calendar.SECOND, 0)
-        set(java.util.Calendar.MILLISECOND, 0)
-    }
-    val monthSales = invoices
-        .filter { it.createdAt >= cal.timeInMillis && it.status != InvoiceStatus.FAILED }
-        .sumOf { it.finalAmount }
-    val target = dailyTarget * 26
-    val ratio = if (target > 0) monthSales.toFloat() / target else 0f
-    val rank = when {
-        ratio >= 1f -> "مدال طلایی 🥇"
-        ratio >= 0.5f -> "مدال نقره‌ای 🥈"
-        ratio >= 0.25f -> "مدال برنزی 🥉"
-        else -> "در مسیر کسب مدال 💪"
-    }
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column {
-            SectionTitle(text = "کارنامه عملکرد ماهانه", icon = Icons.Filled.MilitaryTech)
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(rank, style = MaterialTheme.typography.titleMedium, color = Gold)
-                Spacer(Modifier.weight(1f))
-                Text(
-                    monthSales.toFaPrice(),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = NeonGreen
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(DonutTrack)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(ratio.coerceIn(0.02f, 1f))
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(Color(0xFFC98A5B), Color(0xFFD7DEE9), Gold)
-                            )
-                        )
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "هدف ماهانه: ${target.toFaPrice()} — ${(ratio * 100).toInt().toFaNumber()}٪ محقق شده",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
-        }
-    }
-}
-
-/** دیالوگ اشتراک فاکتور: PDF / Word / تصویر / متن. */
-@Composable
-private fun ShareInvoiceDialog(
-    invoice: InvoiceEntity,
-    viewModel: ir.atiran.vizitor.VizitorViewModel,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("اشتراک فاکتور ${invoice.serverId ?: ("#" + invoice.id)}") },
-        text = {
-            Column {
-                ShareOption("📄 فایل PDF") {
-                    viewModel.invoiceItems(invoice.id) { items ->
-                        ir.atiran.vizitor.data.share.InvoiceShare.sharePdf(context, invoice, items)
-                    }
-                }
-                ShareOption("📝 فایل Word") {
-                    viewModel.invoiceItems(invoice.id) { items ->
-                        ir.atiran.vizitor.data.share.InvoiceShare.shareWord(context, invoice, items)
-                    }
-                }
-                ShareOption("🖼️ تصویر PNG") {
-                    viewModel.invoiceItems(invoice.id) { items ->
-                        ir.atiran.vizitor.data.share.InvoiceShare.shareImage(context, invoice, items)
-                    }
-                }
-                ShareOption("📨 متن پیام") {
-                    viewModel.invoiceItems(invoice.id) { items ->
-                        ir.atiran.vizitor.data.share.InvoiceShare.shareText(context, invoice, items)
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("بستن") } }
-    )
-}
-
-@Composable
-private fun ShareOption(label: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text(label, color = NeonGreen, modifier = Modifier.fillMaxWidth())
-    }
-}
-
-// ════════════════════ انتخابگر پوسته و تم (نسخه ۱٫۸٫۰) ════════════════════
-
-/**
- * کارت انتخاب تم — پنج تم لاکچری (۳ تیره + ۲ روشن) با سواچ رنگی زنده.
- * انتخاب بلافاصله کل برنامه را بازرنگ می‌کند و ماندگار ذخیره می‌شود.
- */
-@Composable
-private fun ThemePickerCard() {
-    val context = LocalContext.current
-    val currentThemeId by ThemeManager.themeId.collectAsState()
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AllPalettes.forEach { palette ->
-                ThemeRow(
-                    palette = palette,
-                    selected = palette.id == currentThemeId,
-                    onSelect = { ThemeManager.setTheme(context, palette.id) }
-                )
-            }
-        }
-    }
-}
-
-/** یک ردیف انتخاب تم: سواچ سه‌رنگ (پس‌زمینه/اصلی/طلایی) + نام + نشان انتخاب. */
-@Composable
-private fun ThemeRow(
-    palette: VizitorPalette,
-    selected: Boolean,
-    onSelect: () -> Unit
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) vizitorPalette.primary.copy(alpha = 0.08f) else Color.Transparent)
-            .border(
-                1.dp,
-                if (selected) vizitorPalette.gold.copy(alpha = 0.8f) else vizitorPalette.glassBorder,
-                RoundedCornerShape(14.dp)
-            )
-            .clickable(onClick = onSelect)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // سواچ سه‌تایی رنگ اصلی تم
-        Box {
-            Box(
-                Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(palette.background)
-                    .border(1.dp, vizitorPalette.glassBorder, CircleShape)
-            )
-            Box(
-                Modifier
-                    .offset(x = (-9).dp)
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(palette.primary)
-                    .border(1.dp, vizitorPalette.glassBorder, CircleShape)
-            )
-            Box(
-                Modifier
-                    .offset(x = (-18).dp)
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(palette.gold)
-                    .border(1.dp, vizitorPalette.glassBorder, CircleShape)
-            )
-        }
-        Spacer(Modifier.width(6.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                palette.displayName,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                if (palette.isDark) "تم تیره لاکچری" else "تم روشن لاکچری",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
-            )
-        }
-        if (selected) {
-            Icon(
-                Icons.Filled.Check,
-                contentDescription = "انتخاب شده",
-                tint = NeonGreen,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-}

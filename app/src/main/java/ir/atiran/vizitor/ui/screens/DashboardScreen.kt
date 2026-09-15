@@ -92,6 +92,10 @@ import ir.atiran.vizitor.ui.theme.TextSecondary
 import ir.atiran.vizitor.ui.theme.ThemeManager
 import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.util.toFaDigits
+import ir.atiran.vizitor.util.toFaTime
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.Image
 import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
 
@@ -119,6 +123,10 @@ fun DashboardScreen(
         customers.filter { it.debt > 0 }.sortedByDescending { it.debt }.take(3)
     }
     val sentToday = remember(invoices) { countSentToday(invoices) }
+    // آخرین زمان همگام‌سازی با سرور آتیران (جدیدترین فاکتور SYNCED)
+    val lastSyncAt = remember(invoices) {
+        invoices.filter { it.status == InvoiceStatus.SYNCED }.maxOfOrNull { it.createdAt }
+    }
 
     val target = viewModel.dailyTarget
     val progress = if (target > 0) (todaySales.toFloat() / target).coerceIn(0f, 1f) else 0f
@@ -136,68 +144,17 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f)) {
-                    ShimmerGoldText("مرکز فرماندهی ویزیت")
-                    Text(
-                        "عملکرد امروز — فشرده، هوشمند، در یک نگاه",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
+                // پنل کاربری ویزیتور — آواتار بادام در قاب مدور گرادیانی تم 🧔🏻🥜
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    VisitorAvatarHero()
                 }
                 Spacer(Modifier.width(10.dp))
                 ThemeDotsSwitch()
             }
         }
 
-        // ── نوار امضای لوکس میلانو (هویت برند — با رشد تایپوگرافی) ─────────
-        item {
-            val p = vizitorPalette
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0x0CFFFFFF))
-                    .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
-                    .padding(vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    Modifier
-                        .width(46.dp)
-                        .height(1.2.dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(Color.Transparent, p.gold.copy(alpha = 0.85f))
-                            )
-                        )
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    "آتیران ویزیتور — امضای لوکس میلانو ✨",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 0.6.sp
-                    ),
-                    color = Gold,
-                    maxLines = 1
-                )
-                Spacer(Modifier.width(10.dp))
-                Box(
-                    Modifier
-                        .width(46.dp)
-                        .height(1.2.dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(p.gold.copy(alpha = 0.85f), Color.Transparent)
-                            )
-                        )
-                )
-            }
-        }
-
         // ── ۱) نبض امروز — دونات دوحلقه (تارگت بیرونی + سینک داخلی) ────────
-        item { PulseCard(target, todaySales, progress, pending, sentToday, syncRatio) }
+        item { PulseCard(target, todaySales, progress, pending, sentToday, syncRatio, lastSyncAt) }
 
         // ── ۲) ریسک بدهی — فقط مشتریان بدهکار (تک‌ستونه و واضح) ────────────
         item { RiskAndWinCard(debtors) }
@@ -297,6 +254,34 @@ private fun ThemeDotsSwitch() {
     }
 }
 
+/** پنل هویت ویزیتور — بادام با کت‌وشلوار طلایی در قاب مدور گرادیانی تم. */
+@Composable
+private fun VisitorAvatarHero() {
+    val p = vizitorPalette
+    Box(
+        modifier = Modifier
+            .size(66.dp)
+            .clip(CircleShape)
+            .border(
+                2.dp,
+                Brush.linearGradient(listOf(p.gold, p.primary)),
+                CircleShape
+            )
+            .background(p.primary.copy(alpha = 0.10f), CircleShape)
+            .padding(3.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(ir.atiran.vizitor.R.drawable.nut_visitor),
+            contentDescription = "آواتار ویزیتور",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(58.dp)
+                .clip(CircleShape)
+        )
+    }
+}
+
 // ═════════════════════════ کارت نبض امروز ═════════════════════════
 
 /** دونات دوحلقه (تارگت بیرونی + سینک داخلی) + ۶ چیپ آماری فشرده. */
@@ -307,7 +292,8 @@ private fun PulseCard(
     progress: Float,
     pending: Int,
     sentToday: Int,
-    syncRatio: Float
+    syncRatio: Float,
+    lastSyncAt: Long?
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
         Column {
@@ -328,6 +314,16 @@ private fun PulseCard(
                     Spacer(Modifier.height(4.dp))
                     LegendLine(Gold, "حلقه داخلی: همگام‌سازی فاکتورها")
                     Spacer(Modifier.height(8.dp))
+                    // آخرین همگام‌سازی — هوشمند و فوق‌فشرده (بدون تغییر آرايش کارت)
+                    Text(
+                        if (lastSyncAt != null) "آخرین سینک: ${lastSyncAt.toFaTime()}"
+                        else "هنوز سینکی انجام نشده",
+                        fontSize = 9.sp,
+                        color = NeonPurple,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(5.dp))
                     Text(
                         if (progress >= 1f) "هدف امروز محقق شد 🏆"
                         else "تا هدف: ${(target - todaySales).coerceAtLeast(0).toFaPrice()}",
