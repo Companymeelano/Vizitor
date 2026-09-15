@@ -102,6 +102,7 @@ import ir.atiran.vizitor.ui.screens.CustomersScreen
 import ir.atiran.vizitor.ui.screens.DashboardScreen
 import ir.atiran.vizitor.ui.screens.ReportsScreen
 import ir.atiran.vizitor.ui.screens.ScannerScreen
+import ir.atiran.vizitor.ui.screens.SettingsScreen
 import ir.atiran.vizitor.ui.screens.SplashScreen
 import ir.atiran.vizitor.ui.theme.DarkSlateElevated
 import ir.atiran.vizitor.ui.theme.GlassBorder
@@ -118,6 +119,7 @@ object Routes {
     const val CART = "cart"
     const val CUSTOMERS = "customers"
     const val REPORTS = "reports"
+    const val SETTINGS = "settings"
     const val CHAT = "chat"
     const val SPLASH = "splash"
     const val SCANNER = "scanner"
@@ -133,7 +135,8 @@ private val rightTabs = listOf(
 
 private val leftTabs = listOf(
     TabItem(Routes.CUSTOMERS, "مشتری", Icons.Filled.Person, R.drawable.tab_customer),
-    TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Receipt, R.drawable.tab_reports)
+    TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Receipt, R.drawable.tab_reports),
+    TabItem(Routes.SETTINGS, "تنظیمات", Icons.Filled.Settings, R.drawable.tab_settings)
 )
 
 @Composable
@@ -222,6 +225,7 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
             composable(Routes.CART) { CartScreen(viewModel) }
             composable(Routes.CUSTOMERS) { CustomersScreen(viewModel) }
             composable(Routes.REPORTS) { ReportsScreen(viewModel) }
+            composable(Routes.SETTINGS) { SettingsScreen(viewModel) }
             composable(Routes.SCANNER) {
                 ScannerScreen(
                     onBarcode = { code ->
