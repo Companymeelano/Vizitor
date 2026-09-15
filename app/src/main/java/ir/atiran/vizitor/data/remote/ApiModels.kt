@@ -17,6 +17,18 @@ data class ApiEnvelope<T>(
     @SerializedName("data") val data: T?
 )
 
+/** پاسخ تست سلامت سرور (action=ping). */
+data class PingDto(
+    @SerializedName("db") val db: String? = null,
+    @SerializedName("db_host") val dbHost: String? = null,
+    @SerializedName("version") val dbVersion: String? = null,
+    @SerializedName("php") val php: String? = null,
+    @SerializedName("api_version") val apiVersion: String? = null,
+    @SerializedName("server_time") val serverTime: Long? = null,
+    /** شمارش رکورد جداول کلیدی؛ مقدار null یعنی جدول در دیتابیس یافت نشده است. */
+    @SerializedName("tables") val tables: Map<String, Int?>? = null
+)
+
 data class ProductDto(
     @SerializedName("id") val id: Int,
     @SerializedName("code") val code: String,

@@ -8,6 +8,44 @@
 
 ---
 
+## ⚡ راه‌اندازی خودکار با یک دستور (توصیه‌شده) — Setup-VizitorServer.ps1
+
+اسکریپت **`Setup-VizitorServer.ps1`** (همین پوشه) تمام ۱۲ بخش زیر را خودش **بررسی** می‌کند؛ هر بخش سالم ← **تیک سبز** و عبور، هر بخش معیوب ← **اصلاح خودکار** و سپس تیک:
+
+1. فایل‌های `api.php` / `config.php` (خواندن خودکار کاربر/رمز/کلید از config.php)
+2. نصب/فعال‌سازی **IIS + FastCGI/CGI**
+3. نصب/بررسی **PHP 8.3 NTS** (دانلود خودکار از windows.php.net)
+4. نصب **Microsoft ODBC Driver 17/18** (با winget)
+5. نصب افزونه‌های **php_sqlsrv / php_pdo_sqlsrv** (دانلود خودکار متناسب با نسخه PHP از گیت‌هاب مایکروسافت)
+6. ساخت/اصلاح **سایت IIS روی پورت 8731** + کپی فایل‌ها در `server/` + ثبت FastCGI + مسدودسازی دانلود `config.php` (web.config)
+7. قانون **فایروال** برای پورت 8731
+8. SQL Server: فعال‌سازی **TCP/IP** روی پورت 1433
+9. SQL Server: فعال‌سازی **Mixed Mode Authentication**
+10. تست ورود به `Meelano` با کاربر config (در صورت نیاز، ساخت/فعال‌سازی لاگین به‌صورت خودکار)
+11. **تست سرتاسری**: ping با کلید ✔ / رد درخواست بدون کلید (۴۰۱) ✔ / مسدود بودن config.php ✔ + گزارش تعداد رکورد جداول
+12. بررسی دسترس‌پذیری `http://37.143.148.14:8731` از بیرون
+
+### نحوه اجرا (روی خود سرور 37.143.148.14)
+```powershell
+# روش ۱: راست‌کلیک روی Setup-VizitorServer.ps1 ← Run with PowerShell (خودش مدیر می‌شود)
+
+# روش ۲: پاورشل Administrator
+powershell -ExecutionPolicy Bypass -File .\Setup-VizitorServer.ps1
+
+# با پارامترهای سفارشی:
+.\Setup-VizitorServer.ps1 -WebPort 8731 -SiteRoot C:\inetpub\VizitorAPI -PhpRoot C:\php\php-8.3-nts
+
+# اجرای آفلاین (بدون دانلود اینترنتی):
+.\Setup-VizitorServer.ps1 -SkipDownloads
+```
+- اسکریپت **ایمن و قابل اجرای مجدد** است؛ خروجی کامل در `Setup-VizitorServer.log` ذخیره می‌شود.
+- پایان اجرا جدول خلاصه با تیک/ضربدر هر بخش + تنظیمات دقیق موردنیاز اپ نمایش داده می‌شود.
+- اسکریپت باید **روی خود سرور میلانو** و روی ویندوز ۱۱/سرور اجرا شود (پاورشل ۵.۱ به بالا).
+
+---
+
+## 🛠 استقرار دستی (اگر اسکریپت را اجرا نکردید)
+
 ### ۱) نصب PHP 8.3 روی IIS
 1. دانلود **PHP 8.3 (NTS x64)** از windows.php.net — استخراج در `C:\php\`
 2. نصب **Microsoft Drivers for PHP for SQL Server (v5.12+)** و قراردادن `php_sqlsrv.dll` و `php_pdo_sqlsrv.dll` در `C:\php\ext\`

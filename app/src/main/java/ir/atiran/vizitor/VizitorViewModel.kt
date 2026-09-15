@@ -19,6 +19,7 @@ import ir.atiran.vizitor.data.local.ChatPrefs
 import ir.atiran.vizitor.data.local.SeedData
 import ir.atiran.vizitor.data.local.TopProduct
 import ir.atiran.vizitor.data.local.InvoiceItemEntity
+import ir.atiran.vizitor.data.repository.HealthReport
 import ir.atiran.vizitor.data.repository.ServerConfig
 import ir.atiran.vizitor.data.repository.SyncReport
 import ir.atiran.vizitor.data.repository.VizitorRepository
@@ -102,6 +103,18 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _syncing = MutableStateFlow(false)
     val syncing: StateFlow<Boolean> = _syncing.asStateFlow()
+
+    /** آخرین گزارش همگام‌سازی — برای نمایش ماندگار در کارت مدیریت سینک. */
+    private val _syncReport = MutableStateFlow<SyncReport?>(null)
+    val syncReport: StateFlow<SyncReport?> = _syncReport.asStateFlow()
+
+    /** وضعیت در حال اجرای تست سلامت سرور. */
+    private val _testing = MutableStateFlow(false)
+    val testing: StateFlow<Boolean> = _testing.asStateFlow()
+
+    /** آخرین نتیجهٔ تست سلامت سرور (null تا اولین اجرا). */
+    private val _health = MutableStateFlow<HealthUiState?>(null)
+    val health: StateFlow<HealthUiState?> = _health.asStateFlow()
 
     fun consumeToast() { _toast.value = null }
     fun showToast(msg: String) { _toast.value = msg }
@@ -226,12 +239,27 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
         _toast.value = "پیکربندی سرور ذخیره شد ✅"
     }
 
+    /** تست سلامت کامل سرور — نتیجه در کارت وضعیت نمایش داده می‌شود. */
     fun testConnection() = viewModelScope.launch {
-        _toast.value = "در حال تست اتصال…"
-        repo.testConnection().fold(
-            onSuccess = { _toast.value = "اتصال برقرار است ✅ (دیتابیس: $it)" },
-            onFailure = { _toast.value = "خطای اتصال: ${it.message}" }
-        )
+        if (_testing.value) return@launch
+        _testing.value = true
+        try {
+            repo.testConnection().fold(
+                onSuccess = {
+                    _health.value = HealthUiState(ok = true, report = it, error = null)
+                    _toast.value = "اتصال سالم است ✅ (تأخیر: ${it.latencyMs}ms)"
+                },
+                onFailure = {
+                    _health.value = HealthUiState(
+                        ok = false, report = null,
+                        error = it.message ?: "خطای نامشخص شبکه"
+                    )
+                    _toast.value = "تست سلامت ناموفق ❌"
+                }
+            )
+        } finally {
+            _testing.value = false
+        }
     }
 
     fun syncNow() = viewModelScope.launch {
@@ -239,8 +267,11 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
         _syncing.value = true
         try {
             val report: SyncReport = repo.syncAll()
+            _syncReport.value = report
             _toast.value = report.summary
         } catch (e: Exception) {
+            val failed = SyncReport(0, 0, listOf(e.message ?: "خطای شبکه"))
+            _syncReport.value = failed
             _toast.value = "همگام‌سازی ناموفق: ${e.message}"
         } finally {
             _syncing.value = false
@@ -249,3 +280,10 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
 
     fun computeDiscount(gross: Long, cash: Boolean): Long = repo.computeDiscount(gross, cash)
 }
+
+/** وضعیت نمایشی تست سلامت سرور در صفحه گزارشات. */
+data class HealthUiState(
+    val ok: Boolean,
+    val report: HealthReport?,
+    val error: String?
+)

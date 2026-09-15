@@ -47,31 +47,32 @@ jobs:
       - name: Prepare distributable APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-v2.9.0.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-v2.10.0.apk"
           ls -la dist/
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: Vizitor-APK
-          path: dist/Vizitor-v2.9.0.apk
+          path: dist/Vizitor-v2.10.0.apk
 
       - name: Publish GitHub Release with downloadable APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.9.0
-          name: "آتیران ویزیتور — نسخه ۲٫۹٫۰ (اتصال واقعی به سرور میلانو 37.143.148.14:8731 + دیتابیس Meelano)"
+          tag_name: v2.10.0
+          name: "آتیران ویزیتور — نسخه ۲٫۱۰٫۰ (تست سلامت سرور + اسکریپت راه‌اندازی خودکار ویندوز)"
           body: |
             نسخه قابل نصب اپلیکیشن **آتیران ویزیتور** ویژه پخش آجیل و خشکبار.
 
-            📲 برای نصب روی گوشی اندروید، فایل **Vizitor-v2.9.0.apk** را از بخش Assets پایین همین صفحه دانلود و نصب کنید.
+            📲 برای نصب روی گوشی اندروید، فایل **Vizitor-v2.10.0.apk** را از بخش Assets پایین همین صفحه دانلود و نصب کنید.
 
-            ✨ تغییرات این نسخه — «اتصال واقعی میلانو»:
-            - 🌐 **پیش‌فرض‌های واقعی سرور**: IP=37.143.148.14، پورت وب‌سرویس=8731، مسیر=server، کلید=MILANO-VIZITOR-2026 — بدون نیاز به تنظیم دستی برای نصب‌های جدید
-            - 🗄️ **config.php سمت سرور** با اتصال به SQL Server میلانو (DB=Meelano، کاربر AdminAn) — آماده استقرار تحت IIS
-            - ➕ اکشن جدید **submit_customer** روی api.php: ثبت مشتری از ویزیتور با IsActive=0 تا تأیید حسابداری (ویژگی «در انتظار تأیید» حالا واقعی کار می‌کند)
-            - 📚 راهنمای کامل استقرار IIS + PHP + SQL Server در server/README.md (فایروال 8731، فعال‌سازی TCP/IP در SQL Server، تست‌های curl و جدول خطاها)
-          files: dist/Vizitor-v2.9.0.apk
+            ✨ تغییرات این نسخه — «اتصال مطمئن میلانو»:
+            - ❤️‍🩹 **کارت «وضعیت سلامت سرور»** در منوی گزارشات: هر بخش اتصال (پاسخ سرور، کلید API، تأخیر شبکه، دیتابیس Meelano، نسخه PHP و وب‌سرویس) جداگانه تیک می‌خورد و شمارش رکورد جداول (کالاها/مشتریان/فاکتورها/سال مالی) گزارش می‌شود
+            - 🔄 **بازگشت یک‌لمسی به پیش‌فرض سرور میلانو** + پیش‌نمایش زندهٔ آدرس کامل وب‌سرویس هنگام ویرایش تنظیمات
+            - 📊 **نتیجهٔ ماندگار همگام‌سازی**: خلاصه ارسال/دریافت و لیست خطاها زیر دکمه «همگام‌سازی اکنون» باقی می‌ماند
+            - 🛠️ **server/Setup-VizitorServer.ps1**: اسکریپت راه‌اندازی خودکار سرور ویندوز ۱۱ — چک و اصلاح مرحله‌به‌مرحله (IIS، PHP 8.3 + درایور SQLSRV، سایت پورت 8731، فایروال، TCP/IP و Mixed Mode در SQL Server، تست سرتاسری API) با تیک سبز برای هر بخش سالم
+            - 📡 اکشن ping سرور حالا گزارش سلامت کامل (دیتابیس، PHP، جداول) برمی‌گرداند
+          files: dist/Vizitor-v2.10.0.apk
           target_commitish: arena/01a09f68-vizitor
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

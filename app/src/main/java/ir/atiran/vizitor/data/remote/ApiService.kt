@@ -16,12 +16,12 @@ import retrofit2.http.Query
 
 interface VizitorApiService {
 
-    /** تست اتصال به سرور. */
+    /** تست سلامت کامل سرور (دیتابیس + PHP + جداول). */
     @GET("api.php")
     suspend fun ping(
         @Header("X-Api-Key") apiKey: String,
         @Query("action") action: String = "ping"
-    ): ApiEnvelope<Map<String, String>>
+    ): ApiEnvelope<PingDto>
 
     /** دریافت کاتالوگ کالا (Live Stock). */
     @GET("api.php")

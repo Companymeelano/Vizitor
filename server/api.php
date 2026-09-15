@@ -69,12 +69,40 @@ try {
 
 // ═══════════════════════════ اکشن‌ها ═══════════════════════════════════════
 
-/** تست اتصال به دیتابیس آتیران. */
+/**
+ * تست سلامت کامل سرور — گزارش وضعیت دیتابیس، PHP، نسخه API
+ * و شمارش رکوند هر جدول کلیدی (جدول ناموجود ← null تا اپ/پاورشل آن را تشخیص دهد).
+ */
 function action_ping(): never
 {
     $pdo = create_pdo();
     $version = $pdo->query('SELECT @@VERSION AS v')->fetch()['v'] ?? 'unknown';
-    respond(true, 'اتصال برقرار است', ['db' => DB_NAME, 'version' => substr($version, 0, 60)]);
+
+    // پروب جداول کلیدی — هر جدول جداگانه تا خطای یکی همه را خراب نکند
+    $probe = [
+        'products'  => TBL_PRODUCTS,
+        'customers' => TBL_CUSTOMERS,
+        'invoices'  => TBL_SALES_HEADER,
+        'sal_mali'  => TBL_SAL_MALI,
+    ];
+    $tables = [];
+    foreach ($probe as $key => $tbl) {
+        try {
+            $tables[$key] = (int) $pdo->query("SELECT COUNT_BIG(*) AS c FROM {$tbl}")->fetch()['c'];
+        } catch (Throwable) {
+            $tables[$key] = null; // جدول یافت نشد — نام TBL_* در config.php باید تطبیق داده شود
+        }
+    }
+
+    respond(true, 'اتصال برقرار است', [
+        'db'          => DB_NAME,
+        'db_host'     => DB_HOST,
+        'version'     => substr($version, 0, 80),
+        'php'         => PHP_VERSION,
+        'api_version' => '2.1',
+        'server_time' => time(),
+        'tables'      => $tables,
+    ]);
 }
 
 /** کاتالوگ کالا با موجودی زنده (Live Stock). */

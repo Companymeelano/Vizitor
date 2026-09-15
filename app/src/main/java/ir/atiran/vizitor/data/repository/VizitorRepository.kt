@@ -10,6 +10,7 @@
 package ir.atiran.vizitor.data.repository
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Base64
 import ir.atiran.vizitor.data.local.AppDatabase
 import ir.atiran.vizitor.data.local.CartItemEntity
@@ -354,18 +355,46 @@ class VizitorRepository(private val context: Context) {
 
     suspend fun saveConfig(config: ServerConfig) = settings.save(config)
 
-    suspend fun testConnection(): Result<String> {
+    /** تست سلامت کامل سرور — با سنجش تأخیر شبکه. */
+    suspend fun testConnection(): Result<HealthReport> {
         val cfg = settings.config.first()
         return try {
             val api = RetrofitClient.buildApi(cfg.baseUrl)
+            val startedAt = SystemClock.elapsedRealtime()
             val res = api.ping(cfg.apiKey)
-            if (res.success) Result.success(res.data?.get("db") ?: "OK")
-            else Result.failure(RuntimeException(res.message ?: "پاسخ نامعتبر"))
+            val latency = SystemClock.elapsedRealtime() - startedAt
+            if (res.success) Result.success(
+                HealthReport(
+                    db = res.data?.db ?: "نامشخص",
+                    dbHost = res.data?.dbHost,
+                    dbVersion = res.data?.dbVersion,
+                    php = res.data?.php,
+                    apiVersion = res.data?.apiVersion,
+                    serverTime = res.data?.serverTime,
+                    tables = res.data?.tables,
+                    latencyMs = latency,
+                    baseUrl = cfg.baseUrl
+                )
+            )
+            else Result.failure(RuntimeException(res.message ?: "پاسخ نامعتبر سرور (کلید API را بررسی کنید)"))
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 }
+
+/** گزارش سلامت سرور — نمایش دقیق در کارت «تست سلامت اتصال». */
+data class HealthReport(
+    val db: String,
+    val dbHost: String?,
+    val dbVersion: String?,
+    val php: String?,
+    val apiVersion: String?,
+    val serverTime: Long?,
+    val tables: Map<String, Int?>?,
+    val latencyMs: Long,
+    val baseUrl: String
+)
 
 data class SyncReport(val pushedInvoices: Int, val pulledRecords: Int, val errors: List<String>) {
     val summary: String

@@ -36,7 +36,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.size
@@ -65,8 +72,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import ir.atiran.vizitor.HealthUiState
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.InvoiceEntity
 import ir.atiran.vizitor.perf.VizitorPerf
@@ -99,6 +108,10 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
     val invoices by viewModel.invoices.collectAsState()
     val config by viewModel.config.collectAsState()
     val syncing by viewModel.syncing.collectAsState()
+    val testing by viewModel.testing.collectAsState()
+    val health by viewModel.health.collectAsState()
+    val syncReport by viewModel.syncReport.collectAsState()
+    val palette = vizitorPalette
     val context = LocalContext.current
     var shareTarget by remember { mutableStateOf<InvoiceEntity?>(null) }
 
@@ -200,6 +213,27 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                         singleLine = true, colors = fieldColors,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    // ── پیش‌نمایش زندهٔ آدرس کامل وب‌سرویس ──────────────────────
+                    val previewUrl = remember(ip, httpPort, apiPath) {
+                        val path = apiPath.trim().trim('/')
+                        "http://${ip.trim().ifBlank { "…" }}:${httpPort.ifBlank { "…" }}/" +
+                                (if (path.isEmpty()) "" else "$path/") + "api.php"
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Storage, contentDescription = null,
+                            tint = palette.gold, modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            previewUrl,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.textSecondary,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
                     Row {
                         NeonPurpleButton(
                             text = "ذخیره پیکربندی",
@@ -207,7 +241,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                                 viewModel.saveConfig(
                                     config.copy(
                                         serverIp = ip.trim(),
-                                        httpPort = httpPort.toIntOrNull() ?: 8080,
+                                        httpPort = httpPort.toIntOrNull() ?: 8731,
                                         dbPort = dbPort.toIntOrNull() ?: 1433,
                                         apiPath = apiPath.trim(),
                                         apiKey = apiKey.trim(),
@@ -218,11 +252,47 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(Modifier.width(8.dp))
-                        NeonGreenButton(text = "تست اتصال", onClick = { viewModel.testConnection() })
+                        NeonGreenButton(
+                            text = if (testing) "در حال تست…" else "تست سلامت اتصال",
+                            icon = Icons.Filled.MonitorHeart,
+                            enabled = !testing,
+                            onClick = { viewModel.testConnection() }
+                        )
+                    }
+
+                    // ── بازگشت یک‌مرحله‌ای به تنظیمات پیش‌فرض سرور میلانو ─────
+                    TextButton(
+                        onClick = {
+                            ip = ServerConfig().serverIp
+                            httpPort = ServerConfig().httpPort.toString()
+                            dbPort = ServerConfig().dbPort.toString()
+                            apiPath = ServerConfig().apiPath
+                            apiKey = ServerConfig().apiKey
+                            viewModel.saveConfig(
+                                config.copy(
+                                    serverIp = ip, httpPort = httpPort.toInt(),
+                                    dbPort = dbPort.toInt(), apiPath = apiPath, apiKey = apiKey
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Filled.RestartAlt, contentDescription = null,
+                            tint = palette.gold, modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "بازگشت به پیش‌فرض سرور میلانو (37.143.148.14:8731)",
+                            color = palette.gold
+                        )
                     }
                 }
             }
         }
+
+        // ── کارت وضعیت سلامت سرور ───────────────────────────────────────────
+        item { HealthStatusCard(health = health, testing = testing) }
 
         // ── مدیریت همگام‌سازی ───────────────────────────────────────────────
         item { SectionTitle(text = "مدیریت همگام‌سازی", icon = Icons.Filled.CloudSync) }
@@ -271,6 +341,41 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
                                 .height(4.dp)
                         )
                     }
+
+                    // ── نتیجهٔ ماندگار آخرین سینک ──────────────────────────────
+                    val lastReport = syncReport
+                    if (lastReport != null && !syncing) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                if (lastReport.errors.isEmpty()) Icons.Filled.CloudDone
+                                else Icons.Filled.ErrorOutline,
+                                contentDescription = null,
+                                tint = if (lastReport.errors.isEmpty()) palette.accent else palette.danger,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                lastReport.summary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (lastReport.errors.isEmpty()) palette.accent else palette.danger
+                            )
+                        }
+                        lastReport.errors.take(3).forEach { err ->
+                            Text(
+                                "• $err",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = palette.danger
+                            )
+                        }
+                        if (lastReport.errors.size > 3) {
+                            Text(
+                                "و ${(lastReport.errors.size - 3).toFaNumber()} خطای دیگر…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = palette.textSecondary
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -282,7 +387,7 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
-                        "آتیران ویزیتور — نسخه ۲٫۹٫۰",
+                        "آتیران ویزیتور — نسخه ۲٫۱۰٫۰",
                         style = MaterialTheme.typography.titleMedium,
                         color = Gold
                     )
@@ -427,6 +532,163 @@ private fun ShareInvoiceDialog(
 private fun ShareOption(label: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Text(label, color = NeonGreen, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+// ═══════════════════ کارت وضعیت سلامت سرور (تست دقیق اتصال) ═══════════════════
+
+private val TABLE_LABELS = mapOf(
+    "products" to "کالاها (Products)",
+    "customers" to "مشتریان (CUSTOMERS)",
+    "invoices" to "فاکتورها (SalesHeader)",
+    "sal_mali" to "سال مالی (sal_mali)"
+)
+
+@Composable
+private fun HealthStatusCard(health: HealthUiState?, testing: Boolean) {
+    val palette = vizitorPalette
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // سربرگ کارت + چراغ وضعیت
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.MonitorHeart, contentDescription = null,
+                    tint = palette.gold, modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "وضعیت سلامت سرور",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                val dotColor = when {
+                    testing -> palette.gold
+                    health == null -> palette.textSecondary
+                    health.ok -> palette.accent
+                    else -> palette.danger
+                }
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                )
+            }
+
+            when {
+                testing -> {
+                    Text(
+                        "در حال بررسی دسترسی به سرور، اعتبار کلید API و اتصال دیتابیس…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.textSecondary
+                    )
+                    CircularProgressIndicator(
+                        color = palette.gold,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                    )
+                }
+
+                health == null -> Text(
+                    "برای بررسی دقیق بخش‌های اتصال، «تست سلامت اتصال» را بزنید. " +
+                            "هر بخش سلامت به‌صورت جداگانه تیک می‌خورد.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.textSecondary
+                )
+
+                !health.ok -> {
+                    HealthRow(ok = false, label = "اتصال برقرار نشد", value = null)
+                    Text(
+                        health.error ?: "خطای نامشخص",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.danger
+                    )
+                    Text(
+                        "راهنما: IP/پورت/مسیر API/کلید را با مقادیر سرور تطبیق دهید. " +
+                                "اگر سرور هنوز راه‌اندازی نشده، اسکریپت Setup-VizitorServer.ps1 " +
+                                "را روی سرور ویندوزی اجرا کنید.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.textSecondary
+                    )
+                }
+
+                else -> {
+                    val report = health.report!!
+                    HealthRow(ok = true, label = "سرور پاسخ می‌دهد", value = report.baseUrl.removeSuffix("api.php"))
+                    HealthRow(ok = true, label = "اعتبار کلید API", value = "معتبر")
+                    HealthRow(
+                        ok = report.latencyMs < 5000,
+                        label = "تأخیر شبکه",
+                        value = "${report.latencyMs.toFaNumber()} م.ث"
+                    )
+                    HealthRow(ok = true, label = "اتصال دیتابیس SQL Server", value = report.db)
+                    report.dbHost?.let { host ->
+                        HealthRow(ok = true, label = "میزبان دیتابیس", value = host)
+                    }
+                    report.php?.let { php ->
+                        HealthRow(ok = true, label = "نسخه PHP سرور", value = php)
+                    }
+                    report.apiVersion?.let { ver ->
+                        HealthRow(ok = true, label = "نسخه وب‌سرویس", value = ver)
+                    }
+
+                    // پروب جداول کلیدی — هر جدول جداگانه تیک/ضربدر می‌خورد
+                    val tables = report.tables
+                    if (!tables.isNullOrEmpty()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "بررسی جداول دیتابیس:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.gold
+                        )
+                        tables.forEach { (key, count) ->
+                            HealthRow(
+                                ok = count != null,
+                                label = TABLE_LABELS[key] ?: key,
+                                value = count?.toFaNumber()?.plus(" رکورد") ?: "یافت نشد!"
+                            )
+                        }
+                        if (tables.values.any { it == null }) {
+                            Text(
+                                "جدول‌های «یافت نشد» باید در config.php سمت سرور " +
+                                        "با نام واقعی جداول آتیران تطبیق داده شوند.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = palette.danger
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthRow(ok: Boolean, label: String, value: String?) {
+    val palette = vizitorPalette
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            if (ok) Icons.Filled.CheckCircle else Icons.Filled.Cancel,
+            contentDescription = if (ok) "سالم" else "خطا",
+            tint = if (ok) palette.accent else palette.danger,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.textPrimary,
+            modifier = Modifier.weight(1f)
+        )
+        if (value != null) {
+            Text(
+                value,
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.textSecondary
+            )
+        }
     }
 }
 
