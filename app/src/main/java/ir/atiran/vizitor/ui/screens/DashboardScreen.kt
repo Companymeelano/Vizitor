@@ -45,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -59,6 +60,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.VizitorViewModel
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CheckCircle
+import ir.atiran.vizitor.data.local.ChequeStore
 import ir.atiran.vizitor.data.local.CustomerEntity
 import ir.atiran.vizitor.data.local.InvoiceEntity
 import ir.atiran.vizitor.data.local.InvoiceStatus
@@ -101,7 +108,11 @@ fun DashboardScreen(
     val pending by viewModel.pendingCount.collectAsState()
     val invoices by viewModel.invoices.collectAsState()
     val customers by viewModel.customers.collectAsState()
-    val tops by viewModel.topProducts.collectAsState()
+    val cheques by ChequeStore.items.collectAsState()
+    val appContext = LocalContext.current
+    LaunchedEffect(customers) {
+        if (customers.isNotEmpty()) ChequeStore.seedIfEmpty(appContext, customers)
+    }
 
     val weekly = remember(invoices, todaySales) { buildWeekly(invoices, todaySales) }
     val debtors = remember(customers) {
@@ -126,9 +137,9 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    ShimmerGoldText("پیشخوان من")
+                    ShimmerGoldText("مرکز فرماندهی ویزیت")
                     Text(
-                        "نمای فشرده و هوشمند عملکرد امروز — یک نگاه کافی است",
+                        "عملکرد امروز — فشرده، هوشمند، در یک نگاه",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
@@ -188,10 +199,26 @@ fun DashboardScreen(
         // ── ۱) نبض امروز — دونات دوحلقه (تارگت بیرونی + سینک داخلی) ────────
         item { PulseCard(target, todaySales, progress, pending, sentToday, syncRatio) }
 
-        // ── ۲) ریسک و فرصت — بدهی‌ها و پرفروش‌ها کنار هم ───────────────────
-        item { RiskAndWinCard(debtors, tops) }
+        // ── ۲) ریسک بدهی — فقط مشتریان بدهکار (تک‌ستونه و واضح) ────────────
+        item { RiskAndWinCard(debtors) }
 
-        // ── ۳) چارت «مشتریان خرید نکرده» — منطبق بر سبک کارت بدهکاران، دقیقاً زیر آن ──
+        // ── ۳) چارت پیگیری چک‌های مشتریان (ثبت‌نشده) ────────────────────────
+        item {
+            ChequeChartCard(
+                cheques = cheques,
+                onCall = { phone ->
+                    appContext.startActivity(
+                        Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                    )
+                },
+                onResolve = { ch ->
+                    ChequeStore.resolve(appContext, ch.serial)
+                    viewModel.showToast("چک ${ch.serial.toFaDigits()} به‌عنوان «ثبت‌شده» برداشته شد ✅")
+                }
+            )
+        }
+
+        // ── ۴) چارت «مشتریان خرید نکرده» — دقیقاً زیر آن ────────────────────
         item {
             FollowUpChartCard(
                 followUp = followUp,
@@ -387,89 +414,141 @@ private fun StatChip(label: String, value: String, tint: Color, modifier: Modifi
 
 // ═════════════════════════ کارت ریسک و فرصت ═════════════════════════
 
-/** بدهی‌های بزرگ (خطا) و پرفروش‌ترین‌ها (فرصت) — دو ستون فشرده در یک کارت. */
+/** کارت ریسک بدهی — فقط بدهکاران بزرگ (تک‌ستونه، فشرده و واضح). */
 @Composable
-private fun RiskAndWinCard(debtors: List<CustomerEntity>, tops: List<TopProduct>) {
+private fun RiskAndWinCard(debtors: List<CustomerEntity>) {
     val maxDebt = debtors.maxOfOrNull { it.debt }?.coerceAtLeast(1L) ?: 1L
     val sumDebt = debtors.sumOf { it.debt }
-    val maxTotal = tops.maxOfOrNull { it.total }?.coerceAtLeast(1.0) ?: 1.0
 
     GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
         Column {
-            RoyalHeader(text = "ریسک بدهی ⇄ فرصت فروش", icon = Icons.Filled.WarningAmber)
+            RoyalHeader(text = "ریسک بدهی — مشتریان بدهکار", icon = Icons.Filled.WarningAmber)
             Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // ستون بدهی‌ها
-                Column(Modifier.weight(1f)) {
-                    MiniPanelTitle("بدهی‌های بزرگ", DangerRed)
-                    Spacer(Modifier.height(6.dp))
-                    if (debtors.isEmpty()) {
-                        Text(
-                            "مشتری بدهکاری نیست 🎉",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
-                        )
-                    } else {
-                        debtors.forEachIndexed { i, c ->
-                            MiniRankRow(
-                                rank = i + 1,
-                                name = c.name,
-                                value = c.debt.toFaPrice(),
-                                valueColor = DangerRed,
-                                fraction = c.debt.toFloat() / maxDebt,
-                                barColors = DebtBarColors
-                            )
-                            if (i < debtors.lastIndex) Spacer(Modifier.height(6.dp))
-                        }
-                        Spacer(Modifier.height(7.dp))
-                        Text(
-                            "جمع: ${sumDebt.toFaPrice()}",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                            color = Gold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                // تیگره نازک جداکننده
-                Box(
-                    Modifier
-                        .width(1.dp)
-                        .height(96.dp)
-                        .background(Color(0x1FFFFFFF))
+            if (debtors.isEmpty()) {
+                Text(
+                    "مشتری بدهکاری نیست 🎉",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
                 )
-                // ستون پرفروش‌ها
-                Column(Modifier.weight(1f)) {
-                    MiniPanelTitle("پرفروش‌ترین‌ها", NeonGreen)
-                    Spacer(Modifier.height(6.dp))
-                    if (tops.isEmpty()) {
-                        Text(
-                            "پس از اولین فاکتور ✨",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
-                        )
-                    } else {
-                        tops.forEachIndexed { i, top ->
-                            MiniRankRow(
-                                rank = i + 1,
-                                name = top.productName,
-                                value = "${top.total.toFaNumber()} واحد",
-                                valueColor = NeonGreen,
-                                fraction = (top.total / maxTotal).toFloat(),
-                                barColors = listOf(NeonPurple, Gold)
-                            )
-                            if (i < tops.lastIndex) Spacer(Modifier.height(6.dp))
-                        }
-                        Spacer(Modifier.height(7.dp))
-                        Text(
-                            "جمع: ${tops.sumOf { it.total }.toFaNumber()} واحد",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                            color = Gold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+            } else {
+                debtors.forEachIndexed { i, c ->
+                    MiniRankRow(
+                        rank = i + 1,
+                        name = c.name,
+                        value = c.debt.toFaPrice(),
+                        valueColor = DangerRed,
+                        fraction = c.debt.toFloat() / maxDebt,
+                        barColors = DebtBarColors
+                    )
+                    if (i < debtors.lastIndex) Spacer(Modifier.height(6.dp))
                 }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "جمع بدهی باز: ${sumDebt.toFaPrice()}",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = Gold,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/**
+ * چارت پیگیری چک‌های مشتریان — چک‌هایی که هنوز در سامانه ثبت نشده‌اند:
+ * نام مشتری + سریال + بانک + مبلغ + سررسید نزدیک + نوار مهلت و تماس مستقیم.
+ */
+@Composable
+private fun ChequeChartCard(
+    cheques: List<ir.atiran.vizitor.data.local.ChequeFollowUp>,
+    onCall: (String) -> Unit,
+    onResolve: (ir.atiran.vizitor.data.local.ChequeFollowUp) -> Unit
+) {
+    // نوار سررسید: محکم با یکی از چرخه‌های رنگی پالت (ها در تیره/روشن خواناست)
+    val dueColors = listOf(Gold, DangerRed)
+
+    GlassCard(modifier = Modifier.fillMaxWidth().royalBorder()) {
+        Column {
+            RoyalHeader(text = "پیگیری چک‌های مشتریان (ثبت‌نشده)", icon = Icons.Filled.AccountBalanceWallet)
+            Spacer(Modifier.height(10.dp))
+            if (cheques.isEmpty()) {
+                Text(
+                    "چک پیگیری‌نشده‌ای نیست — همه ثبت شده‌اند ✅",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            } else {
+                cheques.forEachIndexed { i, ch ->
+                    val frac = (1f - ch.dueDays / 30f).coerceIn(0.08f, 1f)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RankBadge3D(rank = i + 1, size = 20.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                ch.customerName,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                "سریال ${ch.serial.toFaDigits()} • بانک ${ch.bank} • ${ch.amount.toFaPrice()}",
+                                fontSize = 9.sp,
+                                color = TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            DepthBar(fraction = frac, fillColors = dueColors, height = 4.dp)
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "${ch.dueDays.toFaNumber()} روز",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (ch.dueDays <= 7) DangerRed else Gold,
+                                maxLines = 1
+                            )
+                            Row {
+                                // تماس مستقیم با مشتری
+                                Box(
+                                    Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(NeonGreen.copy(alpha = 0.16f))
+                                        .border(1.dp, NeonGreen.copy(alpha = 0.5f), CircleShape)
+                                        .clickable { onCall(ch.phone) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Filled.Call, contentDescription = "تماس", tint = NeonGreen, modifier = Modifier.size(13.dp))
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                // علامت «ثبت شد» — حذف از فهرست پیگیری
+                                Box(
+                                    Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(Gold.copy(alpha = 0.14f))
+                                        .border(1.dp, Gold.copy(alpha = 0.5f), CircleShape)
+                                        .clickable { onResolve(ch) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Filled.CheckCircle, contentDescription = "ثبت شد", tint = Gold, modifier = Modifier.size(13.dp))
+                                }
+                            }
+                        }
+                    }
+                    if (i < cheques.lastIndex) Spacer(Modifier.height(7.dp))
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "جمع مبالغ چک‌ها: ${cheques.sumOf { it.amount }.toFaPrice()} • ${cheques.size.toFaNumber()} چک",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = Gold,
+                    maxLines = 1
+                )
             }
         }
     }

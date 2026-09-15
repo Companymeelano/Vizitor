@@ -28,6 +28,8 @@ class VizitorApp : Application() {
         VizitorPerf.detect(this)
         // مقداردهی پروفایل و تنظیمات اتاق گفتگوی ویزیتورها
         ir.atiran.vizitor.data.local.ChatPrefs.init(this)
+        // مقداردهی فهرست چک‌های پیگیری‌شونده ویزیتور
+        ir.atiran.vizitor.data.local.ChequeStore.init(this)
         val repository = VizitorRepository(this)
         // کاشت داده نمونه برای اولین اجرا (حالت دمو تا اتصال سرور واقعی)
         appScope.launch { repository.ensureSeeded() }

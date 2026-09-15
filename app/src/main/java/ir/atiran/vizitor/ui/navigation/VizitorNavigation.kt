@@ -282,9 +282,9 @@ private fun VizitorBottomBar(
                 BottomTab(tab, currentRoute == tab.route, navController)
             }
 
-            // جایگاه خالی برای FAB مرکزی (سبد سفارش) — بدون برچسب متنی؛ ورود فقط از آیکن سبد
+            // جایگاه FAB مرکزی — عرض ثابت کوچک‌تر تا هر ۵ تب کاملاً هم‌اندازه شوند
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier.weight(1f).height(80.dp),
+                modifier = Modifier.width(78.dp).height(80.dp),
                 contentAlignment = Alignment.Center
             ) { }
 
