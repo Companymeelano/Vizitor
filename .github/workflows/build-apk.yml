@@ -47,26 +47,30 @@ jobs:
       - name: Prepare distributable APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-v2.13.3.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-v2.13.4.apk"
           ls -la dist/
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: Vizitor-APK
-          path: dist/Vizitor-v2.13.3.apk
+          path: dist/Vizitor-v2.13.4.apk
 
       - name: Publish GitHub Release with downloadable APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.13.3
-          name: "آتیران ویزیتور — نسخه ۲٫۱۳٫۳ (اتصال به دیتابیس واقعی atiran2 روی 37.143.147.19)"
+          tag_name: v2.13.4
+          name: "آتیران ویزیتور — نسخه ۲٫۱۳٫۴ (نسخه نهایی اسکریپت سرور — رفع انکدینگ)"
           body: |
             نسخه قابل نصب اپلیکیشن **آتیران ویزیتور** ویژه پخش آجیل و خشکبار.
 
-            📲 برای نصب روی گوشی اندروید، فایل **Vizitor-v2.13.3.apk** را از بخش Assets پایین همین صفحه دانلود و نصب کنید.
+            📲 برای نصب روی گوشی اندروید، فایل **Vizitor-v2.13.4.apk** را از بخش Assets پایین همین صفحه دانلود و نصب کنید.
 
-            ✨ تغییرات این نسخه — «هدف‌گیری دیتابیس واقعی»:
+            ✨ تغییرات این نسخه — «اسکریپت نهایی سرور»:
+            - 🧹 **رفع انکدینگ Setup-VizitorServer.ps1**: پیشوندهای BOM تکراری که هنگام ویرایش‌های متوالی انباشته شده بودند پاک شد — فایل نهایی با یک BOM استاندارد CRLF/UTF-8 مستقیم در ویندوز اجرا می‌شود
+            - 🎯 (مانند ۲٫۱۳٫۳) دیتابیس atiran2 روی 37.143.147.19 — وب‌سرویس 37.143.148.14:8731
+
+            🔹 تغییرات ۲٫۱۳٫۳ — «هدف‌گیری دیتابیس واقعی»:
             - 🎯 **config.php حالا به دیتابیس atiran2 روی 37.143.147.19:1433** متصل می‌شود (وب‌سرویس همچنان 37.143.148.14:8731)
             - 🛡️ اسکریپت راه‌اندازی به سرور دیتابیس به‌هیچ‌عنوان دست نمی‌زند — مراحل محلی SQL خودکار رد می‌شوند و فقط اتصال خوانده/تست می‌شود
             - 📱 کارت سلامت اپ میزبان دیتابیس را هم نمایش می‌دهد تا صحت هدف‌گیری قابل رؤیت باشد
@@ -92,7 +96,7 @@ jobs:
             - 📊 **نتیجهٔ ماندگار همگام‌سازی**: خلاصه ارسال/دریافت و لیست خطاها زیر دکمه «همگام‌سازی اکنون» باقی می‌ماند
             - 🛠️ **server/Setup-VizitorServer.ps1**: اسکریپت راه‌اندازی خودکار سرور ویندوز ۱۱ — چک و اصلاح مرحله‌به‌مرحله (IIS، PHP 8.3 + درایور SQLSRV، سایت پورت 8731، فایروال، TCP/IP و Mixed Mode در SQL Server، تست سرتاسری API) با تیک سبز برای هر بخش سالم
             - 📡 اکشن ping سرور حالا گزارش سلامت کامل (دیتابیس، PHP، جداول) برمی‌گرداند
-          files: dist/Vizitor-v2.13.3.apk
+          files: dist/Vizitor-v2.13.4.apk
           target_commitish: arena/01a09f68-vizitor
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

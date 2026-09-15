@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<#
+﻿<#
 ═══════════════════════════════════════════════════════════════════════════
   Vizitor — آتیران ویزیتور | راه‌اندازی خودکار سرور (Setup-VizitorServer.ps1)
   Developed by Milano Technical Team, Milad Yaghoobi
