@@ -221,7 +221,7 @@ fun SplashScreen(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                "سامانه هوشمند ویزیت، ویترین و سفارش‌گیری — نسخه ۲٫۱۳٫۱",
+                "سامانه هوشمند ویزیت، ویترین و سفارش‌گیری — نسخه ۲٫۱۳٫۲",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.5.sp, fontWeight = FontWeight.Bold),
                 color = Gold.copy(alpha = 0.9f),
                 textAlign = TextAlign.Center

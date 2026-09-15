@@ -1,4 +1,4 @@
-﻿﻿<#
+﻿﻿﻿<#
 ═══════════════════════════════════════════════════════════════════════════
   Vizitor — آتیران ویزیتور | راه‌اندازی خودکار سرور (Setup-VizitorServer.ps1)
   Developed by Milano Technical Team, Milad Yaghoobi
@@ -607,6 +607,14 @@ if (-not $sqlIsLocal) {
 } elseif (-not $script:SqlInstanceSuffix) {
     Step-Fail $stepName 'هیچ نمونه SQL Server روی این ماشین یافت نشد — SQL Server را نصب/بررسی کنید'
 } else {
+    # بکاپ رجیستری پیش از هر تغییر SQL (یک‌بار در این اجرا)
+    try {
+        $tsb = Get-Date -Format 'yyyyMMdd-HHmmss'
+        $regBakDir = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+        $regBak = Join-Path $regBakDir "sql-registry-backup-$tsb.reg"
+        & reg.exe export "HKLM\SOFTWARE\Microsoft\Microsoft SQL Server\$($script:SqlInstanceSuffix)" $regBak /y | Out-Null
+        Write-Host "      بکاپ رجیستری SQL ← $regBak" -ForegroundColor DarkGray
+    } catch { Write-Host "      ⚠ بکاپ رجیستری SQL ناموفق: $($_.Exception.Message)" -ForegroundColor Yellow }
     $tcpKey = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$($script:SqlInstanceSuffix)\MSSQLServer\SuperSocketNetLib\Tcp"
     $ipAll  = Join-Path $tcpKey 'IPAll'
     $needFix = $true

@@ -46,6 +46,14 @@ powershell -ExecutionPolicy Bypass -File .\Setup-VizitorServer.ps1
 - در ساعت اوج کاری: `.\Setup-VizitorServer.ps1 -NoSqlRestart` اجرا کنید و در فرصت مناسب خودتان از services.msc سرویس SQL Server را Restart کنید.
 - اجرای مجدد اسکریپت پس از اعمال تنظیمات، **دیگر ری‌استارتی نمی‌خواهد** و فقط تیک می‌زند.
 
+### 🩺 اگر سرویس SQL اصلاً استارت نشد (بازیابی خودکار)
+اسکریپت **`Recover-VizitorSql.ps1`** را اجرا کنید — اول بکاپ رجیستری می‌گیرد، چند بار سرویس را استارت می‌زند، لاگ `ERRORLOG` و رویدادهای ویندوز را می‌خواند و در صورت لزوم تنظیمات را به حالت امن (TCP غیرفعال + Windows Auth) برمی‌گرداند تا موتور بالا بیاید:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Recover-VizitorSql.ps1
+# یا بدون پرسش، بازگردانی امن را نیز اعمال کن:
+.\Recover-VizitorSql.ps1 -SafeRestore
+```
+
 ### 🚑 اگر سرویس SQL استپ ماند (بازیابی فوری)
 ```powershell
 Start-Service MSSQLSERVER
