@@ -22,6 +22,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,15 +71,19 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -86,6 +91,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import ir.atiran.vizitor.R
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.perf.VizitorPerf
 import ir.atiran.vizitor.ui.components.dashboardBackdrop
@@ -117,17 +123,17 @@ object Routes {
     const val SCANNER = "scanner"
 }
 
-data class TabItem(val route: String, val label: String, val icon: ImageVector)
+data class TabItem(val route: String, val label: String, val icon: ImageVector, val iconRes: Int)
 
 private val rightTabs = listOf(
-    TabItem(Routes.DASHBOARD, "پیشخوان", Icons.Filled.Dashboard),
-    TabItem(Routes.CATALOG, "ویترین", Icons.Filled.Storefront),
-    TabItem(Routes.CHAT, "گفتگو", Icons.Filled.Message)
+    TabItem(Routes.DASHBOARD, "پیشخوان", Icons.Filled.Dashboard, R.drawable.tab_dashboard),
+    TabItem(Routes.CATALOG, "ویترین", Icons.Filled.Storefront, R.drawable.tab_showcase),
+    TabItem(Routes.CHAT, "گفتگو", Icons.Filled.Message, R.drawable.tab_chat)
 )
 
 private val leftTabs = listOf(
-    TabItem(Routes.CUSTOMERS, "مشتری", Icons.Filled.Person),
-    TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Receipt)
+    TabItem(Routes.CUSTOMERS, "مشتری", Icons.Filled.Person, R.drawable.tab_customer),
+    TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Receipt, R.drawable.tab_reports)
 )
 
 @Composable
@@ -433,28 +439,31 @@ private fun androidx.compose.foundation.layout.RowScope.BottomTab(
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // کپسول آیکن — ابعاد ثابت در هر دو حالت (بدون پرش اندازه)
+            // نشان سه‌بعدی اختصاصی هر تب — ابعاد ثابت در هر دو حالت + واکنش به تم:
+            // حلقه/سطح با رنگ‌های پالت، حالت غیرفعال کمی کم‌رنگ‌تر
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .then(
                         if (selected)
-                            Modifier
-                                .background(Brush.verticalGradient(listOf(p.primary, p.primaryDark)))
-                                .border(1.dp, p.gold.copy(alpha = 0.75f), CircleShape)
+                            Modifier.border(1.5.dp, p.gold.copy(alpha = 0.85f), CircleShape)
                         else
-                            Modifier
-                                .background(Color(0x14FFFFFF))
-                                .border(1.dp, Color(0x22FFFFFF), CircleShape)
+                            Modifier.border(1.dp, Color(0x22FFFFFF), CircleShape)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    tab.icon,
+                Image(
+                    painter = painterResource(tab.iconRes),
                     contentDescription = tab.label,
-                    tint = if (selected) p.gold else TextSecondary,
-                    modifier = Modifier.size(17.dp)
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(34.dp) // ثابت در هر دو حالت — بدون پرش اندازه
+                        .clip(CircleShape),
+                    colorFilter = if (selected) null
+                    else ColorFilter.colorMatrix(
+                        ColorMatrix().apply { setToSaturation(0.55f) }
+                    )
                 )
             }
             Spacer(Modifier.height(3.dp))

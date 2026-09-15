@@ -167,17 +167,25 @@ fun CustomersScreen(viewModel: VizitorViewModel) {
                     MicButton(onClick = { startVoice() })
                 }
                 Spacer(Modifier.height(10.dp))
-                NeonGreenButton(
-                    text = if (optimized) "مسیر بهینه شد ✅ (بازگشت به ترتیب پیش‌فرض)" else "بهینه‌سازی مسیر ویزیت بر اساس نزدیکی جغرافیایی",
+                // دکمه‌های قهرمان — عنوان و زیرعنوان دقیقاً داخل قاب، بردر روی مرز
+                val p0 = vizitorPalette
+                HeroActionButton(
+                    title = if (optimized) "مسیر بهینه شد ✅" else "بهینه‌سازی مسیر ویزیت",
+                    subtitle = if (optimized) "برای بازگشت به ترتیب پیش‌فرض بزنید" else "بر اساس نزدیکی جغرافیایی مشتریان منطقه",
                     icon = Icons.Filled.Route,
+                    faceTop = p0.btnAccentTop, faceBottom = p0.btnAccentBottom,
+                    contentColor = p0.onAccent,
                     onClick = { optimized = !optimized },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(10.dp))
                 // ✨ درگاه ثبت مشتری جدید — ارسال برای تأیید به حسابداری آتیران
-                NeonPurpleButton(
-                    text = "افزودن مشتری جدید (ارسال برای تأیید حسابداری)",
+                HeroActionButton(
+                    title = "افزودن مشتری جدید",
+                    subtitle = "ارسال برای تأیید حسابداری آتیران",
                     icon = Icons.Filled.PersonAdd,
+                    faceTop = p0.btnPrimaryTop, faceBottom = p0.btnPrimaryBottom,
+                    contentColor = p0.onPrimary,
                     onClick = { showAddCustomer = true },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -489,7 +497,7 @@ private fun CustomerCard(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxWidth().height(78.dp)
                 )
-                // تنتِ رنگی موج‌دار از رنگ‌های تم فعال — همرنگ با انتخاب کاربر
+                // تنتِ ملایم رنگ تم فعال — بنر خلوت جدید (ابریشم تیره) با تنت سبک‌تر دیده می‌شود
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -497,9 +505,9 @@ private fun CustomerCard(
                         .background(
                             Brush.linearGradient(
                                 listOf(
-                                    p.primary.copy(alpha = 0.55f),
-                                    Color(0x33000000),
-                                    p.gold.copy(alpha = 0.38f)
+                                    p.primary.copy(alpha = 0.34f),
+                                    Color(0x29000000),
+                                    p.gold.copy(alpha = 0.22f)
                                 )
                             )
                         )
@@ -522,7 +530,7 @@ private fun CustomerCard(
                     fontWeight = FontWeight.ExtraBold,
                     color = Color(0xFFFFFFFF),
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
+                        .align(Alignment.BottomEnd) // در RTL ← گوشه چپِ خلوت بنر
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                         .clip(RoundedCornerShape(50))
                         .background(Color(0x8C0B1220))
@@ -894,4 +902,69 @@ private fun openSmsApp(context: android.content.Context, phone: String, body: St
         putExtra("sms_body", body)
     }
     runCatching { context.startActivity(intent) }
+}
+
+// ═══════════════ دکمه قهرمان دولاینه — عنوان/زیرعنوان دقیقاً داخل قاب ═══════════════
+
+/**
+ * جایگزین NeonGreen/Purple Button برای اکشن‌های بالای صفحه:
+ * متن هرگز به دو خط نمی‌شکند، کپسول آیکن با فاصله ثابت داخل قاب است و
+ * بردر دقیقاً روی مرز خود دکمه رسم می‌شود (هیچ لایه‌ای بیرون نمی‌زند).
+ */
+@Composable
+private fun HeroActionButton(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    faceTop: Color,
+    faceBottom: Color,
+    contentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val p = vizitorPalette
+    Row(
+        modifier = modifier
+            .height(64.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.verticalGradient(listOf(faceTop, faceBottom)))
+            .border(1.dp, p.gold.copy(alpha = 0.38f), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // کپسول شیشه‌ای آیکن — فاصله ثابت از لبه‌ها، کاملاً داخل قاب
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.20f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon, contentDescription = null,
+                tint = contentColor, modifier = Modifier.size(21.dp)
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                subtitle,
+                fontSize = 10.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = contentColor.copy(alpha = 0.78f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
 }
