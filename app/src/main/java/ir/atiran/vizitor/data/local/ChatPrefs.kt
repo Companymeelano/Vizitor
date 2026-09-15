@@ -27,6 +27,7 @@ object ChatPrefs {
     private const val KEY_BLOCKED = "blocked_users"
     private const val KEY_ADMIN_USER = "admin_user"
     private const val KEY_ADMIN_PASS = "admin_pass"
+    private const val KEY_AVATAR = "avatar_index"
 
     private val _fullName = MutableStateFlow("")
     val fullName: StateFlow<String> = _fullName.asStateFlow()
@@ -42,6 +43,8 @@ object ChatPrefs {
     val groupLocked: StateFlow<Boolean> = _groupLocked.asStateFlow()
     private val _blocked = MutableStateFlow<Set<String>>(emptySet())
     val blocked: StateFlow<Set<String>> = _blocked.asStateFlow()
+    private val _avatarIndex = MutableStateFlow(0)
+    val avatarIndex: StateFlow<Int> = _avatarIndex.asStateFlow()
 
     val isRegistered: Boolean get() = _username.value.isNotBlank()
 
@@ -62,9 +65,13 @@ object ChatPrefs {
         _groupLocked.value = p.getBoolean(KEY_LOCKED, false)
         _blocked.value = (p.getString(KEY_BLOCKED, "") ?: "")
             .split(',').filter { it.isNotBlank() }.toSet()
+        _avatarIndex.value = p.getInt(KEY_AVATAR, 0)
     }
 
-    fun saveProfile(context: Context, fullName: String, phone: String, username: String, password: String) {
+    fun saveProfile(context: Context, fullName: String, phone: String, username: String, password: String, avatarIndex: Int = 0) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_AVATAR, avatarIndex).apply()
+        _avatarIndex.value = avatarIndex
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_FULL_NAME, fullName)
             .putString(KEY_PHONE, phone)

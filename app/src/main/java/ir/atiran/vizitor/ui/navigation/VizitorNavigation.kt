@@ -13,6 +13,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -121,7 +124,7 @@ private val rightTabs = listOf(
 
 private val leftTabs = listOf(
     TabItem(Routes.CUSTOMERS, "مشتری", Icons.Filled.Person),
-    TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Settings)
+    TabItem(Routes.REPORTS, "گزارشات", Icons.Filled.Receipt)
 )
 
 @Composable
@@ -150,10 +153,14 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
         }
     }
 
+    val navBackStack by navController.currentBackStackEntryAsState()
+    val isSplash = navBackStack?.destination?.route == Routes.SPLASH
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
+            if (isSplash) return@Scaffold
             VizitorBottomBar(
                 navController = navController,
                 onFabClick = {
@@ -187,7 +194,8 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
                         navController.navigate(Routes.DASHBOARD) {
                             popUpTo(Routes.SPLASH) { inclusive = true }
                         }
-                    }
+                    },
+                    onSoon = { viewModel.showToast(it) }
                 )
             }
             composable(Routes.DASHBOARD) { DashboardScreen(viewModel) }
@@ -241,12 +249,19 @@ private fun VizitorBottomBar(
     // رنگ‌های تم — کپچر در کانتکست کامپوزبل پیش از ورود به لایه رسم
     val hairlinePrimary = NeonPurple
     val hairlineGold = Gold
+    val barSurface = vizitorPalette.surface
+    val barSurfaceDeep = vizitorPalette.surfaceDeep
     Box(modifier = Modifier.fillMaxWidth()) {
         NavigationBar(
-            containerColor = DarkSlateElevated.copy(alpha = 0.94f),
+            containerColor = Color.Transparent,
             tonalElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(barSurface.copy(alpha = 0.97f), barSurfaceDeep.copy(alpha = 0.97f))
+                    )
+                )
                 .border(0.5.dp, GlassBorder, RoundedCornerShape(0.dp))
                 // خط نور گرادیانی بالای نوار (امضای لوکس)
                 .drawBehind {
@@ -371,32 +386,77 @@ private fun androidx.compose.foundation.layout.RowScope.BottomTab(
     selected: Boolean,
     navController: androidx.navigation.NavController
 ) {
-    NavigationBarItem(
-        selected = selected,
-        onClick = {
-            navController.navigate(tab.route) {
-                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                launchSingleTop = true; restoreState = true
-            }
-        },
-        icon = {
-            Icon(
-                tab.icon,
-                contentDescription = tab.label,
-                tint = if (selected) NeonPurple else TextSecondary,
-                modifier = Modifier.size(24.dp)
+    val p = vizitorPalette
+    val lift by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.55f, stiffness = 420f),
+        label = "tabLift${tab.route}"
+    )
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .height(74.dp)
+            .padding(horizontal = 3.dp, vertical = 6.dp)
+            .graphicsLayer { translationY = -7.dp.toPx() * lift }
+            .clip(RoundedCornerShape(16.dp))
+            .then(
+                if (selected)
+                    Modifier
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(p.primary.copy(alpha = 0.32f), p.primaryDark.copy(alpha = 0.24f))
+                            )
+                        )
+                        .border(1.dp, p.gold.copy(alpha = 0.55f), RoundedCornerShape(16.dp))
+                else
+                    Modifier
+                        .background(Color.Transparent)
+                        .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(16.dp))
             )
-        },
-        label = {
+            .clickable {
+                navController.navigate(tab.route) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true; restoreState = true
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // کپسول سه‌بعدی آیکن — انتخاب: گرادیان تم + حلقه طلایی و سایه نور
+            Box(
+                modifier = Modifier
+                    .size(if (selected) 34.dp else 30.dp)
+                    .clip(CircleShape)
+                    .then(
+                        if (selected)
+                            Modifier
+                                .background(Brush.verticalGradient(listOf(p.primary, p.primaryDark)))
+                                .border(1.dp, p.gold.copy(alpha = 0.75f), CircleShape)
+                        else
+                            Modifier
+                                .background(Color(0x14FFFFFF))
+                                .border(1.dp, Color(0x22FFFFFF), CircleShape)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    tab.icon,
+                    contentDescription = tab.label,
+                    tint = if (selected) p.gold else TextSecondary,
+                    modifier = Modifier.size(if (selected) 18.dp else 16.dp)
+                )
+            }
+            Spacer(Modifier.height(3.dp))
             Text(
                 tab.label,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (selected) NeonPurple else TextSecondary,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Normal,
+                    fontSize = 9.5.sp
+                ),
+                color = if (selected) p.gold else TextSecondary,
                 maxLines = 1
             )
-        },
-        colors = NavigationBarItemDefaults.colors(
-            indicatorColor = NeonPurpleGlow.copy(alpha = 0.18f)
-        )
-    )
+        }
+    }
 }
+

@@ -78,6 +78,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.VizitorViewModel
+import ir.atiran.vizitor.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.Image
 import ir.atiran.vizitor.data.local.ChatMessageEntity
 import ir.atiran.vizitor.data.local.ChatMessageType
 import ir.atiran.vizitor.data.local.ChatPrefs
@@ -97,6 +101,20 @@ import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaTime
 import kotlin.math.abs
 
+/** آواتارهای انتخابی خود کاربر در ثبت‌نام گفتگو (۴ چهره واقعی). */
+private val MyAvatarChoices = listOf(
+    R.drawable.avatar_m_visitor, R.drawable.avatar_f_visitor,
+    R.drawable.avatar_m_warehouse, R.drawable.avatar_f_manager
+)
+
+/** مخزن آواتار سایر ویزیتورها — آجیل‌ها + چهره‌ها (پایدار بر اساس نام‌کاربری). */
+private val VisitorAvatarPool = listOf(
+    R.drawable.avatar_pistachio, R.drawable.avatar_almond, R.drawable.avatar_cashew,
+    R.drawable.avatar_walnut, R.drawable.avatar_fig,
+    R.drawable.avatar_m_visitor, R.drawable.avatar_f_visitor,
+    R.drawable.avatar_f_manager, R.drawable.avatar_m_warehouse
+)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(viewModel: VizitorViewModel) {
@@ -109,6 +127,7 @@ fun ChatScreen(viewModel: VizitorViewModel) {
     val hideContact by ChatPrefs.hideContact.collectAsState()
     val groupLocked by ChatPrefs.groupLocked.collectAsState()
     val blocked by ChatPrefs.blocked.collectAsState()
+    val myAvatarIdx by ChatPrefs.avatarIndex.collectAsState()
 
     var showAdmin by remember { mutableStateOf(false) }
     var actionTarget by remember { mutableStateOf<ChatMessageEntity?>(null) }
@@ -254,6 +273,7 @@ fun ChatScreen(viewModel: VizitorViewModel) {
                     ChatBubble(
                         msg = msg,
                         myUsername = username,
+                        myAvatarRes = MyAvatarChoices[myAvatarIdx.coerceIn(0, MyAvatarChoices.lastIndex)],
                         hideContact = hideContact,
                         onLong = { actionTarget = msg }
                     )
@@ -264,8 +284,8 @@ fun ChatScreen(viewModel: VizitorViewModel) {
         // ── ثبت‌نام یا کمپوزر ───────────────────────────────────────────────
         if (!registered) {
             RegistrationCard(
-                onSubmit = { fn, ph, un, pw ->
-                    ChatPrefs.saveProfile(context, fn, ph, un, pw)
+                onSubmit = { fn, ph, un, pw, av ->
+                    ChatPrefs.saveProfile(context, fn, ph, un, pw, av)
                     viewModel.showToast("به اتاق گفتگو خوش آمدی، «» $fn » 🎉")
                     viewModel.sendChatMessage("به اتاق گفتگوی ویزیتورها پیوستم! 👋", ChatMessageType.TEXT)
                 }
@@ -335,6 +355,7 @@ fun ChatScreen(viewModel: VizitorViewModel) {
 private fun ChatBubble(
     msg: ChatMessageEntity,
     myUsername: String,
+    myAvatarRes: Int,
     hideContact: Boolean,
     onLong: () -> Unit
 ) {
@@ -359,7 +380,10 @@ private fun ChatBubble(
         horizontalArrangement = if (mine) Arrangement.Start else Arrangement.End
     ) {
         if (!mine) {
-            ChatAvatar(msg.senderName, avatarGrad)
+            ChatAvatar(
+                resId = VisitorAvatarPool[kotlin.math.abs(msg.senderUsername.hashCode()) % VisitorAvatarPool.size],
+                gradient = avatarGrad
+            )
             Spacer(Modifier.width(7.dp))
         }
         Column(
@@ -422,26 +446,29 @@ private fun ChatBubble(
         }
         if (mine) {
             Spacer(Modifier.width(7.dp))
-            ChatAvatar(msg.senderName, avatarGrad)
+            ChatAvatar(resId = myAvatarRes, gradient = avatarGrad)
         }
     }
 }
 
-/** آواتار گرد کوچک با حرف اول نام — گرادیان پایدار به ازای کاربر. */
+/** آواتار گرد تصویری — چهره سه‌بعدی از استخر آواتارها + حلقه گرادیان پایدار. */
 @Composable
-private fun ChatAvatar(name: String, gradient: List<Color>) {
+private fun ChatAvatar(resId: Int, gradient: List<Color>) {
     Box(
         modifier = Modifier
-            .size(30.dp)
+            .size(32.dp)
             .clip(CircleShape)
-            .background(Brush.linearGradient(gradient))
-            .border(1.dp, Color(0x66FFFFFF), CircleShape),
+            .border(1.5.dp, Brush.linearGradient(gradient), CircleShape)
+            .padding(1.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            name.firstOrNull()?.toString() ?: "؟",
-            color = Color(0xFF0B1220),
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold)
+        Image(
+            painter = painterResource(resId),
+            contentDescription = "آواتار",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
         )
     }
 }
@@ -645,11 +672,12 @@ private fun ComposerIcon(
 
 /** فرم ورود به گفتگو — اعتبارسنجی لاتین برای نام‌کاربری و رمز. */
 @Composable
-private fun RegistrationCard(onSubmit: (String, String, String, String) -> Unit) {
+private fun RegistrationCard(onSubmit: (String, String, String, String, Int) -> Unit) {
     var fullName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var avatarIdx by remember { mutableStateOf(0) }
 
     val phoneOk = phone.trim().replace('۰', '0').filter { it.isDigit() }.length >= 10
     val usernameOk = username.matches(Regex("^[A-Za-z][A-Za-z0-9_.]{2,19}$"))
@@ -688,11 +716,45 @@ private fun RegistrationCard(onSubmit: (String, String, String, String) -> Unit)
             if (password.isNotBlank() && !passwordOk) {
                 HintDanger("رمز: حداقل ۶ نویسه از حروف/اعداد/نمادهای انگلیسی، با حداقل یک حرف و یک عدد — بدون نویسه فارسی")
             }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "انتخاب آواتار:",
+                style = MaterialTheme.typography.labelMedium,
+                color = Gold
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MyAvatarChoices.forEachIndexed { i, res ->
+                    val selected = avatarIdx == i
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .border(
+                                2.dp,
+                                if (selected) Gold else Color(0x33FFFFFF),
+                                CircleShape
+                            )
+                            .clickable { avatarIdx = i }
+                            .padding(if (selected) 3.dp else 0.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(res),
+                            contentDescription = "آواتار ${i + 1}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(if (selected) 44.dp else 48.dp)
+                                .clip(CircleShape)
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
             NeonGreenButton(
                 text = "ورود به اتاق گفتگو 🎉",
                 enabled = ready,
-                onClick = { onSubmit(fullName.trim(), phone.trim(), username.trim(), password) },
+                onClick = { onSubmit(fullName.trim(), phone.trim(), username.trim(), password, avatarIdx) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
