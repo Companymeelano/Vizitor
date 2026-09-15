@@ -1,4 +1,4 @@
-﻿﻿﻿<#
+﻿﻿﻿﻿<#
 ═══════════════════════════════════════════════════════════════════════════
   Vizitor — آتیران ویزیتور | راه‌اندازی خودکار سرور (Setup-VizitorServer.ps1)
   Developed by Milano Technical Team, Milad Yaghoobi
@@ -168,7 +168,7 @@ if ((Test-Path $apiPhp) -and (Test-Path $configPhp)) {
 
 # خواندن ثابت‌ها از config.php (منبع واحد حقیقت — بدون تکرار رمز در اسکریپت)
 $script:ConfigText = ''
-$DbHost = $PublicHost; $DbPort = $SqlPort; $DbName = 'Meelano'; $DbUser = ''; $DbPass = ''; $ApiKey = ''
+$DbHost = '37.143.147.19'; $DbPort = $SqlPort; $DbName = 'atiran2'; $DbUser = ''; $DbPass = ''; $ApiKey = ''
 if (Test-Path $configPhp) {
     $script:ConfigText = Get-Content $configPhp -Raw -Encoding UTF8
     function Read-CfgConst([string]$Name, $Default) {
@@ -180,7 +180,7 @@ if (Test-Path $configPhp) {
     }
     $DbHost = [string](Read-CfgConst 'DB_HOST'     $PublicHost)
     $DbPort = [int]   (Read-CfgConst 'DB_PORT'     $SqlPort)
-    $DbName = [string](Read-CfgConst 'DB_NAME'     'Meelano')
+    $DbName = [string](Read-CfgConst 'DB_NAME'     'atiran2')
     $DbUser = [string](Read-CfgConst 'DB_USER'     '')
     $DbPass = [string](Read-CfgConst 'DB_PASSWORD' '')
     $ApiKey = [string](Read-CfgConst 'API_KEY'     '')
@@ -603,7 +603,7 @@ if (Test-Path $instReg) {
     }
 }
 if (-not $sqlIsLocal) {
-    Step-Skip $stepName "SQL روی ماشین دیگری است ($DbHost) — فعال‌سازی TCP/IP را روی همان ماشین انجام دهید"
+    Step-Skip $stepName "SQL روی $DbHost است (ماشین جدا از وب‌سرور) — اسکریپت به آن دست نمی‌زند؛ فقط مطمئن شوید روی آن سرور TCP/IP فعال و پورت $DbPort برای وب‌سرور باز است"
 } elseif (-not $script:SqlInstanceSuffix) {
     Step-Fail $stepName 'هیچ نمونه SQL Server روی این ماشین یافت نشد — SQL Server را نصب/بررسی کنید'
 } else {
