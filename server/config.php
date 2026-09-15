@@ -11,14 +11,14 @@
 declare(strict_types=1);
 
 // ── تنظیمات اتصال SQL Server ────────────────────────────────────────────────
-const DB_HOST     = '192.168.1.10';     // IP سرور دیتابیس آتیران
+const DB_HOST     = '37.143.148.14';    // سرور اصلی میلانو (SQL Server روی همین ماشین است؛ localhost همکار می‌کند)
 const DB_PORT     = 1433;               // پورت استاندارد SQL Server
-const DB_NAME     = 'AtiranAccounting'; // نام دیتابیس حسابداری
-const DB_USER     = 'vizitor_api';      // کاربر اختصاصی فقط‌خواندنی/نوشتاری کنترل‌شده
-const DB_PASSWORD = 'CHANGE_ME_STRONG_PASSWORD';
+const DB_NAME     = 'Meelano';          // دیتابیس میلانو
+const DB_USER     = 'AdminAn';           // کاربر SQL Server میلانو
+const DB_PASSWORD = 'St@R2022$';       // ⚠️ محرمانه — دسترسی فایل را محدود کنید (IIS: جلوگیری از دانلود config.php)
 
 // ── کلید احراز هویت اپلیکیشن (باید با کلید داخل اپ یکسان باشد) ────────────
-const API_KEY = 'ATIRAN-CHANGE-ME';
+const API_KEY = 'MILANO-VIZITOR-2026';
 
 // ── نام جداول دیتابیس حسابداری آتیران ─────────────────────────────────────
 const TBL_PRODUCTS     = 'Products';     // کالای کاتالوگ

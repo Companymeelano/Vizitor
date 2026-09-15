@@ -1,48 +1,71 @@
 # Developed by Milano Technical Team, Milad Yaghoobi
 
-## نصب وب‌سرویس آتیران ویزیتور (PHP 8.3 + SQL Server)
+## راهنمای استقرار وب‌سرویس ویزیتور روی سرور میلانو (Windows Server + IIS)
 
-### ۱) پیش‌نیازها
-- **PHP 8.3** با یکی از درایورهای زیر:
-  - ویندوز: `pdo_sqlsrv` (نصب با `pecl install sqlsrv` یا فعال‌سازی `php_sqlsrv.dll` در `php.ini`)
-  - لینوکس: `pdo_dblib` + فری‌تی‌دی‌اس:
-    ```bash
-    sudo apt install freetds-dev php8.3-dev
-    sudo pecl install pdo_dblib
-    echo "extension=pdo_dblib.so" | sudo tee /etc/php/8.3/mods-available/pdo_dblib.ini
-    sudo phpenmod pdo_dblib
-    ```
-- دسترسی شبکه از وب‌سرور به **پورت 1433** سرور SQL.
+### راه‌سرور واقعی
+- وب‌سرویس: `http://37.143.148.14:8731/server/api.php`
+- دیتابیس: SQL Server روی همان ماشین — دیتابیس `Meelano` با کاربر `AdminAn`
 
-### ۲) استقرار فایل‌ها
+---
+
+### ۱) نصب PHP 8.3 روی IIS
+1. دانلود **PHP 8.3 (NTS x64)** از windows.php.net — استخراج در `C:\php\`
+2. نصب **Microsoft Drivers for PHP for SQL Server (v5.12+)** و قراردادن `php_sqlsrv.dll` و `php_pdo_sqlsrv.dll` در `C:\php\ext\`
+3. در `C:\php\php.ini` فعال کنید:
+   ```ini
+   extension_dir = "C:\php\ext"
+   extension=php_sqlsrv.dll
+   extension=php_pdo_sqlsrv.dll
+   ```
+4. در IIS ← Handler Mappings ← `*.php` را به همین PHP map کنید (FastCGI).
+
+### ۲) مشاهده تست
+قبل از گذاشتن فایل‌ها:
 ```
-/var/www/vizitor/
+C:\php\php.exe -m | findstr sqlsrv
+```
+پاسخ `pdo_sqlsrv` یعنی درایور سالم است.
+
+### ۳) استقرار فایل‌ها
+این دو فایل را در ریشه سایت IIS که به پورت 8731 متصل است قرار دهید:
+```
+C:\inetpub\wwwroot\ (یا پوشهٔ اختصاصی سایت ویزیتور)
 ├── api.php
 └── config.php
 ```
-> فقط همین پوشه را زیر دامنه/ساب‌دامنه اختصاصی قرار دهید و دسترسی نوشتن را بگیرید.
+⚠️ در IIS تنظیم کنید که `config.php` قابل دانلود نباشد.
+(Request Filtering ← فایل config.php ← Deny)
 
-### ۳) پیکربندی
-در `config.php` مقادیر زیر را تغییر دهید:
-- `DB_HOST`, `DB_PORT` (پیش‌فرض 1433), `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-- `API_KEY` — باید دقیقاً با کلید واردشده در اپ (تب گزارشات ← پیکربندی سرور) یکسان باشد.
-- نام جداول (`TBL_*`) را در صورت تفاوت با دیتابیس آتیران تنظیم کنید.
+### ۴) فایروال ویندوز
+پورت **8731** را باز کنید (Inbound Rules ← New Rule ← TCP:8731 ← Allow).
+پورت 1433 الزاماً **فقط داخل سرور** فعال می‌شود (بیرون از شبکه بسته بماند).
 
-### ۴) کاربر دیتابیس (اصل کمترین دسترسی)
-```sql
-CREATE LOGIN vizitor_api WITH PASSWORD = 'CHANGE_ME_STRONG_PASSWORD';
-USE AtiranAccounting;
-CREATE USER vizitor_api FOR LOGIN vizitor_api;
-GRANT SELECT ON dbo.Products   TO vizitor_api;
-GRANT SELECT ON dbo.CUSTOMERS  TO vizitor_api;
-GRANT SELECT ON dbo.CustGroup  TO vizitor_api;
-GRANT SELECT ON dbo.sal_mali   TO vizitor_api;
-GRANT SELECT, INSERT, UPDATE ON dbo.SalesHeader TO vizitor_api;
-GRANT SELECT, INSERT ON dbo.SalesLines TO vizitor_api;
-GRANT UPDATE ON dbo.Products   TO vizitor_api; -- کاهش موجودی
-```
+### ۵) تنظیم SQL Server (در همان سرور)
+1. SQL Server Configuration Manager ← SQL Server Network Configuration ←
+   **TCP/IP = Enabled** (IPAll: TCP Port = 1433) ← سرویس SQL Server را restart کنید.
+2. رو‌ش Authentication را **Mixed Mode** کنید (از روی SSMS ← Server Properties ← Security).
+3. صحت کاربر `AdminAn` با رمز `St@R2022$` (یا کاربر برنامه مد نظر) را بررسی کنید.
 
-### ۵) تست سریع
+### ۶) تست نهایی (از هر دستگاه روی شبکه)
 ```bash
-curl -H "X-Api-Key: ATIRAN-CHANGE-ME" "http://SERVER:8080/vizitor/api.php?action=ping"
+# تست اتصال
+curl -H "X-Api-Key: MILANO-VIZITOR-2026" "http://37.143.148.14:8731/server/api.php?action=ping"
+
+# کاتالوگ
+curl -H "X-Api-Key: MILANO-VIZITOR-2026" "http://37.143.148.14:8731/server/api.php?action=catalog" | head
+
+# مشتریان
+curl -H "X-Api-Key: MILANO-VIZITOR-2026" "http://37.143.148.14:8731/server/api.php?action=customers" | head
 ```
+
+### ۷) خطاهای رایج و راه‌حل
+| کد | پیام | راه‌حل |
+|---|---|---|
+| 401 | کلید API نامعتبر | `API_KEY` در `config.php` باید دقیقاً `MILANO-VIZITOR-2026` و مطابق تنظیمات اپ باشد |
+| 500 | هیچ درایور SQL Server نصب نیست | مرحله ۱ و ۲ (نصب php_sqlsrv) |
+| — | Connect failed / timeout | مرحله ۵.۱ (فعال‌سی TCP/IP در SQL Server) و فایروال ویندوز برای 8731 |
+| 403 | اعتبار مشتری قرمز | مشتری در دیتابیس `CreditOk=0` است |
+
+### ۸) امنیت (مرحلهٔ بعد)
+پس از پایان تست، یک کاربر SQL کم‌صلاحیت بسازید (`README` نسخه قدیمی راهنمای دقیقش را دارد)
+و `config.php` را از حالت AdminAn به آن کاربر تغییر دهید تا حداقل دسترسی صادر گردد.

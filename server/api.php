@@ -11,6 +11,7 @@
  *    sal_mali       → تاریخچه سال مالی مشتری برای تحلیل هوش مصنوعی
  *    submit_invoice → صدور فاکتور با BEGIN TRANSACTION روی
  *                     SalesHeader + SalesLines (درج اتمیک)
+ *    submit_customer → ثبت مشتری جدید از ویزیتور (IsActive=0 تا تأیید حسابداری)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -58,6 +59,7 @@ try {
         'customers'      => action_customers(),
         'sal_mali'       => action_sal_mali(),
         'submit_invoice' => action_submit_invoice(),
+        'submit_customer' => action_submit_customer(),
         default          => respond(false, "اکشن ناشناخته: {$action}", null, 400),
     };
 } catch (Throwable $e) {
@@ -297,4 +299,74 @@ function action_submit_invoice(): never
         }
         throw $e;
     }
+}
+
+/**
+ * ثبت مشتری جدید از سمت ویزیتور — درج در CUSTOMERS با IsActive=0.
+ * در برنامه/پنل حسابداری آتیران، مشتری در «انتظار تأیید» دیده می‌شود و پس از
+ * تأیید (تغییر IsActive=1) در لیست customers اپ همگام می‌شود.
+ */
+function action_submit_customer(): never
+{
+    $raw  = file_get_contents('php://input');
+    $body = json_decode($raw ?: 'null', true);
+
+    if (!is_array($body)) {
+        respond(false, 'بدنه درخواست JSON معتبر نیست', null, 400);
+    }
+
+    $name  = trim((string) ($body['name']        ?? ''));
+    $group = trim((string) ($body['group_name']  ?? ''));
+    $city  = trim((string) ($body['city']        ?? ''));
+    $addr  = trim((string) ($body['address']     ?? ''));
+    $phone = trim((string) ($body['phone']       ?? ''));
+    $note  = trim((string) ($body['visitor_note'] ?? ''));
+
+    if ($name === '')  respond(false, 'نام مشتری الزامی است', null, 422);
+    if ($phone === '') respond(false, 'شماره تماس الزامی است', null, 422);
+    if (mb_strlen($name) > 190) respond(false, 'نام مشتری بیش از حد طولانی است', null, 422);
+
+    // ختم یادداشت ویزیتور به آدرس تا سمت حسابداری سازگار باشد
+    if ($note !== '') {
+        $addr = trim($addr . ($addr !== '' ? ' — ' : '') . 'یادداشت ویزیتور: ' . $note);
+    }
+
+    $pdo = create_pdo();
+
+    // تولید کد یکتا — پیشوند APP + برچسب زمانی کوتاه
+    $code = 'APP-' . date('ymd') . '-' . random_int(100, 999);
+
+    // یافتن GroupId بر اساس نام گروه (اگر گروه معتبر است)
+    $groupId = null;
+    if ($group !== '') {
+        $g = $pdo->prepare('SELECT TOP 1 Id FROM ' . TBL_CUST_GROUP . ' WHERE GroupName = :gn');
+        $g->execute([':gn' => $group]);
+        $groupId = $g->fetchColumn();
+        $groupId = $groupId === false ? null : (int) $groupId;
+    }
+
+    $sql = 'INSERT INTO ' . TBL_CUSTOMERS . '
+                (Code, Name, GroupId, City, Address, Phone, Lat, Lng,
+                 CreditOk, IsVip, IsActive, LastPurchaseDate, UpdatedAt)
+            VALUES
+                (:code, :name, :gid, :city, :addr, :phone, 0, 0,
+                 1, 0, 0, NULL, GETDATE());
+            SELECT CAST(SCOPE_IDENTITY() AS BIGINT) AS new_id';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':code'  => $code,
+        ':name'  => mb_substr($name, 0, 190),
+        ':gid'   => $groupId,
+        ':city'  => $city,
+        ':addr'  => mb_substr($addr, 0, 390),
+        ':phone' => mb_substr($phone, 0, 28),
+    ]);
+    $newId = (int) $stmt->fetch()['new_id'];
+
+    respond(true, 'مشتری ثبت شد و در انتظار تأیید حسابداری آتیران است', [
+        'request_id'  => (string) $newId,
+        'code'        => $code,
+        'server_time' => time(),
+    ]);
 }

@@ -21,11 +21,11 @@ import kotlinx.coroutines.flow.map
 private val Context.settingsDataStore by preferencesDataStore(name = "vizitor_settings")
 
 data class ServerConfig(
-    val serverIp: String = "192.168.1.10",
-    val httpPort: Int = 8080,
+    val serverIp: String = "37.143.148.14",
+    val httpPort: Int = 8731,
     val dbPort: Int = 1433,          // پورت استاندارد SQL Server
-    val apiPath: String = "vizitor",
-    val apiKey: String = "ATIRAN-CHANGE-ME",
+    val apiPath: String = "server",
+    val apiKey: String = "MILANO-VIZITOR-2026",
     val workerUrl: String = "https://vizitor-ai-proxy.YOUR-SUBDOMAIN.workers.dev",
     val geminiModel: String = "gemini-1.5-flash",
     val autoSync: Boolean = true,
