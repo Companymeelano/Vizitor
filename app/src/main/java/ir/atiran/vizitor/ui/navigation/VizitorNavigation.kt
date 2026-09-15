@@ -24,6 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +72,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -102,6 +104,7 @@ import ir.atiran.vizitor.ui.theme.NeonPurple
 import ir.atiran.vizitor.ui.theme.NeonPurpleDark
 import ir.atiran.vizitor.ui.theme.NeonPurpleGlow
 import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 
 object Routes {
     const val DASHBOARD = "dashboard"
