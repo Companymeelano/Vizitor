@@ -393,7 +393,7 @@ private fun ProductCard(
                         onClick = onRemove,
                         enabled = inStock,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .border(1.dp, NeonPurple.copy(alpha = 0.45f), CircleShape)
                             .background(NeonPurple.copy(alpha = 0.22f)),
@@ -405,7 +405,7 @@ private fun ProductCard(
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 6.dp)
-                            .height(28.dp)
+                            .height(36.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(if (qtyInCart > 0) Gold.copy(alpha = 0.14f) else Color(0x0FFFFFFF))
                             .border(

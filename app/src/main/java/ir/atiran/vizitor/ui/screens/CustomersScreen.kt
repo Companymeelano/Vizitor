@@ -724,8 +724,8 @@ private fun CustomerCard(
 
             Spacer(Modifier.height(10.dp))
 
-            // ═══ اکشن اصلی: صدور فاکتور + تماس + مسیریابی ═══
-            Row {
+            // ═══ اکشن اصلی: صدور فاکتور + تماس + مسیریابی — همه دکمه‌ها دقیقاً ۵۶dp هم‌تراز ═══
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (customer.pendingApproval) {
                     Box(
                         modifier = Modifier
@@ -755,26 +755,26 @@ private fun CustomerCard(
                 IconButton(
                     onClick = onCall,
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(56.dp)
                         .clip(CircleShape)
                         .border(1.dp, NeonPurple.copy(alpha = 0.5f), CircleShape),
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = NeonPurple.copy(alpha = 0.2f),
                         contentColor = NeonPurple
                     )
-                ) { Icon(Icons.Filled.Call, contentDescription = "تماس") }
+                ) { Icon(Icons.Filled.Call, contentDescription = "تماس", modifier = Modifier.size(22.dp)) }
                 Spacer(Modifier.width(8.dp))
                 IconButton(
                     onClick = onNavigate,
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(56.dp)
                         .clip(CircleShape)
                         .border(1.dp, Gold.copy(alpha = 0.5f), CircleShape),
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = Gold.copy(alpha = 0.2f),
                         contentColor = Gold
                     )
-                ) { Icon(Icons.Filled.NearMe, contentDescription = "مسیریابی") }
+                ) { Icon(Icons.Filled.NearMe, contentDescription = "مسیریابی", modifier = Modifier.size(22.dp)) }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -822,12 +822,14 @@ private fun MiniActionChip(
     modifier: Modifier,
     onClick: () -> Unit
 ) {
+    // چیپ اکشن — ارتفاع ثابت و بردر یکنواخت دورتا‌دور برای هر سه دکمه (تراز دقیق)
     Row(
         modifier = modifier
+            .height(38.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(tint.copy(alpha = 0.12f))
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .border(1.dp, tint.copy(alpha = 0.32f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {

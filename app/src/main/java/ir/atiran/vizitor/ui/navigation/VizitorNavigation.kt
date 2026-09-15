@@ -282,9 +282,9 @@ private fun VizitorBottomBar(
                 BottomTab(tab, currentRoute == tab.route, navController)
             }
 
-            // جایگاه FAB مرکزی — عرض ثابت کوچک‌تر تا هر ۵ تب کاملاً هم‌اندازه شوند
+            // جایگاه FAB مرکزی — هم‌ارتفاع با تب‌ها تا کل نوار دقیقاً یک خط تراز شود
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier.width(78.dp).height(80.dp),
+                modifier = Modifier.width(78.dp).height(74.dp),
                 contentAlignment = Alignment.Center
             ) { }
 
@@ -390,17 +390,13 @@ private fun androidx.compose.foundation.layout.RowScope.BottomTab(
     navController: androidx.navigation.NavController
 ) {
     val p = vizitorPalette
-    val lift by animateFloatAsState(
-        targetValue = if (selected) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.55f, stiffness = 420f),
-        label = "tabLift${tab.route}"
-    )
+    // همه تب‌ها دقیقاً هم‌اندازه و هم‌ترازاند — تفاوت حالت صرفاً رنگ/حاشیه/نشانگر است
+    // (بدون بالاپریدن، بدون تغییر ابعاد؛ بردر و پس‌زمینه دقیقاً در قاب تب رسم می‌شوند)
     Box(
         modifier = Modifier
             .weight(1f)
             .height(74.dp)
             .padding(horizontal = 3.dp, vertical = 6.dp)
-            .graphicsLayer { translationY = -7.dp.toPx() * lift }
             .clip(RoundedCornerShape(16.dp))
             .then(
                 if (selected)
@@ -424,11 +420,23 @@ private fun androidx.compose.foundation.layout.RowScope.BottomTab(
             },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // کپسول سه‌بعدی آیکن — انتخاب: گرادیان تم + حلقه طلایی و سایه نور
+        // نشانگر طلایی بالای تب انتخاب‌شده (داخل قاب، روی خط بالایی)
+        if (selected) {
             Box(
                 modifier = Modifier
-                    .size(if (selected) 34.dp else 30.dp)
+                    .align(Alignment.TopCenter)
+                    .padding(top = 3.dp)
+                    .width(22.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(p.gold)
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // کپسول آیکن — ابعاد ثابت در هر دو حالت (بدون پرش اندازه)
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
                     .clip(CircleShape)
                     .then(
                         if (selected)
@@ -446,7 +454,7 @@ private fun androidx.compose.foundation.layout.RowScope.BottomTab(
                     tab.icon,
                     contentDescription = tab.label,
                     tint = if (selected) p.gold else TextSecondary,
-                    modifier = Modifier.size(if (selected) 18.dp else 16.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             }
             Spacer(Modifier.height(3.dp))
