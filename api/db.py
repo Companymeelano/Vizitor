@@ -65,21 +65,33 @@ def verify_password(password, stored):
     return hmac.compare_digest(dk.hex(), expected)
 
 
+def _jsonable(v):
+    """Convert values that json cannot serialize (e.g. SQL Server DATETIME2) to str."""
+    if v is None or isinstance(v, (bool, int, float, str)):
+        return v
+    return str(v)
+
+
 class DB:
-    """Thin thread-safe wrapper around sqlite3 or pymysql connections."""
+    """Thin thread-safe wrapper around sqlite3, pymysql or pyodbc (SQL Server)."""
 
     def __init__(self, cfg):
         self.cfg = cfg or {}
         self.lock = threading.RLock()
         self.conn = None
         self.engine = (self.cfg.get("db") or {}).get("engine", "sqlite")
-        if self.engine not in ("sqlite", "mysql"):
+        if self.engine not in ("sqlite", "mysql", "sqlserver"):
             raise ValueError("unsupported db engine: %s" % self.engine)
         self._pymysql = None
+        self._pyodbc = None
         if self.engine == "mysql":
             import pymysql  # noqa: optional dependency
 
             self._pymysql = pymysql
+        if self.engine == "sqlserver":
+            import pyodbc  # noqa: optional dependency
+
+            self._pyodbc = pyodbc
         self.connect()
 
     # ------------------------------------------------------------ connection
@@ -96,6 +108,8 @@ class DB:
                 autocommit=True,
                 connect_timeout=8,
             )
+        elif self.engine == "sqlserver":
+            self.conn = self._connect_sqlserver(d)
         else:
             path = d.get("path") or os.path.join(default_data_dir(), "vizitor.db")
             parent = os.path.dirname(path)
@@ -105,10 +119,50 @@ class DB:
             self.conn.row_factory = sqlite3.Row
         self.ensure_schema()
 
+    def _connect_sqlserver(self, d):
+        host = d.get("host", "localhost") or "localhost"
+        port = int(d.get("port", 1433))
+        name = d.get("name", "vizitor")
+        auth = (d.get("auth", "sql") or "sql").lower()
+        try:
+            drivers = list(self._pyodbc.drivers())
+        except Exception:
+            drivers = []
+        preferred = [
+            "ODBC Driver 18 for SQL Server",
+            "ODBC Driver 17 for SQL Server",
+            "ODBC Driver 13 for SQL Server",
+            "SQL Server Native Client 11.0",
+            "SQL Server",
+        ]
+        driver = next((p for p in preferred if p in drivers), None)
+        if driver is None:
+            if drivers:
+                driver = drivers[0]
+            else:
+                raise RuntimeError(
+                    "no ODBC driver for SQL Server found on this machine. "
+                    "Install 'ODBC Driver 17 for SQL Server' (see INSTALL.md)."
+                )
+        common = (
+            "DRIVER={%s};SERVER=tcp:%s,%d;DATABASE=%s;"
+            "TrustServerCertificate=yes;Encrypt=no;Connection Timeout=8;"
+            % (driver, host, port, name)
+        )
+        if auth == "windows":
+            conn_str = common + "Trusted_Connection=yes;"
+        else:
+            conn_str = common + "UID=%s;PWD=%s;" % (d.get("user", ""), d.get("password", ""))
+        return self._pyodbc.connect(conn_str, autocommit=True)
+
     def _schema_file(self):
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        name = "schema_mysql.sql" if self.engine == "mysql" else "schema_sqlite.sql"
-        return os.path.join(base, "database", name)
+        names = {
+            "mysql": "schema_mysql.sql",
+            "sqlite": "schema_sqlite.sql",
+            "sqlserver": "schema_sqlserver.sql",
+        }
+        return os.path.join(base, "database", names[self.engine])
 
     def ensure_schema(self):
         path = self._schema_file()
@@ -131,12 +185,24 @@ class DB:
         with self.lock:
             cur = self.conn.execute(self._convert(sql), tuple(params))
             self.conn.commit()
-            return [dict(r) for r in cur.fetchall()]
+            rows = cur.fetchall()
+            if self.engine == "sqlite":
+                return [dict(r) for r in rows]
+            cols = [c[0] for c in cur.description] if cur.description else []
+            return [
+                {col: _jsonable(val) for col, val in zip(cols, row)}
+                for row in rows
+            ]
 
     def execute(self, sql, params=()):
         with self.lock:
             cur = self.conn.execute(self._convert(sql), tuple(params))
             self.conn.commit()
+            if self.engine == "sqlserver":
+                # pyodbc lastrowid is unreliable on SQL Server
+                cur2 = self.conn.execute("SELECT CAST(SCOPE_IDENTITY() AS BIGINT)")
+                row = cur2.fetchone()
+                return int(row[0]) if row else None
             return cur.lastrowid
 
     def ping(self):
@@ -152,6 +218,13 @@ class DB:
                 "INSERT INTO settings (k, v) VALUES (?, ?) "
                 "ON DUPLICATE KEY UPDATE v = VALUES(v)",
                 (key, value),
+            )
+        elif self.engine == "sqlserver":
+            self.execute(
+                "IF EXISTS (SELECT 1 FROM settings WHERE k = ?) "
+                "UPDATE settings SET v = ? WHERE k = ? "
+                "ELSE INSERT INTO settings (k, v) VALUES (?, ?)",
+                (key, value, key, key, value),
             )
         else:
             self.execute(

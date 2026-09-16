@@ -6,11 +6,20 @@
 
 ## ۱. پیش‌نیازها
 
+**Linux:**
 - یک سرور لینوکس با دسترسی **root** (Debian/Ubuntu، RHEL/CentOS/Rocky/Alma، Fedora، openSUSE یا Alpine)
 - `python3` (اگر نبود، نصب‌کننده خودش نصبش می‌کند)
 - برای دیتابیس MySQL: اینترنت برای نصب بسته‌ها (اگر نبود، **به‌صورت هوشمند** روی SQLite بازمی‌گردد)
 
-> نصب‌کننده هرچه می‌تواند خودکار انجام می‌دهد؛ فقط اطلاعاتی که باید از **شما** بپرسد (کد فعال‌سازی، گذرواژه‌ها و…) را می‌پرسد.
+**Windows:**
+- ویندوز ۱۰/۱۱ یا Windows Server 2016+ با دسترسی **Administrator**
+- `python` 3.8+ (اگر نبود، نصب‌کننده با `winget` تلاش می‌کند؛ در غیر این‌صورت از python.org نصب کنید)
+- برای دیتابیس **Microsoft SQL Server**:
+  - SQL Server 2012+ (روی همین ماشین یا سرور دیگر)
+  - یک **درایور ODBC** (پیشنهاد: *Microsoft ODBC Driver 17 for SQL Server* — اگر نبود، نصب‌کننده با `winget` نصبش می‌کند)
+  - `pyodbc` که نصب‌کننده خودش با pip نصب می‌کند
+
+> نصب‌کننده (هر دو نسخه) هرچه می‌تواند خودکار انجام می‌دهد؛ فقط اطلاعاتی که باید از **شما** بپرسد (کد فعال‌سازی، گذرواژه‌ها و…) را می‌پرسد.
 
 ---
 
@@ -36,6 +45,71 @@ sudo bash install.sh
 | `sudo bash install.sh --port 9000` | اجبار یک پورت خاص |
 | `sudo bash install.sh --ip 1.2.3.4` | اجبار یک آدرس خاص (IP یا دامنه) |
 | `sudo bash install.sh --help` | نمایش راهنما |
+
+### نصب روی Windows (install.ps1)
+
+```powershell
+# در PowerShell (به‌صورت Administrator) در پوشهٔ پروژه:
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+اگر بدون دسترسی Administrator اجرا کنید، اسکریپت خودکار با UAC دوباره بالا می‌آید.
+
+| دستور | کاربرد |
+|---|---|
+| `install.ps1` | نصب کامل و تعاملی |
+| `install.ps1 -Auto` | نصب بدون پرسش (مقادیر پیش‌فرض هوشمند) — مناسب اسکریپت/CI |
+| `install.ps1 -Recheck` | فقط **بازرسی و تعمیر** یک نصب موجود |
+| `install.ps1 -Port 9000` | اجبار یک پورت خاص |
+| `install.ps1 -Ip 1.2.3.4` | اجبار یک آدرس خاص (IP یا دامنه) |
+
+روی Windows هم دقیقاً همان رویهٔ هوشمند اجرا می‌شود:
+1. تشخیص ویندوز، Python، سرویس SQL Server (نام‌های `MSSQLSERVER` / `MSSQL$*`) و درایورهای ODBC از رجیستری
+2. شناسایی آی‌پی عمومی + داخلی و ساخت آدرس API
+3. پرسش: **آدرس/IP، پروتکل، پورت، موتور دیتابیس (پیشنهاد هوشمند: اگر SQL Server + درایور ODBC روی سیستم باشد، `sqlserver`)**، مشخصات SQL Server (هاست، پورت، روش احراز `sql`/`windows`، کاربر، گذرواژه، نام دیتابیس)، حساب ادمین و کد فعال‌سازی
+4. نصب خودکار پیش‌نیازها (`pyodbc` با pip، درایور ODBC با winget)
+5. آماده‌سازی **غیرتلفیقی** SQL Server (تفصیل در بخش «امنیت اتصال SQL Server»)
+6. انتشار فایل‌ها در `C:\Vizitor`، ساخت `C:\ProgramData\Vizitor\config.json` و تعریف Scheduled Task با نام `VizitorAPI` (اجرا هنگام بوت به‌عنوان SYSTEM با ۳ بار تلاش مجدد)
+7. ساخت قانون فایروال ویندوز برای پورت API
+8. حلقهٔ چک و تعمیر خودکار (تا ۴ دور) + نمایش آدرس نهایی برای برنامهٔ اندروید
+
+**فایل‌ها و سرویس روی Windows:**
+
+| مسیر / آیتم | توضیح |
+|---|---|
+| `C:\Vizitor\` | کد برنامه + `run.bat` (راه‌انداز سرویس) |
+| `C:\ProgramData\Vizitor\config.json` | **فایل تنظیمات** |
+| `C:\ProgramData\Vizitor\vizitor.log` | لاگ سرویس |
+| `C:\ProgramData\Vizitor\vizitor.db` | دیتابیس SQLite (فقط اگر موتور sqlite باشد) |
+| Scheduled Task `VizitorAPI` | سرویس (راه‌اندازی هنگام بوت) |
+
+```powershell
+# مدیریت سرویس روی Windows
+Get-ScheduledTask -TaskName VizitorAPI            # وضعیت
+Start-ScheduledTask -TaskName VizitorAPI          # شروع
+Stop-ScheduledTask -TaskName VizitorAPI           # توقف
+Get-Content C:\ProgramData\Vizitor\vizitor.log -Tail 50 -Wait   # تماشای لاگ
+```
+
+---
+
+## امنیت اتصال SQL Server (بدون هیچ آسیبی)
+
+اتصال و آماده‌سازی SQL Server در Vizitor **دقیق و کاملاً غیرتلفیقی** است. اسکریپت
+`api/provision_sqlserver.py` (که نصب‌کنندهٔ ویندوز می‌خواند) فقط این کارها را انجام می‌دهد:
+
+| عمل | سیاست |
+|---|---|
+| دیتابیس Vizitor | `CREATE DATABASE` **فقط اگر وجود نداشته باشد** |
+| لاگین (کاربر) SQL | `CREATE LOGIN` **فقط اگر وجود نداشته باشد** — اگر وجود داشته باشد، **گذرواژه‌اش دست‌نخورده می‌ماند** |
+| یوزر داخل دیتابیس | `CREATE USER ... FOR LOGIN` فقط اگر نباشد |
+| اختیارات | فقط `db_datareader` + `db_datawriter` + `db_ddladmin` **روی همان دیتابیس هدف** |
+| جداول | اسکیم `database/schema_sqlserver.sql` با نگهبان `IF OBJECT_ID(...) IS NULL CREATE TABLE ...` — فقط در صورت نبود |
+| `DROP` / تغییر شیء موجود / تنظیمات سراسری سرور | **هرگز انجام نمی‌شود** |
+
+نتیجه: اجرای مکرر نصب‌کننده یا `provision_sqlserver.py` روی سرورهای واقعی که قبلاً
+دیتابیس‌ها/لاگین‌ها ساخته شده‌اند، **هیچ تغییری** روی آن‌ها ایجاد نمی‌کند و فقط
+آیتم‌های کم‌موجود را می‌سازد.
 
 ---
 
@@ -179,9 +253,9 @@ tail -f /var/lib/vizitor/vizitor.log
 
 ## ۶. تغییرات و بازپیکربندی
 
-- **بازپیکربندی**: دوباره `sudo bash install.sh` را اجرا کنید؛ گزینهٔ `[2] بازپیکربندی` را انتخاب کنید. مقادیر فعلی به‌عنوان پیش‌فرض نمایش داده می‌شوند.
-- **فقط بازرسی/تعمیر**: `sudo bash install.sh --recheck` — بدون تغییر مقادیر، همه را چک و در صورت خرابی تعمیر می‌کند.
-- **ویرایش دستی**: می‌توانید `/var/lib/vizitor/config.json` را ویرایش کنید و بعد `sudo systemctl restart vizitor` (یا `service vizitor restart`) بزنید. بعد از `--recheck` برای اطمینان.
+- **بازپیکربندی**: دوباره `sudo bash install.sh` را اجرا کنید؛ گزینهٔ `[2] بازپیکربندی` را انتخاب کنید. مقادیر فعلی به‌عنوان پیش‌فرض نمایش داده می‌شوند. روی ویندوز: `install.ps1` → گزینهٔ `[2] بازپیکربندی`.
+- **فقط بازرسی/تعمیر**: `sudo bash install.sh --recheck` (ویندوز: `install.ps1 -Recheck`) — بدون تغییر مقادیر، همه را چک و در صورت خرابی تعمیر می‌کند.
+- **ویرایش دستی**: می‌توانید `/var/lib/vizitor/config.json` (ویندوز: `C:\ProgramData\Vizitor\config.json`) را ویرایش کنید و بعد سرویس را ری‌استارت کنید (`systemctl restart vizitor` / `Restart-ScheduledTask -TaskName VizitorAPI`). بعد از recheck برای اطمینان.
 
 ### تغییر آدرس/پورت/دیتابیس
 ساده‌ترین راه: `sudo bash install.sh` → گزینهٔ بازپیکربندی → مقادیر جدید را وارد کنید. نصب‌کننده فایل تنظیمات را بازنویسی و سرویس را راه‌اندازی می‌کند.
@@ -193,11 +267,15 @@ tail -f /var/lib/vizitor/vizitor.log
 | مشکل | راه‌حل |
 |---|---|
 | برنامهٔ اندروید وصل نمی‌شود | `curl http://آدرس/api/ping` از خود سرور و از یک دستگاه دیگر را امتحان کنید. آدرس/پورت را دقیق بررسی کنید. |
-| خطای دیتابیس در `/api/health` | `--recheck` را اجرا کنید. برای MySQL مطمئن شوید سرور دیتابیس بالا است و کاربر دسترسی دارد. |
+| خطای دیتابیس در `/api/health` | `--recheck` را اجرا کنید. برای MySQL/SQL Server مطمئن شوید سرور دیتابیس بالا است و کاربر دسترسی دارد. |
 | «غیرفعال» می‌ماند | کد فعال‌سازی را با `POST /api/activate` یا از برنامه وارد کنید. |
 | پورت درگیر است | `--port` دیگر بگذارید یا سرویس درگیر را متوقف کنید. |
-| فایروال مسدود می‌کند | پورت را به firewalld/ufw اضافه کنید (نصب‌کننده این کار را می‌کند؛ در ویرش دستی از سر انجام دهید). |
-| آی‌پی عمومی شناسایی نشد | سرور پشت NAT است؛ یک دامنه/IP ثابت + پورت‌فورورد تنظیم کنید و آدرس را با `--ip` یا بازپیکربندی به‌روز کنید. |
+| فایروال مسدود می‌کند | پورت را به firewalld/ufw (یا فایروال ویندوز) اضافه کنید — نصب‌کننده این کار را می‌کند. |
+| آی‌پی عمومی شناسایی نشد | سرور پشت NAT است؛ یک دامنه/IP ثابت + پورت‌فورورد تنظیم کنید و آدرس را با `--ip`/`-Ip` یا بازپیکربندی به‌روز کنید. |
+| **Windows:** «no ODBC driver for SQL Server found» | درایور *Microsoft ODBC Driver 17 for SQL Server* نصب نشده؛ از سایت مایکروسافت یا `winget install Microsoft.Msodbcsql170` نصب کنید و `install.ps1 -Recheck` بزنید. |
+| **Windows:** خطای احراز SQL Server (`Login failed`) | کاربر/گذرواژهٔ `config.json` را با `sqlcmd` یا SSMS راستی‌آزمایی کنید؛ اگر لاگین قبلاً با گذرواژهٔ دیگری ساخته شده، گذرواژهٔ همان را در config وارد کنید (Vizitor گذرواژهٔ لاگین موجود را **تغییر نمی‌دهد**). |
+| **Windows:** سرویس `VizitorAPI` بالا نمی‌آید | `C:\ProgramData\Vizitor\vizitor.log` را ببینید؛ رایج‌ترین علت، نبود `pyodbc` برای کاربر SYSTEM است — `install.ps1 -Recheck` با دسترسی Administrator دوباره اجرا کنید. |
+| **Windows:** پیام «اتصال TCP به SQL Server برقرار نشد» | سرویس SQL Server خاموش است یا فایروال سرور SQL پورت 1433 را می‌بندد؛ سرویس `MSSQLSERVER` را بالا بیاورید یا هاست/پورت SQL را در config اصلاح کنید. |
 
 برای بازرسی سریعِ وضعیت کامل همیشه از این استفاده کنید:
 ```bash
@@ -211,6 +289,10 @@ curl http://127.0.0.1:پورت/api/health
 - `config.json` را برای کاربران عادی غیرقابل‌خواندگان کنید:
   ```bash
   chmod 600 /var/lib/vizitor/config.json
+  ```
+  روی ویندوز (از PowerShell با دسترسی Administrator):
+  ```powershell
+  icacls C:\ProgramData\Vizitor\config.json /inheritance:r /grant:r "Administrators:F" "SYSTEM:F"
   ```
 - برای دسترسی از بیرون، ترجیحاً از **HTTPS** (دامنه + گواهی) استفاده کنید؛ این نصب‌کننده به‌صورت پیش‌فرض `http` است.
 - در سرورهای با دسترسی عمومی، پورت را محدود و از فایروال استفاده کنید.

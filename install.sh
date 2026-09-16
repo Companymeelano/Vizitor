@@ -389,7 +389,9 @@ if command -v mysqld >/dev/null 2>&1 || command -v mariadbd >/dev/null 2>&1 \
    || command -v mysql >/dev/null 2>&1 && mysqladmin ping --silent >/dev/null 2>&1; then
   SMART_DB="mysql"
 fi
-DB_ENGINE="$(ask "موتور دیتابیس (mysql / sqlite) — هوشمند: $SMART_DB" "$SMART_DB")"
+ENGINE_DEFAULT="${PREV_DB_ENGINE:-$SMART_DB}"
+[ -z "$ENGINE_DEFAULT" ] && ENGINE_DEFAULT="$SMART_DB"
+DB_ENGINE="$(ask "موتور دیتابیس (mysql / sqlite) — هوشمند: $SMART_DB" "$ENGINE_DEFAULT")"
 [ "$DB_ENGINE" != "mysql" ] && DB_ENGINE="sqlite"
 
 DB_HOST="127.0.0.1"; DB_DPORT="3306"
