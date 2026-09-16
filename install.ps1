@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
   Vizitor — نصب‌کننده هوشمند سرور برای ویندوز (Smart Windows Installer)
 
@@ -412,8 +412,39 @@ if (-not $script:ActCode -and -not $Auto) {
     if ($confirm -eq "خ" -or $confirm -eq "x" -or $confirm -eq "n") { Write-Info "خروج."; exit 0 }
 }
 
+# ---------------------------- IIS: اتصال از طریق IIS ------------------------
+function Test-IisInstalled { $null -ne (Get-Service W3SVC -ErrorAction SilentlyContinue) }
+function Test-UrlRewriteModule { Test-Path "C:\Windows\System32\inetsrv\rewrite\urlrewrite.dll" }
+function Test-ArrModule { Test-Path "C:\Windows\System32\inetsrv\applicationrequestrouting.dll" }
+
+$script:IisProxyMode = $false
+$script:InternalPort = $script:Port
+$script:PublicPort = $script:Port
+
+if ($script:Mode -ne "keep" -and (Test-IisInstalled)) {
+    $iisAnswer = "آ"
+    if (-not $Auto) {
+        $iisAnswer = Read-Prompt "IIS روی سرور نصب است. آیا API از طریق IIS (پروکسی معکوس بدون تغییر پیکربندی‌های موجود IIS) قابل‌دسترسی باشد؟ [آ/خ]" "آ"
+    }
+    if ($iisAnswer -eq "آ" -or $iisAnswer -eq "y" -or $iisAnswer -eq "yes" -or [string]::IsNullOrEmpty($iisAnswer)) {
+        $script:IisProxyMode = $true
+        # API روی پورت داخلی گوش می‌دهد؛ IIS ترافیک پورت 80 را به آن انتقال می‌دهد
+        $candidate = $script:Port
+        if (($candidate -eq 80 -or $candidate -eq 443) -or -not (Test-PortFree $candidate)) { $candidate = 0 }
+        if ($candidate -eq 0) {
+            foreach ($p in @(8080, 8081, 8090, 8180, 8280)) {
+                if (Test-PortFree $p) { $candidate = $p; break }
+            }
+            if ($candidate -eq 0) { $candidate = 8080 }
+        }
+        $script:InternalPort = [int]$candidate
+        $script:PublicPort = 80
+        Write-Ok "اتصال از طریق IIS: پورت عمومی 80 → API روی پورت داخلی $($script:InternalPort)"
+    }
+}
+
 $script:ApiUrl = "$($script:Proto)://$($script:Addr)"
-if ($script:Port -ne 80 -and $script:Port -ne 443) { $script:ApiUrl = "$script:ApiUrl:$($script:Port)" }
+if ($script:PublicPort -ne 80 -and $script:PublicPort -ne 443) { $script:ApiUrl = "$script:ApiUrl:$($script:PublicPort)" }
 $script:ApiUrl = "$script:ApiUrl/api"
 
 Write-Host ""
@@ -530,7 +561,7 @@ Write-Ok "فایل‌های برنامه در $script:AppHome منتشر شدن�
 function Write-ConfigJson {
     $env:VIZ_DATA_DIR   = $script:DataDir
     $env:VIZ_BIND_IP    = "0.0.0.0"
-    $env:VIZ_PORT       = [string]$script:Port
+    $env:VIZ_PORT       = [string]$script:InternalPort
     $env:VIZ_API_URL    = $script:ApiUrl
     $env:VIZ_DB_ENGINE  = $script:DbEngine
     $env:VIZ_DB_HOST    = $script:DbHost
@@ -648,17 +679,105 @@ function Seed-Db {
 
 if ($script:Mode -ne "keep") { Install-VizitorTask }
 
+# ---------------------------- IIS: پروکسی معکوس غیرتلفیقی -------------------
+function New-IisProxy {
+    # فقط شیء جدید می‌سازد (سایت VizitorAPI یا اپ /api)؛ هیچ سایت/آپلیکیشن موجودی را لمس نمی‌کند
+    if (Get-Module -Name WebAdministration -ErrorAction SilentlyContinue) {} else {
+        try { Import-Module WebAdministration -ErrorAction Stop } catch {
+            Write-Warn "ماژول WebAdministration در دسترس نیست؛ نمی‌توانم پروکسی IIS را خودکار بسازم"
+            return $false
+        }
+    }
+    if (-not (Test-UrlRewriteModule) -or -not (Test-ArrModule)) {
+        Write-Info "ماژول‌های URL Rewrite/ARR یافت نشد؛ تلاش برای نصب با winget ..."
+        $winget = Get-Command winget -ErrorAction SilentlyContinue
+        if ($winget) {
+            try { & winget install -e --id Microsoft.UrlRewrite --accept-source-agreements --accept-package-agreements 2>$null | Out-Null } catch {}
+            try { & winget install -e --id Microsoft.ARR30 --accept-source-agreements --accept-package-agreements 2>$null | Out-Null } catch {}
+        }
+        if (-not (Test-UrlRewriteModule)) { Write-Warn "URL Rewrite نصب نشد — دستی: https://www.iis.net/downloads/microsoft/url-rewrite" }
+        if (-not (Test-ArrModule)) { Write-Warn "ARR نصب نشد — دستی: https://www.iis.net/downloads/microsoft/application-request-routing" }
+        if (-not (Test-UrlRewriteModule) -or -not (Test-ArrModule)) {
+            Write-Warn "پروکسی IIS ساخته نشد؛ اتصال مستقیم به پورت $($script:InternalPort) فعال است (برنامه اندروید با همان آدرس کار می‌کند)"
+            $script:IisProxyMode = $false
+            return $false
+        }
+    }
+    try {
+        if ((Get-Service W3SVC).Status -ne "Running") { Start-Service W3SVC; Start-Sleep -Seconds 2 }
+    } catch { Write-Warn "شروع سرویس IIS ناموفق بود" }
+    $iisWebDir = Join-Path $script:AppHome "iis"
+    New-Item -ItemType Directory -Force -Path $iisWebDir | Out-Null
+    $target = "http://127.0.0.1:$($script:InternalPort)/{R:1}"
+    $webCfg = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <proxy enabled="true" reverseRewriteHostHeader="true" />
+    <urlRewrite>
+      <inboundRules>
+        <rule name="VizitorProxy" patternSyntax="Explicit" stopProcessing="true">
+          <match url="(.*)" />
+          <action type="Rewrite" url="$target" />
+        </rule>
+      </inboundRules>
+    </urlRewrite>
+  </system.webServer>
+</configuration>
+"@
+    Set-Content -Path (Join-Path $iisWebDir "web.config") -Value $webCfg -Encoding UTF8
+
+    $bound = $false
+    try {
+        if (-not (Get-WebBinding -Name "VizitorAPI" -ErrorAction SilentlyContinue)) {
+            try {
+                New-Website -Name "VizitorAPI" -Port 80 -PhysicalPath $iisWebDir -ErrorAction Stop
+                Write-Ok "سایت IIS ساخته شد: VizitorAPI (پورت 80)"
+                $bound = $true
+            } catch {
+                Write-Warn "ساخت سایت VizitorAPI روی پورت 80 ممکن نشد (پورت اشغال است؟) — به حالت اپلیکیشن /api می‌روم"
+            }
+        } else { $bound = $true }
+    } catch {
+        Write-Warn "دسترسی به سایت‌های IIS ممکن نشد؛ تلاش برای حالت اپلیکیشن /api"
+    }
+    if (-not $bound) {
+        $defaultSite = (Get-Website -ErrorAction SilentlyContinue | Where-Object { $_.ID -eq 1 }).Name
+        if (-not $defaultSite) { $defaultSite = "Default Web Site" }
+        $existing = Get-WebApplication -Name "api" -Site $defaultSite -ErrorAction SilentlyContinue
+        if ($existing) {
+            Write-Warn "مسیر /api روی سایت '$defaultSite' از قبل وجود دارد و دست‌نخورده می‌ماند؛ لطفاً تنظیم دستی انجام دهید (مطابق INSTALL.md)"
+        } else {
+            try {
+                New-WebApplication -Name "api" -Site $defaultSite -PhysicalPath $iisWebDir -ErrorAction Stop
+                Write-Ok "اپلیکیشن IIS ساخته شد: /api روی سایت '$defaultSite' (پورت 80) — محتوای سایت موجود دست‌نخورده است"
+            } catch {
+                Write-Warn "ساخت اپلیکیشن /api ناموفق بود: $($_.Exception.Message)"
+            }
+        }
+    }
+    return $true
+}
+
+if ($script:IisProxyMode -and (Test-IisInstalled)) {
+    New-IisProxy | Out-Null
+}
+
 # ---------------------------- گام ۶: فایروال ------------------------------
 Write-Step "بررسی فایروال ویندوز"
-try {
-    if (-not (Get-NetFirewallRule -DisplayName "Vizitor API" -ErrorAction SilentlyContinue)) {
-        New-NetFirewallRule -DisplayName "Vizitor API" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:Port -Profile Any | Out-Null
-        Write-Ok "قانون فایروال برای پورت $($script:Port)/TCP ساخته شد (Vizitor API)"
-    } else {
-        Write-Info "قانون فایروال Vizitor API از قبل وجود دارد"
+if ($script:IisProxyMode) {
+    Write-Info "در حالت IIS، پورت 80 توسط خود IIS باز است؛ قانون جداگانه لازم نیست"
+} else {
+    try {
+        if (-not (Get-NetFirewallRule -DisplayName "Vizitor API" -ErrorAction SilentlyContinue)) {
+            New-NetFirewallRule -DisplayName "Vizitor API" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:PublicPort -Profile Any | Out-Null
+            Write-Ok "قانون فایروال برای پورت $($script:PublicPort)/TCP ساخته شد (Vizitor API)"
+        } else {
+            Write-Info "قانون فایروال Vizitor API از قبل وجود دارد"
+        }
+    } catch {
+        Write-Warn "ساخت قانون فایروال خودکار ممکن نشد — در صورت نیاز دستی: New-NetFirewallRule -DisplayName 'Vizitor API' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:PublicPort"
     }
-} catch {
-    Write-Warn "ساخت قانون فایروال خودکار ممکن نشد — در صورت نیاز دستی: New-NetFirewallRule -DisplayName 'Vizitor API' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:Port"
 }
 
 # ---------------------------- گام ۷: راه‌اندازی + بازرسی --------------------
@@ -685,6 +804,19 @@ if ($script:Mode -eq "keep") {
     }
     $script:Proto = "http"
     if ($script:ApiUrl -match '^https://') { $script:Proto = "https" }
+    # تشخیص حالت IIS در نصب موجود: آدرس عمومی پورت 80 است ولی سرویس روی پورت دیگر listen می‌کند
+    $script:InternalPort = $script:Port
+    $script:PublicPort = $script:Port
+    $script:IisProxyMode = $false
+    if (Test-IisInstalled) {
+        $urlPort = 80
+        if ($script:ApiUrl -match '^[a-z]+://[^:/]+:([0-9]+)') { $urlPort = [int]$Matches[1] }
+        if ($urlPort -eq 80 -and $script:Port -ne 80) {
+            $script:IisProxyMode = $true
+            $script:PublicPort = 80
+            Write-Info "نصب موجود در حالت اتصال از طریق IIS شناسایی شد"
+        }
+    }
 }
 
 # اگر sqlserver انتخاب شد، دیتابیس به‌صورت غیرتلفیقی آماده شود
@@ -721,10 +853,10 @@ $script:CheckFailures = @()
 
 function Run-Checks {
     $script:CheckFailures = @()
-    $base = "http://127.0.0.1:$($script:Port)"
+    $base = "http://127.0.0.1:$($script:InternalPort)"
 
     # ۱) سرویس در حال listen باشد
-    if (-not (Test-PortUp $script:Port)) { $script:CheckFailures += "process"; return }
+    if (-not (Test-PortUp $script:InternalPort)) { $script:CheckFailures += "process"; return }
 
     # ۲) ping
     $r = Invoke-JsonGet "$base/api/ping"
@@ -748,7 +880,16 @@ function Run-Checks {
     $r = Invoke-JsonPost "$base/api/login" $body
     if ($null -eq $r -or $r -notmatch '"ok": *true') { $script:CheckFailures += "login" }
 
-    # ۷) قابل‌دستی‌بودن از بیرون (فقط هشدار)
+    # ۷) در حالت IIS: مرور از طریق خود IIS (پورت 80)
+    if ($script:IisProxyMode) {
+        if (Invoke-JsonGet "http://127.0.0.1:80/api/ping") {
+            Write-Ok "مرور از طریق IIS (پورت 80) به درستی کار می‌کند"
+        } else {
+            $script:CheckFailures += "iis"
+        }
+    }
+
+    # ۸) قابل‌دستی‌بودن از بیرون (فقط هشدار)
     if ($script:PublicIp -and $script:PublicIp -ne $script:LocalIp) {
         $ext = "$($script:Proto)://$($script:Addr)"
         if ($script:Port -ne 80 -and $script:Port -ne 443) { $ext = "$ext:$($script:Port)" }
@@ -767,18 +908,35 @@ function Repair {
                 Write-Info "تعمیر: راه‌اندازی مجدد سرویس ..."
                 Restart-VizitorService
                 Start-Sleep -Seconds 3
-                if (-not (Test-PortUp $script:Port)) {
-                    foreach ($tryPort in @(8090, 8180, 8280, 8081, 8082)) {
-                        if (Test-PortFree $tryPort) {
-                            Write-Info "پورت $($script:Port) درگیر است؛ به‌صورت هوشمند پورت $tryPort انتخاب می‌شود"
-                            $script:Port = $tryPort
-                            $script:ApiUrl = "$($script:Proto)://$($script:Addr)"
-                            if ($script:Port -ne 80 -and $script:Port -ne 443) { $script:ApiUrl = "$script:ApiUrl:$($script:Port)" }
-                            $script:ApiUrl = "$script:ApiUrl/api"
-                            Write-ConfigJson | Out-Null
-                            Restart-VizitorService
-                            Start-Sleep -Seconds 3
-                            break
+                if (-not (Test-PortUp $script:InternalPort)) {
+                    if ($script:IisProxyMode) {
+                        # در حالت IIS، پورت عمومی ثابت 80 است؛ فقط پورت داخلی جابه‌جا می‌شود
+                        Write-Info "پورت داخلی $($script:InternalPort) درگیر است؛ به‌صورت هوشمند پورت جایگزین انتخاب می‌شود"
+                        foreach ($tryPort in @(8090, 8180, 8280, 8081, 8082)) {
+                            if (Test-PortFree $tryPort) {
+                                $script:InternalPort = $tryPort
+                                New-IisProxy | Out-Null
+                                Write-ConfigJson | Out-Null
+                                Restart-VizitorService
+                                Start-Sleep -Seconds 3
+                                break
+                            }
+                        }
+                    }
+                    else {
+                        foreach ($tryPort in @(8090, 8180, 8280, 8081, 8082)) {
+                            if (Test-PortFree $tryPort) {
+                                Write-Info "پورت $($script:PublicPort) درگیر است؛ به‌صورت هوشمند پورت $tryPort انتخاب می‌شود"
+                                $script:InternalPort = $tryPort
+                                $script:PublicPort = $tryPort
+                                $script:ApiUrl = "$($script:Proto)://$($script:Addr)"
+                                if ($script:PublicPort -ne 80 -and $script:PublicPort -ne 443) { $script:ApiUrl = "$script:ApiUrl:$($script:PublicPort)" }
+                                $script:ApiUrl = "$script:ApiUrl/api"
+                                Write-ConfigJson | Out-Null
+                                Restart-VizitorService
+                                Start-Sleep -Seconds 3
+                                break
+                            }
                         }
                     }
                 }
@@ -800,6 +958,12 @@ function Repair {
                 Seed-Db
                 Restart-VizitorService
                 Start-Sleep -Seconds 3
+                break
+            }
+            'iis' {
+                Write-Info "تعمیر: بازنویسی پیکربندی پروکسی IIS و راه‌اندازی مجدد W3SVC ..."
+                New-IisProxy | Out-Null
+                Start-Sleep -Seconds 2
                 break
             }
             'activation|login' {
@@ -850,6 +1014,9 @@ Write-Host "     $script:ApiUrl" -ForegroundColor Green
 Write-Host "  آدرس دریافت خودکار تنظیمات (برای اپ):"
 Write-Host "     $($script:ApiUrl -replace '/api$', '/api/config')" -ForegroundColor Cyan
 Write-Hr
+if ($script:IisProxyMode) {
+    Write-Host "  اتصال        : از طریق IIS (پروکسی معکوس، پورت عمومی 80 → پورت داخلی $($script:InternalPort))"
+}
 if ($script:DbEngine -eq "sqlserver") {
     Write-Host "  دیتابیس      : sqlserver  ($($script:DbName) @ $($script:DbHost):$($script:DbDPort) ، احراز: $($script:DbAuth) ، کاربر: $($script:DbUser))"
 } else {
@@ -873,7 +1040,7 @@ Write-Hr
 Write-Host "  راهنمای اندروید: در بخش اتصال API برنامه، آدرس $script:ApiUrl را وارد کنید."
 if (-not $script:PublicIp) {
     Write-Host "  ⚠ آی‌پی عمومی شناسایی نشد؛ $script:ApiUrl داخل شبکه محلی کار می‌کند. برای دسترسی از بیرون،" -ForegroundColor Yellow
-    Write-Host "     یک دامنه/IP ثابت + پورت‌فورورد روی $($script:Port) تنظیم کنید." -ForegroundColor Yellow
+    Write-Host "     یک دامنه/IP ثابت + پورت‌فورورد روی پورت $($script:PublicPort) تنظیم کنید." -ForegroundColor Yellow
 }
 Write-Host ""
 

@@ -4,31 +4,85 @@
 Vizitor API — HTTP server (standard library only).
 Endpoints (JSON, UTF-8):
   GET  /api/ping      -> health ping (no auth, no db needed)
-  GET  /api/config    -> public config for the Android app
+  GET  /api/config    -> public config for the Android app (self-configuration)
   GET  /api/health    -> full health report (db, activation, ...)
   GET  /api/activate  -> current activation state
   POST /api/activate  -> activate with a code  {"code": "..."}
   POST /api/login     -> admin login            {"username": "...", "password": "..."}
   GET  /api/visitors  -> list visitors (bearer token, activated)
   POST /api/visitors  -> create visitor (bearer token, activated)
+  GET  /api/visitors/since?after_id=N  -> incremental fetch (bearer token, activated)
+  GET  /api/events    -> Server-Sent Events realtime stream (bearer token, activated)
 """
 import argparse
 import hmac
 import json
 import os
+import queue
 import secrets
 import signal
 import sys
 import threading
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from db import DB, default_config_path, hash_password, load_config, verify_password  # noqa: E402
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 START_TIME = time.time()
 STATE = {"cfg": None, "db": None, "db_error": None}
+
+
+# ---------------------------------------------------------------- realtime
+class EventBus:
+    """In-process pub/sub for SSE clients. One queue per subscriber."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._clients = set()
+        self._seq = 0
+        self._seq_lock = threading.Lock()
+
+    def _next_seq(self):
+        with self._seq_lock:
+            self._seq += 1
+            return self._seq
+
+    def subscribe(self):
+        q = queue.Queue(maxsize=256)
+        with self._lock:
+            self._clients.add(q)
+        return q
+
+    def unsubscribe(self, q):
+        with self._lock:
+            self._clients.discard(q)
+
+    def client_count(self):
+        with self._lock:
+            return len(self._clients)
+
+    def publish(self, event_type, data):
+        """Publish to all live SSE clients; slow clients are dropped."""
+        ev = {
+            "seq": self._next_seq(),
+            "type": event_type,
+            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "data": data,
+        }
+        with self._lock:
+            clients = list(self._clients)
+            for q in clients:
+                try:
+                    q.put_nowait(ev)
+                except queue.Full:
+                    self._clients.discard(q)
+        return ev
+
+
+EVENT_BUS = EventBus()
 
 
 def get_db():
@@ -64,6 +118,10 @@ def public_config(cfg):
         "activated": is_activated(db),
         "db_engine": (cfg.get("db") or {}).get("engine", "sqlite"),
         "server_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+        # real-time capability — the Android app reads this for self-configuration
+        "realtime": True,
+        "sse_path": "/api/events",
+        "features": ["self_config", "sse", "incremental_sync"],
     }
 
 
@@ -154,6 +212,10 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path != "/":
             path = path.rstrip("/")
+        if path == "/api/events":
+            # SSE streams handle their own errors; never wrap in the 500 handler
+            self._events_stream()
+            return
         try:
             if path in ("", "/"):
                 self._send(
@@ -170,6 +232,8 @@ class Handler(BaseHTTPRequestHandler):
                             "POST /api/login",
                             "GET  /api/visitors",
                             "POST /api/visitors",
+                            "GET  /api/visitors/since?after_id=N",
+                            "GET  /api/events   (SSE realtime stream)",
                         ],
                     },
                 )
@@ -184,6 +248,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, {"activated": is_activated(db)})
             elif path == "/api/visitors":
                 self._list_visitors()
+            elif path == "/api/visitors/since":
+                self._list_visitors_since()
             else:
                 self._send(404, {"error": "not_found", "path": self.path})
         except BrokenPipeError:
@@ -224,9 +290,11 @@ class Handler(BaseHTTPRequestHandler):
             db.upsert_setting("activation_code", code)
             db.upsert_setting("activated", "1")
             db.upsert_setting("activated_at", time.strftime("%Y-%m-%d %H:%M:%S"))
+            EVENT_BUS.publish("activation.changed", {"activated": True})
             self._send(200, {"ok": True, "activated": True, "message": "first activation saved"})
         elif hmac.compare_digest(stored, code):
             db.upsert_setting("activated", "1")
+            EVENT_BUS.publish("activation.changed", {"activated": True})
             self._send(200, {"ok": True, "activated": True})
         else:
             self._send(403, {"ok": False, "activated": False, "error": "invalid_code"})
@@ -282,14 +350,115 @@ class Handler(BaseHTTPRequestHandler):
         if not ok:
             return
         try:
-            rows = db.q(
-                "SELECT id, name, phone, purpose, host_name, created_at "
-                "FROM visitors ORDER BY id DESC LIMIT 100"
-            )
+            if db.engine == "sqlserver":
+                rows = db.q(
+                    "SELECT TOP (100) id, name, phone, purpose, host_name, created_at "
+                    "FROM visitors ORDER BY id DESC"
+                )
+            else:
+                rows = db.q(
+                    "SELECT id, name, phone, purpose, host_name, created_at "
+                    "FROM visitors ORDER BY id DESC LIMIT 100"
+                )
         except Exception as exc:
             self._send(500, {"error": "db_error", "detail": str(exc)})
             return
         self._send(200, {"ok": True, "count": len(rows), "visitors": rows})
+
+    def _list_visitors_since(self):
+        """Incremental fetch: visitors with id > after_id (ascending)."""
+        db, ok = self._gate()
+        if not ok:
+            return
+        query = self.path.split("?", 1)[1] if "?" in self.path else ""
+        params = urllib.parse.parse_qs(query)
+        try:
+            after_id = int((params.get("after_id") or ["0"])[0])
+        except ValueError:
+            after_id = 0
+        try:
+            limit = max(1, min(int((params.get("limit") or ["100"])[0]), 500))
+        except ValueError:
+            limit = 100
+        cols = "id, name, phone, purpose, host_name, created_at"
+        try:
+            if db.engine == "sqlserver":
+                rows = db.q(
+                    "SELECT TOP (?) %s FROM visitors WHERE id > ? ORDER BY id ASC" % cols,
+                    (limit, after_id),
+                )
+            else:
+                rows = db.q(
+                    "SELECT %s FROM visitors WHERE id > ? ORDER BY id ASC LIMIT ?" % cols,
+                    (after_id, limit),
+                )
+        except Exception as exc:
+            self._send(500, {"error": "db_error", "detail": str(exc)})
+            return
+        max_id = rows[-1]["id"] if rows else after_id
+        self._send(
+            200,
+            {
+                "ok": True,
+                "count": len(rows),
+                "visitors": rows,
+                "max_id": max_id,
+                "has_more": len(rows) == limit,
+            },
+        )
+
+    def _events_stream(self):
+        """Server-Sent Events: pushes visitor.created / activation.changed live."""
+        db, ok = self._gate()
+        if not ok:
+            return
+        last_id = 0
+        try:
+            rows = db.q("SELECT COALESCE(MAX(id), 0) AS m FROM visitors")
+            last_id = int(rows[0].get("m", 0)) if rows else 0
+        except Exception:
+            pass
+        q = EVENT_BUS.subscribe()
+
+        def write_event(obj):
+            self.wfile.write(("data: %s\n\n" % json.dumps(obj, ensure_ascii=False)).encode("utf-8"))
+            self.wfile.flush()
+
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-transform")
+            self.send_header("Connection", "close")
+            self.send_header("X-Accel-Buffering", "no")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            # hello: lets the client sync state (then GET /api/visitors/since)
+            write_event(
+                {
+                    "type": "hello",
+                    "version": VERSION,
+                    "activated": is_activated(db),
+                    "last_visitor_id": last_id,
+                    "retry_ms": 5000,
+                }
+            )
+            while True:
+                try:
+                    write_event(q.get(timeout=15))
+                except queue.Empty:
+                    # periodic keepalive comment (15s)
+                    try:
+                        self.wfile.write(b": keepalive\n\n")
+                        self.wfile.flush()
+                    except Exception:
+                        break
+        except (BrokenPipeError, ConnectionResetError, TimeoutError):
+            pass
+        except Exception:
+            pass
+        finally:
+            EVENT_BUS.unsubscribe(q)
+            self.close_connection = True
 
     def _create_visitor(self):
         db, ok = self._gate()
@@ -309,7 +478,16 @@ class Handler(BaseHTTPRequestHandler):
                 str(body.get("host_name", "")).strip(),
             ),
         )
-        self._send(201, {"ok": True, "id": visitor_id})
+        # push to realtime subscribers (best effort)
+        try:
+            rows = db.q(
+                "SELECT id, name, phone, purpose, host_name, created_at FROM visitors WHERE id = ?",
+                (visitor_id,),
+            )
+            ev = EVENT_BUS.publish("visitor.created", rows[0] if rows else {"id": visitor_id})
+        except Exception:
+            ev = EVENT_BUS.publish("visitor.created", {"id": visitor_id})
+        self._send(201, {"ok": True, "id": visitor_id, "event_seq": ev.get("seq") if ev else None})
 
 
 def main():
@@ -334,6 +512,7 @@ def main():
 
     try:
         httpd = ThreadingHTTPServer((host, port), Handler)
+        httpd.daemon_threads = True  # SSE listener threads die with the process
     except OSError as exc:
         sys.stderr.write("FATAL: cannot bind %s:%s — %s\n" % (host, port, exc))
         sys.exit(1)
