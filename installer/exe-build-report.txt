@@ -1,5 +1,5 @@
 گزارش ساخت نصب‌کنندهٔ ویندوز — ویزیتور (Vizitor-Setup-1.0.0.exe)
-تاریخ: 2026-09-18 15:14:30 UTC   کامیت: 5a0a8070835ba8803fe0140cbe244cc838619d4f
+تاریخ: 2026-09-18 15:17:23 UTC   کامیت: 2d3a2101502b25b5ddd457849da69083fa14c6d3
 ==================================================================================
 
 --- خروجی ساخت (NSIS) ---
@@ -17,41 +17,41 @@ EXE header size:              230912 / 100864 bytes
 Install code:                          (147728 bytes)
 Install data:                          (2070449 bytes)
 Uninstall code+data:                   (175476 bytes)
-Compressed data:              743961 / 2393653 bytes
-CRC (0xB3578250):                  4 / 4 bytes
+Compressed data:              743918 / 2393653 bytes
+CRC (0x95CA2F63):                  4 / 4 bytes
 
-Total size:                   974877 / 2494521 bytes (39.0%)
-[ok] sha256: 4e70dddab6674a8017ab08f4a523751015138999a8f5a5fef53141a0fb101a7a  Vizitor-Setup-1.0.0.exe
-total 968
-drwxr-xr-x  2 runner runner   4096 Sep 18 15:14 .
-drwxr-xr-x 12 runner runner   4096 Sep 18 15:14 ..
--rw-r--r--  1 runner runner 974877 Sep 18 15:14 Vizitor-Setup-1.0.0.exe
--rw-r--r--  1 runner runner     90 Sep 18 15:14 Vizitor-Setup-1.0.0.exe.sha256
+Total size:                   974834 / 2494521 bytes (39.0%)
+[ok] sha256: 3a5212139b9a339fa90ce5a7240516791d365805df6ef5477730dedbe608681c  Vizitor-Setup-1.0.0.exe
+total 964
+drwxr-xr-x  2 runner runner   4096 Sep 18 15:17 .
+drwxr-xr-x 12 runner runner   4096 Sep 18 15:17 ..
+-rw-r--r--  1 runner runner 974834 Sep 18 15:17 Vizitor-Setup-1.0.0.exe
+-rw-r--r--  1 runner runner     90 Sep 18 15:17 Vizitor-Setup-1.0.0.exe.sha256
 [ok] فایل نصب ساخته شد.
 
 --- sha256 خروجی ---
-4e70dddab6674a8017ab08f4a523751015138999a8f5a5fef53141a0fb101a7a  release/Vizitor-Setup-1.0.0.exe
+3a5212139b9a339fa90ce5a7240516791d365805df6ef5477730dedbe608681c  release/Vizitor-Setup-1.0.0.exe
 
 --- sha256 فایل‌های مبدأ داخل exe ---
 13a6e5a0bec106190fd39097a30c518073057969aeb7079801ac322f9031dc2a  install.ps1
 381d8e3b9b70bbdbcc769a4bea1d816624112247f8121fa609698ff411b7256d  installer/nsi/preflight.ps1
 
 --- محتوای exe ---
-2026-09-18 15:14:18 .....        76159               setup/install.ps1
-2026-09-18 15:14:18 .....         5852               $PLUGINSDIR/preflight.ps1
-2026-09-18 15:14:18 .....         5852               setup/preflight.ps1
-2026-09-18 15:14:18 .....        12984               setup/api/android_connect.py
-2026-09-18 15:14:18 .....        17922               setup/api/check_connection_contract.py
-2026-09-18 15:14:18 .....         8416               setup/api/db.py
-2026-09-18 15:14:18 .....        10033               setup/api/provision_android_sql.py
-2026-09-18 15:14:18 .....         5940               setup/api/provision_sqlserver.py
-2026-09-18 15:14:18 .....         2505               setup/api/seed.py
-2026-09-18 15:14:18 .....        29171               setup/api/server.py
-2026-09-18 15:14:18 .....        19478               setup/api/sql_admin_tools.py
-2026-09-18 15:14:18 .....         1115               setup/api/vendor/README.md
-2026-09-18 15:14:18 .....         1503               setup/api/vendor/segno/LICENSE.txt
-2026-09-18 15:14:18 .....        46818               setup/api/vendor/segno/__init__.py
-2026-09-18 15:14:18 .....        34205               setup/api/vendor/segno/consts.py
+2026-09-18 15:17:12 .....        76159               setup/install.ps1
+2026-09-18 15:17:12 .....         5852               $PLUGINSDIR/preflight.ps1
+2026-09-18 15:17:12 .....         5852               setup/preflight.ps1
+2026-09-18 15:17:12 .....        12984               setup/api/android_connect.py
+2026-09-18 15:17:12 .....        17922               setup/api/check_connection_contract.py
+2026-09-18 15:17:12 .....         8416               setup/api/db.py
+2026-09-18 15:17:12 .....        10033               setup/api/provision_android_sql.py
+2026-09-18 15:17:12 .....         5940               setup/api/provision_sqlserver.py
+2026-09-18 15:17:12 .....         2505               setup/api/seed.py
+2026-09-18 15:17:12 .....        29171               setup/api/server.py
+2026-09-18 15:17:12 .....        19478               setup/api/sql_admin_tools.py
+2026-09-18 15:17:12 .....         1115               setup/api/vendor/README.md
+2026-09-18 15:17:12 .....         1503               setup/api/vendor/segno/LICENSE.txt
+2026-09-18 15:17:12 .....        46818               setup/api/vendor/segno/__init__.py
+2026-09-18 15:17:12 .....        34205               setup/api/vendor/segno/consts.py
 
 این exe همان install.ps1 این کامیت را در خود دارد: بررسی شنوندهٔ TCP ۱۴۳۳
 و فعال‌سازی خودکار TCP/IP + BOM برای اجرای درست فارسی در PowerShell 5.1.
