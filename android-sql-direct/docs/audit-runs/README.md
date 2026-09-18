@@ -1,7 +1,8 @@
 # Audit runs — what the operator ran and what came back
 
 These files are the **raw output the operator pasted back** after running a script on
-the real server (SSMS, server `MIGHTY`, database `Meelano` unless stated otherwise).
+the real server (SSMS, server `MIGHTY`, database `Meelano` - the operator confirmed the name
+`Meelano` again on 2026-09-18).
 Chat-only content dies with the session, so the workspace keeps a copy.
 
 | file | what produced it | what it answered | state |
@@ -10,6 +11,9 @@ Chat-only content dies with the session, so the workspace keeps a copy.
 | `out_06_login.txt` | `sql/06_login_probe.sql` (v2) | L1..L7: login source, `PWDCOMPARE`, ConfirmUser/LoginDetails, sal_mali | **not saved verbatim** — only the distilled facts survive (§13.1) |
 | `out_05_gaps.txt` | `sql/05_gaps_small.sql` | G1..G5: flags, custgroup tiers, sys_cus/sys_vis mapping, sal_mali | **not saved verbatim** — summary in §15.1 |
 | `out_03_bodies.txt` | `sql/03b_bodies_file.sql` / `run_audit.bat` | the four procedure bodies + helper lengths | **not saved verbatim** — behaviour written out in `docs/write-path/ERP-WRITE-PROCEDURES.md` |
+| `out_11_helper_bodies.txt` | `run_audit.bat` / رراه ۳ (sys.sql_modules) | part 7: the four procedure bodies + 8 helper bodies (`Edit_sail_pish`, `FixManCustomer`, `UpdateMojodiInventory*`, `VW_InventoryAnbars`, `AddFromAtiranDetailsForVisitors`, `SelectPriceAndTedvahForushVisitorhaByDate`) | verbatim, 2026-09-18 |
+| `out_12_module_search.txt` | رراه ۷ (`sys.sql_modules ... LIKE`) | part 8: the 12 modules that touch the line tables - two INSTEAD OF triggers, two views, one function, one list proc | verbatim, 2026-09-18 |
+| `out_13_trigger_bodies.txt` | رراه ۸ (trigger parents + 8 definitions) | part 9: **the line writer found** - `trig_sst_pish` on `subsailtemp_pish` writes `subsailfact_pish`; `InvoiceTrigger` on `subsailtemp` writes `subsailfact` + `ka_act`; `ListPishFactor` gives the ERP's own pre-invoice list shape | verbatim, 2026-09-18 |
 | `out_02_gaps.txt` | `sql/02_fill_gaps.sql` | audit part 2: roles, visitor limits, view/proc inventory, column lists | **not saved verbatim** — distilled in §14 |
 
 ⚠️ For the four "not saved verbatim" rows the raw text existed only in the chat and is
