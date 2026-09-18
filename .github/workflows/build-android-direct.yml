@@ -125,20 +125,28 @@ jobs:
               done
             done
           } > "$R"
-          cat "$R"
           git config user.name "vizitor-ci"
           git config user.email "ci@vizitor.local"
-          git add -f "$R"
-          git diff --cached --quiet || git commit -m "chore(ci): APK verification report [skip ci]"
-          URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          ok=0
-          for try in 1 2 3; do
-            if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then ok=1; break; fi
-            echo "پوش رد شد (تلاش $try) — ریبس و تلاش دوباره (سه ورک‌فلو هم‌زمان کامیت می‌کنند)"
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || git rebase --abort || true
-            sleep 5
+          rm -rf /tmp/cargo && mkdir -p /tmp/cargo
+          for f in "$R"; do
+            [ -f "$f" ] && cp "$f" /tmp/cargo/$(basename "$f")
           done
-          [ "$ok" = "1" ] && echo "گزارش APK در مخزن ثبت شد ✓" || echo "::warning::گزارش ثبت نشد (پوش رد شد)"
+          URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          pushed=0
+          for try in 1 2 3; do
+            git fetch -q "$URL" "${GITHUB_REF_NAME}"
+            git reset --hard "FETCH_HEAD"
+            for f in "$R"; do
+              [ -f "/tmp/cargo/$(basename "$f")" ] && cp "/tmp/cargo/$(basename "$f")" "$f"
+            done
+            git add -f "$R" 2>/dev/null || true
+            git diff --cached --quiet && { echo "چیزی برای ثبت نبود"; pushed=1; break; }
+            git commit -q -m "chore(ci): APK verification report [skip ci]"
+            if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then pushed=1; break; fi
+            echo "پوش رد شد (تلاش $try) — همگام‌سازی با نوک شاخه و تلاش دوباره"
+            sleep 4
+          done
+          [ "$pushed" = "1" ] && echo "گزارش در مخزن ثبت شد ✓" || echo "::warning::گزارش ثبت نشد (پوش رد شد)"
 
       - name: بارگذاری خروجی‌ها (artifact)
         uses: actions/upload-artifact@v4
