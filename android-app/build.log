@@ -1,0 +1,402 @@
+Downloading https://services.gradle.org/distributions/gradle-8.7-bin.zip
+............10%.............20%.............30%.............40%............50%.............60%.............70%.............80%.............90%............100%
+
+Welcome to Gradle 8.7!
+
+Here are the highlights of this release:
+ - Compiling and testing with Java 22
+ - Cacheable Groovy script compilation
+ - New methods in lazy collection properties
+
+For more details see https://docs.gradle.org/8.7/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.7/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :vizitor-direct:preBuild UP-TO-DATE
+> Task :vizitor-direct:preDebugBuild UP-TO-DATE
+> Task :vizitor-direct:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :vizitor-direct:checkKotlinGradlePluginConfigurationErrors
+> Task :vizitor-direct:generateDebugBuildConfig
+> Task :vizitor-direct:generateDebugResValues
+> Task :vizitor-direct:checkDebugAarMetadata
+> Task :vizitor-direct:mapDebugSourceSetPaths
+> Task :vizitor-direct:generateDebugResources
+> Task :vizitor-direct:packageDebugResources
+> Task :vizitor-direct:mergeDebugResources
+> Task :vizitor-direct:createDebugCompatibleScreenManifests
+> Task :vizitor-direct:extractDeepLinksDebug
+> Task :vizitor-direct:parseDebugLocalResources
+> Task :vizitor-direct:processDebugMainManifest
+> Task :vizitor-direct:processDebugManifest
+> Task :vizitor-direct:javaPreCompileDebug
+> Task :vizitor-direct:mergeDebugShaders
+> Task :vizitor-direct:compileDebugShaders NO-SOURCE
+> Task :vizitor-direct:generateDebugAssets UP-TO-DATE
+> Task :vizitor-direct:mergeDebugAssets
+> Task :vizitor-direct:desugarDebugFileDependencies
+> Task :vizitor-direct:compressDebugAssets
+> Task :vizitor-direct:processDebugManifestForPackage
+> Task :vizitor-direct:checkDebugDuplicateClasses
+> Task :vizitor-direct:mergeDebugStartupProfile
+> Task :vizitor-direct:processDebugResources
+> Task :vizitor-direct:mergeExtDexDebug
+> Task :vizitor-direct:mergeDebugJniLibFolders
+> Task :vizitor-direct:mergeLibDexDebug
+> Task :vizitor-direct:mergeDebugNativeLibs NO-SOURCE
+> Task :vizitor-direct:stripDebugDebugSymbols NO-SOURCE
+> Task :vizitor-direct:validateSigningDebug
+> Task :vizitor-direct:writeDebugAppMetadata
+> Task :vizitor-direct:writeDebugSigningConfigVersions
+> Task :vizitor-direct:buildKotlinToolingMetadata
+> Task :vizitor-direct:preReleaseBuild UP-TO-DATE
+> Task :vizitor-direct:generateReleaseBuildConfig
+> Task :vizitor-direct:checkReleaseAarMetadata
+> Task :vizitor-direct:generateReleaseResValues FROM-CACHE
+> Task :vizitor-direct:mapReleaseSourceSetPaths
+> Task :vizitor-direct:generateReleaseResources
+> Task :vizitor-direct:packageReleaseResources
+> Task :vizitor-direct:parseReleaseLocalResources FROM-CACHE
+> Task :vizitor-direct:createReleaseCompatibleScreenManifests
+> Task :vizitor-direct:extractDeepLinksRelease FROM-CACHE
+> Task :vizitor-direct:processReleaseMainManifest
+> Task :vizitor-direct:processReleaseManifest
+> Task :vizitor-direct:javaPreCompileRelease FROM-CACHE
+> Task :vizitor-direct:extractProguardFiles
+> Task :vizitor-direct:mergeReleaseJniLibFolders
+> Task :vizitor-direct:mergeReleaseNativeLibs NO-SOURCE
+> Task :vizitor-direct:stripReleaseDebugSymbols NO-SOURCE
+> Task :vizitor-direct:extractReleaseNativeSymbolTables NO-SOURCE
+> Task :vizitor-direct:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :vizitor-direct:processReleaseManifestForPackage
+> Task :vizitor-direct:desugarReleaseFileDependencies
+> Task :vizitor-direct:mergeReleaseStartupProfile
+> Task :vizitor-direct:checkReleaseDuplicateClasses
+> Task :vizitor-direct:mergeReleaseResources
+> Task :vizitor-direct:mergeReleaseArtProfile
+> Task :vizitor-direct:compileDebugKotlin
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectApplication.kt:4:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectApplication.kt:13:9 Unresolved reference: SecureDbStore
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:16:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:17:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:18:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:19:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:20:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:21:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:22:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:23:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:24:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:25:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:26:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:59:35 Unresolved reference: DbLoginRow
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:59:61 Unresolved reference: DbVisitorIdentity
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:64:25 Unresolved reference: DbCustomer
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:65:24 Unresolved reference: DbProduct
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:73:23 Unresolved reference: MeelanoDataSource
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:73:41 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:99:31 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:99:50 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:102:36 Unresolved reference: DirectSql
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:104:32 Unresolved reference: ServerConfig
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:107:9 Unresolved reference: SecureDbStore
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:113:21 Unresolved reference: SecureDbStore
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:114:25 Unresolved reference: SecureDbStore
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:115:25 Unresolved reference: ServerConfig
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:117:55 Unresolved reference: host
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:120:26 Unresolved reference: port
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:121:26 Unresolved reference: username
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:122:30 Unresolved reference: password
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:123:30 Unresolved reference: database
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:125:19 Unresolved reference: host
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:125:46 Unresolved reference: database
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:125:77 Unresolved reference: username
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:130:48 Unresolved reference: DbSettings
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:131:18 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:135:29 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:135:66 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:185:25 Unresolved reference: DbSettings
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:194:26 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:196:31 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:197:31 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:216:28 Unresolved reference: DbSettings
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:225:22 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:227:33 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:227:70 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:232:13 Unresolved reference: SecureDbStore
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:233:13 Unresolved reference: SecureDbStore
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:234:29 Unresolved reference: ServerConfig
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:254:27 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:297:9 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:305:9 Unresolved reference: SqlConnectionManager
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/DirectViewModel.kt:306:9 Unresolved reference: SecureDbStore
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:51:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:116:23 Property delegate must have a 'getValue(Nothing?, KProperty<*>)' method. None of the following functions is suitable: 
+public inline operator fun <T> State<???>.getValue(thisObj: Any?, property: KProperty<*>): ??? defined in androidx.compose.runtime
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:262:17 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:287:28 'when' expression must be exhaustive, add necessary 'else' branch
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:288:16 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:289:16 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:290:16 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/MainActivity.kt:291:16 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:31:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:32:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:33:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:52:11 Unresolved reference: DbLoginRow
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:53:15 Unresolved reference: DbVisitorIdentity
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:54:17 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:80:13 None of the following functions can be called with the arguments supplied: 
+public fun Text(text: AnnotatedString, modifier: Modifier = ..., color: Color = ..., fontSize: TextUnit = ..., fontStyle: FontStyle? = ..., fontWeight: FontWeight? = ..., fontFamily: FontFamily? = ..., letterSpacing: TextUnit = ..., textDecoration: TextDecoration? = ..., textAlign: TextAlign? = ..., lineHeight: TextUnit = ..., overflow: TextOverflow = ..., softWrap: Boolean = ..., maxLines: Int = ..., minLines: Int = ..., inlineContent: Map<String, InlineTextContent> = ..., onTextLayout: (TextLayoutResult) -> Unit = ..., style: TextStyle = ...): Unit defined in androidx.compose.material3
+public fun Text(text: String, modifier: Modifier = ..., color: Color = ..., fontSize: TextUnit = ..., fontStyle: FontStyle? = ..., fontWeight: FontWeight? = ..., fontFamily: FontFamily? = ..., letterSpacing: TextUnit = ..., textDecoration: TextDecoration? = ..., textAlign: TextAlign? = ..., lineHeight: TextUnit = ..., overflow: TextOverflow = ..., softWrap: Boolean = ..., maxLines: Int = ..., minLines: Int = ..., onTextLayout: ((TextLayoutResult) -> Unit)? = ..., style: TextStyle = ...): Unit defined in androidx.compose.material3
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:89:69 Unresolved reference: it
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:121:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:122:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:123:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:124:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:153:67 Type mismatch: inferred type is Modifier but Boolean was expected
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:172:35 Overload resolution ambiguity: 
+public inline fun <T> Iterable<TypeVariable(T)>.forEach(action: (TypeVariable(T)) -> Unit): Unit defined in kotlin.collections
+public inline fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.forEach(action: (Map.Entry<TypeVariable(K), TypeVariable(V)>) -> Unit): Unit defined in kotlin.collections
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:172:45 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:173:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:194:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:198:75 Type mismatch: inferred type is Modifier but Boolean was expected
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:212:40 Overload resolution ambiguity: 
+public inline fun <T> Iterable<TypeVariable(T)>.forEach(action: (TypeVariable(T)) -> Unit): Unit defined in kotlin.collections
+public inline fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.forEach(action: (Map.Entry<TypeVariable(K), TypeVariable(V)>) -> Unit): Unit defined in kotlin.collections
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:212:50 Cannot infer a type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:213:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/HomeScreen.kt:239:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/LoginScreen.kt:25:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/LoginScreen.kt:38:17 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/LoginScreen.kt:68:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/LoginScreen.kt:69:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/LoginScreen.kt:70:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/LoginScreen.kt:71:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:33:26 Unresolved reference: data
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:51:17 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:119:62 Type mismatch: inferred type is Modifier but Boolean was expected
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:120:70 Type mismatch: inferred type is Modifier but Boolean was expected
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:192:41 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:196:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:200:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:201:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:202:20 Unresolved reference: ConnectionState
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:239:65 Type mismatch: inferred type is Modifier but Boolean was expected
+e: file:///home/runner/work/Vizitor/Vizitor/android-app/vizitor-direct/src/main/java/ir/atiran/vizitor/direct/ui/screens/SetupScreen.kt:240:63 Type mismatch: inferred type is Modifier but Boolean was expected
+
+> Task :vizitor-direct:compileDebugKotlin FAILED
+> Task :vizitor-direct:mergeExtDexRelease
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':vizitor-direct:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':vizitor-direct:compileDebugKotlin'.
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:282)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:200)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:195)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:287)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:130)
+	at org.gradle.internal.Factories$1.create(Factories.java:31)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:336)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocks(DefaultWorkerLeaseService.java:319)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLock(DefaultWorkerLeaseService.java:324)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:126)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:92)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:78)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:66)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:252)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:68)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:200)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:195)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:41)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:74)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:67)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:45)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:145)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$4(BuildCacheStep.java:101)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$5(BuildCacheStep.java:101)
+	at org.gradle.internal.Try$Success.map(Try.java:164)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:85)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:74)
+	at org.gradle.internal.Either$Left.fold(Either.java:115)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:76)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:54)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:54)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:36)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:106)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:55)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:61)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:61)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:200)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:195)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:80)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:20)
+	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:141)
+	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCompilerRunnerWithWorkers.kt:73)
+	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:200)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:195)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:187)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:120)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:162)
+	at org.gradle.internal.Factories$1.create(Factories.java:31)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:264)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:128)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:133)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:157)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:126)
+	... 2 more
+
+
+BUILD FAILED in 2m 54s
+51 actionable tasks: 47 executed, 4 from cache
