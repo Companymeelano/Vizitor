@@ -175,19 +175,93 @@ def simulate_dynamic_sql(text: str):
     return out
 
 
+def split_statements(batch: str):
+    """Split one batch at top-level semicolons (depth 0, BEGIN/END balanced).
+
+    Used when a T-SQL parser cannot swallow a whole batch even though every
+    statement in it is valid: some parsers fall back to a raw 'Command' node
+    for TRY/CATCH blocks and then lose track of the rest of the batch."""
+    out, start, i = [], 0, 0
+    depth, in_lit = 0, False
+    while i < len(batch):
+        ch = batch[i]
+        if in_lit:
+            if ch == "'":
+                if batch[i + 1:i + 2] == "'":
+                    i += 2
+                    continue
+                in_lit = False
+            i += 1
+            continue
+        if ch == "'":
+            in_lit = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif ch == ";":
+            head = batch[start:i + 1]
+            if depth == 0 and (len(re.findall(r"\bBEGIN\b", head, re.I))
+                               == len(re.findall(r"\bEND\b", head, re.I))):
+                out.append(head)
+                start = i + 1
+        i += 1
+    tail = batch[start:].strip()
+    if tail:
+        out.append(tail)
+    return [x for x in out if x.strip()]
+
+
+def begin_end_balanced(batch: str):
+    """BEGIN/END and BEGIN TRY/BEGIN CATCH versus END counts."""
+    code = re.sub(r"'[^']*(?:''[^']*)*'", "''", batch)      # drop string literals
+    begins = len(re.findall(r"\bBEGIN\b", code, re.I))
+    ends = len(re.findall(r"\bEND\b", code, re.I))
+    cases = len(re.findall(r"\bCASE\b", code, re.I))
+    trys = len(re.findall(r"\bBEGIN\s+TRY\b", code, re.I))
+    catches = len(re.findall(r"\bBEGIN\s+CATCH\b", code, re.I))
+    # every CASE expression also ends with END, so it pairs with one END too
+    return (begins + cases) - ends, trys - catches
+
+
 def check(path: pathlib.Path) -> bool:
     text = path.read_text(encoding="utf-8-sig")
     ok = True
     print(f"\n=== {path.name} ===")
 
     batch_list = batches(text)
-    failures = [(i, parse(b)) for i, b in enumerate(batch_list, 1) if parse(b)]
-    if failures:
+    whole_fail, stmt_fail = [], []
+    for i, b in enumerate(batch_list, 1):
+        err = parse(b)
+        if not err:
+            continue
+        # a parser may choke on a whole batch that is valid: verify statement by
+        # statement before reporting a problem
+        bad = [(st, parse(st)) for st in split_statements(b)]
+        bad = [(st, e) for st, e in bad if e]
+        if bad:
+            stmt_fail.append((i, bad[0][1], bad[0][0]))
+            whole_fail.append((i, err))
+        else:
+            whole_fail.append((i, None))
+
+    if stmt_fail:
         ok = False
-        for i, err in failures:
-            print(f"  [FAIL] batch {i}: {err[:160]}")
+        for i, err, st in stmt_fail:
+            print(f"  [FAIL] batch {i} statement: {err[:140]}")
+            print("         " + st.strip().replace("\n", " ")[:200])
+    elif whole_fail:
+        print(f"  batches parsed .............. {len(batch_list)}/{len(batch_list)} OK "
+              f"(batch {whole_fail[0][0]} verified statement-by-statement: "
+              "the parser cannot read TRY/CATCH batches as a whole)")
     else:
         print(f"  batches parsed .............. {len(batch_list)}/{len(batch_list)} OK")
+
+    for i, b in enumerate(batch_list, 1):
+        be, tc = begin_end_balanced(b)
+        if be != 0 or tc != 0:
+            ok = False
+            print(f"  [FAIL] batch {i}: BEGIN/END differ by {be}, TRY/CATCH by {tc}")
 
     for var, gen, err0 in simulate_dynamic_sql(text):
         if err0:
@@ -206,13 +280,50 @@ def check(path: pathlib.Path) -> bool:
             print(f"  dynamic SQL @{var} ........... OK "
                   f"({len(gen)} chars, quotes balanced: {gen.count(chr(39)) % 2 == 0})")
 
-    code = strip_comments(text)
-    bad = sorted({c for c in code if ord(c) > 127})
+    raw = path.read_bytes()
+    if raw.startswith(b"\xef\xbb\xbf"):
+        ok = False
+        print("  [FAIL] file starts with a UTF-8 BOM: SSMS passes it into the first "
+              "batch -> \"Msg 102 Incorrect syntax near '\". Save as plain UTF-8.")
+    else:
+        print("  no BOM ..................... OK")
+
+    bad = sorted({c for c in text if ord(c) > 127})
     if bad:
         ok = False
-        print(f"  [FAIL] non-ASCII in executable code: {[hex(ord(c)) for c in bad][:10]}")
+        print(f"  [FAIL] non-ASCII characters present: {[hex(ord(c)) for c in bad][:10]}"
+              "  (SQL files must be pure ASCII, comments included)")
     else:
-        print("  executable code ASCII ....... OK (Persian text is comments-only)")
+        print("  file is pure ASCII ......... OK (comments included)")
+
+    # independent check: parentheses must balance inside every batch, ignoring
+    # string literals and comments (caught a real missing ')' in v5 section 04
+    # that a T-SQL parser only reports as a confusing "Expecting )" elsewhere)
+    for n, batch in enumerate(batch_list, 1):
+        depth, in_lit, k, bad = 0, False, 0, False
+        while k < len(batch):
+            ch = batch[k]
+            if in_lit:
+                if ch == "'":
+                    if batch[k + 1:k + 2] == "'":
+                        k += 2
+                        continue
+                    in_lit = False
+            elif ch == "'":
+                in_lit = True
+            elif ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth < 0:
+                    bad = True
+                    break
+            k += 1
+        if bad or depth != 0:
+            ok = False
+            print(f"  [FAIL] batch {n}: parentheses do not balance "
+                  f"(final depth {depth}) - a missing or extra '(' or ')'")
+    code = strip_comments(text)   # comments removed: used by the checks below
 
     banned = {
         "ic.is_primary_key": "sys.index_columns has no is_primary_key - join sys.indexes",
