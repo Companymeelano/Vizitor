@@ -108,20 +108,12 @@ if (-not $odbc -and $pyOdbc -eq 1 -and $pyExe) {
     try { $odbc = (& $pyExe -c "import pyodbc; print('|'.join(pyodbc.drivers()))" 2>$null | Out-String).Trim() } catch { }
 }
 
-# ---- SQL Server service / IIS / firewall --------------------------------- #
+# ---- SQL Server service / firewall ---------------------------------------- #
 $sql = 0
 try {
     $svc = Get-Service -Name "MSSQLSERVER", "MSSQL`$*" -ErrorAction SilentlyContinue
     foreach ($s in $svc) { if ($s.Status -eq "Running") { $sql = 1; break } }
     if ($sql -eq 0 -and $svc -ne $null) { $sql = 2 }   # installed but not running
-} catch { }
-
-$iis = 0
-try { if (Get-Service W3SVC -ErrorAction SilentlyContinue) { $iis = 1 } } catch { }
-
-$iisRw = 0
-try {
-    if (Test-Path "$env:windir\System32\inetsrv\rewrite\urlrewrite.dll") { $iisRw = 1 }
 } catch { }
 
 $fw = 0
@@ -145,8 +137,6 @@ Add-Line "pythonexe"   $pyExe
 Add-Line "pyodbc"      "$pyOdbc"
 Add-Line "odbc"        $odbc
 Add-Line "sql"         "$sql"
-Add-Line "iis"         "$iis"
-Add-Line "iisrewrite"  "$iisRw"
 Add-Line "firewall"    "$fw"
 Add-Line "existing"    "$existing"
 

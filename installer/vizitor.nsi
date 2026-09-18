@@ -57,19 +57,15 @@ Var /GLOBAL RecheckOnly
 Var /GLOBAL PrevExists
 Var /GLOBAL FreshClean
 Var /GLOBAL PyExe
-Var /GLOBAL hIisReset
 Var /GLOBAL hHealth
 Var /GLOBAL hDbList
 Var /GLOBAL hBtnList
 Var /GLOBAL hListStatus
 Var /GLOBAL DbCount
 Var /GLOBAL DbIdx
-Var /GLOBAL IisReset
 Var /GLOBAL HealthWanted
 Var /GLOBAL IpAddr
 Var /GLOBAL ApiPort
-Var /GLOBAL IisProxy
-Var /GLOBAL IisDetected
 Var /GLOBAL SqlHost
 Var /GLOBAL SqlPort
 Var /GLOBAL SqlAuth
@@ -85,7 +81,6 @@ Var /GLOBAL InstallRc
 Var /GLOBAL Detected
 Var /GLOBAL hIp
 Var /GLOBAL hPort
-Var /GLOBAL hIis
 Var /GLOBAL hSqlHost
 Var /GLOBAL hSqlPort
 Var /GLOBAL hWinAuth
@@ -184,8 +179,7 @@ Section "هستهٔ سامانه — API و سرویس (اجباری)" SecCore
       RMDir /r "$INSTDIR\setup"
     ${EndIf}
     RMDir /r "$INSTDIR\api"
-    RMDir /r "$INSTDIR\iis"
-    RMDir /r "$INSTDIR\docs"
+      RMDir /r "$INSTDIR\docs"
     RMDir /r "$INSTDIR\tools"
     Delete "$INSTDIR\run.bat"
     DetailPrint "فایل‌های برنامهٔ قبلی جایگزین شدند (تنظیمات و داده‌ها دست‌نخورده)"
@@ -220,10 +214,7 @@ SectionEnd
 Section "دیتابیس سامانه در SQL Server" SecDb
 SectionEnd
 
-Section "پروکسی IIS روی پورت ۸۰" SecIis
-SectionEnd
-
-Section "قاعدهٔ فایروال ویندوز برای پورت API" SecFirewall
+Section "قاعدهٔ فایروال ویندوز (۱۴۳۳ برای اندروید + پورت پنل)" SecFirewall
 SectionEnd
 
 Section "اتصال مستقیم اندروید به SQL Server (کاربر محدود + پورت ۱۴۳۳)" SecAndroidSql
@@ -264,11 +255,6 @@ Section "-Run"
   IntOp $0 $0 & ${SF_SELECTED}
   ${If} $0 == 0
     StrCpy $1 "$1 -SkipDatabase"
-  ${EndIf}
-  SectionGetFlags ${SecIis} $0
-  IntOp $0 $0 & ${SF_SELECTED}
-  ${If} $0 == 0
-    StrCpy $1 "$1 -SkipIis"
   ${EndIf}
   SectionGetFlags ${SecFirewall} $0
   IntOp $0 $0 & ${SF_SELECTED}
@@ -323,15 +309,14 @@ SectionEnd
 ;  توضیح بخش‌ها (بعد از تعریف بخش‌ها)
 ; ---------------------------------------------------------------------------
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore}       "موتور API، سرویس ویندوز (${TASK_NAME})، فایل‌های پیکربندی و ابزارهای مدیریتی. این بخش اجباری است."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecPrereq}     "نصب خودکار pyodbc و بررسی درایور ODBC مایکروسافت؛ فقط چیزی که روی این کامپیوتر کم باشد نصب می‌شود."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecDb}         "ساخت دیتابیس و جداول داخلی سامانه در SQL Server. کاملاً غیرتلفیقی: هیچ جدول، ستون یا دادهٔ موجودی حذف/تغییر نمی‌شود."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecIis}        "اجرای API روی پورت ۸۰ با پروکسی معکوس IIS، بدون دست‌زدن به سایت‌های موجود. اگر IIS نبود، همان پورت مستقیم استفاده می‌شود."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecFirewall}   "ساخت قاعدهٔ فایروال ویندوز برای پورت API تا برنامهٔ اندروید بتواند وصل شود."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecAndroidSql} "اتصال مستقیم اندروید به SQL Server: ساخت کاربر محدود vizitor_android، دادن گرنت فقط برای اشیای تأییدشدهٔ پروژه و باز کردن پورت ۱۴۳۳ تنها برای شبکهٔ محلی."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore}       "سرویس ویندوز (${TASK_NAME})، پنل مدیریت روی پورت ۹۵۹۵، فایل‌های پیکربندی و ابزارها. (اتصال برنامهٔ اندروید مستقل از این بخش و مستقیم به SQL Server است.)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecPrereq}     "pyodbc و درایور ODBC مایکروسافت — همان چیزهایی که برای گفت‌وگو با SQL Server لازم است؛ فقط در صورت کمبود نصب می‌شوند."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecDb}         "ساخت دیتابیس و جداول داخلی خود سامانه (پنل و فعال‌سازی) — کاملاً غیرتلفیقی؛ دیتابیس حسابداری شما دست‌نخورده می‌ماند."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecFirewall}   "باز کردن پورت ۱۴۳۳ فقط برای شبکهٔ محلی (اتصال مستقیم برنامهٔ اندروید به دیتابیس) و پورت ۹۵۹۵ برای پنل مدیریت."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecAndroidSql} "هستهٔ کار: کاربر محدود vizitor_android (اگر نباشد)، گرنت فقط برای اشیای تأییدشده، کارت اتصال و کد QR، و بررسی سلامت اتصال به دیتابیس حسابداری."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDocs}       "کپی راهنماهای فارسی، گزارش نهایی مهاجرت، اسکریپت‌های بازرسی SQL و ابزارهای بررسی."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecShortcuts}  "ساخت میان‌بر دسکتاپ و منوی استارت (پنل مدیریت، بازرسی و تعمیر، شروع/توقف سرویس، حذف نصب)."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecSelfCheck}  "پس از نصب، API و دیتابیس و فعال‌سازی و لاگین بازرسی می‌شوند و در صورت خطا خودکار تعمیر می‌شود (تا ۴ دور)."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecSelfCheck}  "بازرسی و تعمیر خودکار: دیتابیس سامانه، پنل، فعال‌سازی و در پایان «بررسی سلامت اتصال» دیتابیس حسابداری (تا ۴ دور)."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ---------------------------------------------------------------------------
@@ -367,8 +352,6 @@ Function WriteAnswers
   Delete "$PLUGINSDIR\answers.ini"
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "addr"         "$IpAddr"
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "port"         "$ApiPort"
-  WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "iis"          "$IisProxy"
-  WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "iisreset"     "$IisReset"
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "lanip"        "$IpAddr"
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "apphome"      "$INSTDIR"
   WriteINIStr "$PLUGINSDIR\answers.ini" "db"         "engine"       "sqlserver"
@@ -395,7 +378,7 @@ Function PageServerCreate
     Abort
   ${EndIf}
 
-  !insertmacro MUI_HEADER_TEXT "سرور سامانه و IIS" "آدرس سرور، پورت و تنظیم IIS"
+  !insertmacro MUI_HEADER_TEXT "سرور سامانه" "آدرس سرور و پورت — اتصال اندروید مستقل و مستقیم به دیتابیس است"
 
   nsDialogs::Create 1018
   Pop $PageDialog
@@ -406,7 +389,7 @@ Function PageServerCreate
   ${NSD_CreateLabel} 0 0 100% 9u "سامانه ویزیتور روی پورت پیش‌فرض ۹۵۹۵ اجرا می‌شود. رمزها هرگز نمایش داده نمی‌شوند."
   Pop $0
 
-  ${NSD_CreateGroupBox} 0 10u 100% 72u "سرور و IIS"
+  ${NSD_CreateGroupBox} 0 10u 100% 72u "سرور سامانه (پنل مدیریت روی همین پورت بالا می‌آید)"
   Pop $0
   ${NSD_CreateLabel} 2% 20u 34% 9u "آدرس سرور (IP یا دامنه):"
   Pop $0
@@ -416,15 +399,11 @@ Function PageServerCreate
   Pop $0
   ${NSD_CreateText} 38% 31u 20% 12u "$ApiPort"
   Pop $hPort
-  ${NSD_CreateCheckBox} 2% 44u 96% 10u "اجرای پنل وب از طریق IIS (اختیاری — برای اتصال مستقیم اندروید لازم نیست)"
-  Pop $hIis
-  ${If} $IisProxy == "1"
-    ${NSD_SetState} $hIis ${BST_CHECKED}
-  ${EndIf}
-  ${NSD_CreateCheckBox} 2% 55u 96% 10u "پاک‌سازی کامل تنظیمات موجود IIS و ساخت دوبارهٔ سایت ویزیتور (فقط اگر IIS را تیک بزنید)"
-  Pop $hIisReset
-  ${NSD_SetState} $hIisReset ${BST_CHECKED}
-  ${NSD_CreateLabel} 2% 68u 96% 9u "اتصال برنامهٔ اندروید روی پورت ۱۴۳۳ مستقیم به SQL Server است و به IIS کاری ندارد."
+  ${NSD_CreateLabel} 2% 45u 96% 9u "اتصال برنامهٔ اندروید مستقیم به SQL Server روی پورت ۱۴۳۳ است؛ IIS و API در این مسیر نقشی ندارند."
+  Pop $0
+  ${NSD_CreateLabel} 2% 55u 96% 9u "پنل مدیریت (اختیاری) روی همین پورت با آدرس  .../api/health  باز می‌شود."
+  Pop $0
+  ${NSD_CreateLabel} 2% 66u 96% 9u "قاعدهٔ فایروال این پورت فقط برای شبکهٔ محلی ساخته می‌شود."
   Pop $0
   ${NSD_CreateLabel} 2% 78u 96% 9u "آدرس نهایی سامانه:  $ApiUrlDisplay"
   Pop $hUrlHint
@@ -528,18 +507,6 @@ FunctionEnd
 Function PageServerLeave
   ${NSD_GetText} $hIp $IpAddr
   ${NSD_GetText} $hPort $ApiPort
-  ${NSD_GetState} $hIis $0
-  ${If} $0 == ${BST_CHECKED}
-    StrCpy $IisProxy "1"
-  ${Else}
-    StrCpy $IisProxy "0"
-  ${EndIf}
-  ${NSD_GetState} $hIisReset $0
-  ${If} $0 == ${BST_CHECKED}
-    StrCpy $IisReset "1"
-  ${Else}
-    StrCpy $IisReset "0"
-  ${EndIf}
   ${If} $IpAddr == ""
     MessageBox MB_ICONEXCLAMATION "آدرس سرور (IP یا دامنه) را وارد کنید."
     Abort
@@ -741,8 +708,6 @@ Function .onInit
 
   StrCpy $IpAddr ""
   StrCpy $ApiPort "9595"
-  StrCpy $IisProxy "0"
-  StrCpy $IisDetected "0"
   StrCpy $SqlHost "localhost"
   StrCpy $SqlPort "1433"
   StrCpy $SqlAuth "sql"
@@ -761,7 +726,6 @@ Function .onInit
   StrCpy $FreshClean "0"
   StrCpy $PyExe ""
   StrCpy $DbCount "0"
-  StrCpy $IisReset "1"
   StrCpy $HealthWanted "1"
 
   InitPluginsDir
@@ -778,8 +742,6 @@ Function .onInit
       StrCpy $IpAddr $0
     ${EndIf}
     ReadINIStr $PrevExists "$PLUGINSDIR\pre.ini" "pre" "existing"
-    ReadINIStr $0 "$PLUGINSDIR\pre.ini" "pre" "iis"      ; فقط اطلاع: IIS نصب است یا نه
-    StrCpy $IisDetected "$0"
     ReadINIStr $0 "$PLUGINSDIR\pre.ini" "pre" "python"
     ReadINIStr $1 "$PLUGINSDIR\pre.ini" "pre" "ps"
     ReadINIStr $2 "$PLUGINSDIR\pre.ini" "pre" "sql"
@@ -802,12 +764,7 @@ Function .onInit
     ${If} $3 == ""
       StrCpy $Detected "$Detected  •  درایور ODBC: باید نصب شود"
     ${EndIf}
-    ${If} $IisDetected == "1"
-      StrCpy $Detected "$Detected  •  IIS: نصب است (برای اتصال مستقیم اندروید لازم نیست)"
-    ${Else}
-      StrCpy $Detected "$Detected  •  IIS: نصب نیست (لازم هم نیست)"
-    ${EndIf}
-    StrCpy $Detected "$Detected$\r$\nاتصال اندروید: مستقیم به SQL Server روی پورت 1433 — بدون نیاز به IIS یا API"
+    StrCpy $Detected "$Detected$\r$\nاتصال اندروید: مستقیم به SQL Server روی پورت 1433 — بدون IIS و بدون API"
   preflight_done:
 
   IfSilent skip_prev_check
@@ -853,7 +810,7 @@ Section "Uninstall"
   nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="Vizitor SQL 1433"'
   Pop $0
 
-  DetailPrint "حذف سایت/اپلیکیشن IIS ساختهٔ ویزیتور (فقط اگر همین نصب‌کننده ساخته باشد) ..."
+  ; پاک‌سازی باقی‌ماندهٔ نسخه‌های قبلی که سایت IIS می‌ساختند (فقط اگر دقیقاً همین نام باشد)
   IfFileExists "$SYSDIR\inetsrv\appcmd.exe" 0 no_iis
     nsExec::ExecToLog '"$SYSDIR\inetsrv\appcmd.exe" list site "VizitorAPI" /xml'
     Pop $0
@@ -884,7 +841,6 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\tools"
   RMDir /r "$INSTDIR\docs"
   RMDir /r "$INSTDIR\api"
-  RMDir /r "$INSTDIR\iis"
   Delete "$INSTDIR\run.bat"
   Delete "$INSTDIR\connect.txt"
   Delete "$INSTDIR\vizitor.ico"

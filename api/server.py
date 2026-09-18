@@ -109,52 +109,6 @@ def is_activated(db):
         return False
 
 
-SETUP_FAILURES = {"count": 0, "until": 0.0}
-
-
-def direct_sql_block(cfg, with_password=False):
-    """تنظیمات «اتصال مستقیم اندروید به SQL Server».
-
-    بدون رمز برمی‌گردد مگر with_password=True (که فقط پس از بررسی کد
-    راه‌اندازی صدا زده می‌شود). رمز هرگز لاگ/چاپ نمی‌شود.
-    """
-    ds = (cfg.get("direct_sql") or {})
-    if not ds or not ds.get("enabled"):
-        return None
-    out = {
-        "enabled": True,
-        "mode": "direct_sql",
-        "host": ds.get("host", ""),
-        "port": int(ds.get("port") or 1433),
-        "database": ds.get("database", ""),
-        "login": ds.get("login", ""),
-        "encrypt": ds.get("encrypt", "no"),
-        "trust_server_certificate": bool(ds.get("trust_server_certificate", True)),
-        "application_intent": ds.get("application_intent", "ReadOnly"),
-        "password_required": True,
-        "setup_path": "/api/direct-sql/setup",
-        "token_required": bool(str(ds.get("setup_token") or "").strip()),
-    }
-    if with_password:
-        pw = str(ds.get("password") or "")
-        if not pw:
-            path = str(ds.get("password_file") or "")
-            try:
-                with open(path, encoding="utf-8-sig") as fh:
-                    pw = fh.read().strip()
-            except Exception:
-                pw = ""
-        out["password"] = pw
-        out["password_ready"] = bool(pw)
-        out["connection_string"] = (
-            "jdbc:jtds:sqlserver://%s,%d/%s;user=%s;password=%s"
-            "?useUnicode=true&characterEncoding=UTF-8"
-            % (out["host"], out["port"], out["database"], out["login"], pw)
-            if pw else ""
-        )
-    return out
-
-
 def public_config(cfg):
     db = get_db()
     body = {
@@ -164,14 +118,11 @@ def public_config(cfg):
         "activated": is_activated(db),
         "db_engine": (cfg.get("db") or {}).get("engine", "sqlite"),
         "server_time": time.strftime("%Y-%m-%d %H:%M:%S"),
-        # real-time capability — the Android app reads this for self-configuration
+        # real-time capability of the server panel (the Android app talks to SQL directly)
         "realtime": True,
         "sse_path": "/api/events",
         "features": ["self_config", "sse", "incremental_sync"],
     }
-    dsq = direct_sql_block(cfg, with_password=False)
-    if dsq:
-        body["direct_sql"] = dsq
     return body
 
 
@@ -204,18 +155,10 @@ class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     def log_message(self, fmt, *args):
-        try:
-            line = fmt % args
-        except Exception:
-            line = str(fmt)
-        if "token=" in line:                      # کد راه‌اندازی هرگز لاگ نمی‌شود
-            head, _, tail = line.partition("token=")
-            rest = tail.split(" ", 1)
-            line = head + "token=***" + ((" " + rest[1]) if len(rest) > 1 else "")
-        sys.stderr.write("[%s] %s\n" % (self.log_date_time_string(), line))
+        sys.stderr.write("[%s] %s\n" % (self.log_date_time_string(), fmt % args))
         sys.stderr.flush()
 
-    # ------------------------------------------------------------- helpers
+
     def _send(self, code, obj):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
@@ -304,8 +247,6 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/activate":
                 db = get_db()
                 self._send(200, {"activated": is_activated(db)})
-            elif path == "/api/direct-sql/setup":
-                self._direct_sql_setup()
             elif path == "/api/visitors":
                 self._list_visitors()
             elif path == "/api/visitors/since":
@@ -336,49 +277,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(500, {"error": "internal", "detail": str(exc)})
 
     # ----------------------------------------------------------- endpoints
-    def _direct_sql_setup(self):
-        """تنظیمات کامل اتصال مستقیم (به‌همراه رمز) — فقط با کد راه‌اندازی.
 
-        کد راه‌اندازی در نصب‌کننده ساخته می‌شود و روی کارت اتصال/QR است.
-        اگر در config.json مقدار setup_token خالی باشد و allow_anonymous=true
-        باشد، بدون کد هم پاسخ می‌دهد (فقط برای شبکهٔ محلی و به‌خواست مدیر).
-        """
-        cfg = STATE["cfg"] or {}
-        ds = (cfg.get("direct_sql") or {})
-
-        now = time.time()
-        if SETUP_FAILURES["count"] >= 10 and now < SETUP_FAILURES["until"]:
-            self._send(429, {"ok": False, "error": "too_many_attempts",
-                             "detail": "too many wrong setup codes; wait a minute"})
-            return
-
-        if not ds or not ds.get("enabled"):
-            self._send(404, {"ok": False, "error": "direct_sql_not_enabled"})
-            return
-
-        qs = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
-        given = (qs.get("token", [""])[0] or self.headers.get("X-Vizitor-Token", "")).strip()
-        expected = str(ds.get("setup_token") or "").strip()
-        allow_anon = bool(ds.get("allow_anonymous"))
-
-        if expected:
-            if not given or not hmac.compare_digest(expected, given):
-                SETUP_FAILURES["count"] += 1
-                SETUP_FAILURES["until"] = now + 60
-                time.sleep(0.5)
-                self._send(403, {"ok": False, "error": "bad_setup_code",
-                                 "detail": "setup code is wrong; read it from the connection card"})
-                return
-        elif not allow_anon:
-            self._send(403, {"ok": False, "error": "setup_locked",
-                             "detail": "no setup code is configured; ask the administrator"})
-            return
-
-        block = direct_sql_block(cfg, with_password=True)
-        block["ok"] = True
-        self._send(200, block)
-
-    def _activate(self):
         db = get_db()
         if not db:
             self._send(500, {"ok": False, "error": "db_unavailable", "detail": STATE["db_error"]})

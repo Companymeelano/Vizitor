@@ -33,7 +33,6 @@ param(
     [string]$AppHome = "",            # پوشهٔ نصب (پیش‌فرض C:\Vizitor)
     [switch]$SkipPrerequisites,       # بخش «پیش‌نیازهای پایتون» تیک نخورده
     [switch]$SkipDatabase,            # بخش «دیتابیس سامانه» تیک نخورده
-    [switch]$SkipIis,                 # بخش «پروکسی IIS» تیک نخورده
     [switch]$SkipFirewall,            # بخش «فایروال» تیک نخورده
     [switch]$SkipAndroidPrep,         # بخش «اتصال مستقیم اندروید» تیک نخورده
     [switch]$SkipSelfCheck,           # بخش «بازرسی و تعمیر» تیک نخورده
@@ -62,12 +61,10 @@ $script:ScriptDir  = $PSScriptRoot
 # استفاده می‌شوند. هیچ‌کدام از این مقادیر چاپ نمی‌شوند (رمز SQL هرگز).
 $script:Unattended     = $false
 $script:Ans            = @{}
-$script:AnswerIis      = ""
 $script:ErpDb          = "Meelano"
 $script:AndroidLogin   = "vizitor_android"
 $script:AndroidFirewall = $true
 $script:AndroidOk      = $false
-$script:IisReset       = $true      # پاک‌سازی کامل IIS و ساخت دوباره (پیش‌فرض طبق درخواست)
 $script:HealthWanted   = $true      # تیک «بررسی سلامت اتصال» در نصب‌کننده
 
 function Get-Answer([string]$Key, [string]$Default = "") {
@@ -403,8 +400,6 @@ if (-not $script:PrevDbName)    { $script:PrevDbName    = Get-Answer "db/name" "
 if (-not $script:PrevAdminUser) { $script:PrevAdminUser = Get-Answer "admin/username" "" }
 if (-not $script:PrevAdminPass) { $script:PrevAdminPass = Get-Answer "admin/password" "" }
 if (-not $script:PrevActCode)   { $script:PrevActCode   = Get-Answer "activation/code" "" }
-$script:AnswerIis       = Get-Answer "server/iis" ""
-$script:IisReset        = ((Get-Answer "server/iisreset" "1") -ne "0")
 $script:HealthWanted    = ((Get-Answer "db/health" "1") -ne "0")
 $script:HostLan         = Get-Answer "server/lanip" ""
 $script:HostPublic      = Get-Answer "server/publicip" ""
@@ -539,39 +534,11 @@ if (-not $script:ActCode -and -not $Auto) {
     if ($confirm -eq "خ" -or $confirm -eq "x" -or $confirm -eq "n") { Write-Info "خروج."; exit 0 }
 }
 
-# ---------------------------- IIS: اتصال از طریق IIS ------------------------
-function Test-IisInstalled { $null -ne (Get-Service W3SVC -ErrorAction SilentlyContinue) }
-function Test-UrlRewriteModule { Test-Path "C:\Windows\System32\inetsrv\rewrite\urlrewrite.dll" }
-function Test-ArrModule { Test-Path "C:\Windows\System32\inetsrv\applicationrequestrouting.dll" }
-
-$script:IisProxyMode = $false
+# --- پورت سامانه: API و پنل مستقیماً روی همین پورت گوش می‌دهند (بدون IIS) ---
 $script:InternalPort = $script:Port
-$script:PublicPort = $script:Port
+$script:PublicPort   = $script:Port
 
-if (-not $SkipIis -and $script:Mode -ne "keep" -and (Test-IisInstalled)) {
-    # از نسخهٔ ۱.۱: اتصال اندروید مستقیم است، پس IIS اختیاری است و پیش‌فرض «خیر»
-    $iisAnswer = "خ"
-    if ($script:AnswerIis -eq "1" -or $script:AnswerIis -eq "آ" -or $script:AnswerIis -eq "y") { $iisAnswer = "آ" }
-    elseif ($script:AnswerIis -eq "") {
-        if (-not $Auto -and -not $script:Unattended) {
-            $iisAnswer = Read-Prompt "IIS روی سرور نصب است. اجرای پنل وب از طریق IIS لازم دارید؟ (برای اتصال مستقیم اندروید لازم نیست) [آ/خ]" "خ"
-        }
-    }
-    if ($iisAnswer -eq "آ" -or $iisAnswer -eq "y" -or $iisAnswer -eq "yes" -or [string]::IsNullOrEmpty($iisAnswer)) {
-        $script:IisProxyMode = $true
-        # سایت IIS روی پورت عمومی 9595 می‌نشیند و ترافیک را به API داخلی می‌دهد
-        $script:PublicPort = 9595
-        $candidate = 0
-        foreach ($p in @(9596, 9597, 9598, 9600, 9601)) {
-            if (Test-PortFree $p) { $candidate = $p; break }
-        }
-        if ($candidate -eq 0) { $candidate = 9596 }
-        $script:InternalPort = [int]$candidate
-        Write-Ok "اتصال از طریق IIS: سایت روی پورت عمومی $($script:PublicPort) → API روی پورت داخلی $($script:InternalPort)"
-    }
-}
 
-$script:ApiUrl = "$($script:Proto)://$($script:Addr)"
 if ($script:PublicPort -ne 80 -and $script:PublicPort -ne 443) { $script:ApiUrl = "$script:ApiUrl:$($script:PublicPort)" }
 $script:ApiUrl = "$script:ApiUrl/api"
 
@@ -817,165 +784,12 @@ function Seed-Db {
 
 if ($script:Mode -ne "keep") { Install-VizitorTask }
 
-# ---------------------------- IIS: پروکسی معکوس غیرتلفیقی -------------------
-# ---------------------------------------------------------------------------
-#  پاک‌سازی کامل IIS و ساخت دوباره از صفر روی پورت 9595
-#  ابتدا از تنظیمات فعلی IIS یک پشتیبان XML گرفته می‌شود (قابل برگشت)، بعد
-#  همهٔ سایت‌ها/اپلیکیشن‌ها/استخرها پاک و یک سایت تازهٔ ویزیتور ساخته می‌شود.
-#  اگر این مرحله را نمی‌خواهید، تیک «پاک‌سازی کامل IIS» را در نصب‌کننده بردارید.
-# ---------------------------------------------------------------------------
-function Backup-IisConfiguration {
-    $dir = Join-Path $script:DataDir ("iis-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
-    try {
-        New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        $appcmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
-        if (Test-Path $appcmd) {
-            foreach ($what in @("site", "app", "apppool", "vdir", "config")) {
-                try {
-                    $out = & $appcmd list $what /xml 2>&1 | Out-String
-                    Set-Content -Path (Join-Path $dir "$what.xml") -Value $out -Encoding UTF8
-                } catch {}
-            }
-        }
-        # پشتیبان رسمی خود IIS (اگر ممکن باشد)
-        try { & $appcmd add backup "vizitor-before-install" 2>&1 | Out-Null } catch {}
-        Write-Ok "پشتیبان تنظیمات فعلی IIS گرفته شد: $dir"
-        return $dir
-    } catch {
-        Write-Warn "گرفتن پشتیبان IIS ممکن نشد: $($_.Exception.Message)"
-        return ""
-    }
-}
+# ---------------------------- گام ۶: فایروال ----------------------------------
 
-function Reset-IisForVizitor {
-    $appcmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
-    if (-not (Test-Path $appcmd)) { Write-Warn "appcmd پیدا نشد؛ پاک‌سازی IIS انجام نشد"; return $false }
-
-    $backup = Backup-IisConfiguration
-
-    Write-Info "پاک‌سازی کامل تنظیمات IIS (همهٔ سایت‌ها، اپلیکیشن‌ها و استخرها) ..."
-    # 1) سایت‌ها
-    try {
-        $sites = @(& $appcmd list sites 2>$null | ForEach-Object { ($_ -split '"')[1] } | Where-Object { $_ })
-        foreach ($name in $sites) {
-            & $appcmd delete site "$name" 2>&1 | Out-Null
-            Write-Info "   سایت حذف شد: $name"
-        }
-    } catch { Write-Warn "حذف سایت‌ها ناقص ماند: $($_.Exception.Message)" }
-
-    # 2) استخرهای برنامه (به‌جز آن‌هایی که سیستم به آن‌ها وابسته است)
-    try {
-        $pools = @(& $appcmd list apppools 2>$null | ForEach-Object { ($_ -split '"')[1] } | Where-Object { $_ })
-        foreach ($name in $pools) {
-            if ($name -eq "DefaultAppPool") { continue }
-            & $appcmd delete apppool "$name" 2>&1 | Out-Null
-            Write-Info "   استخر برنامه حذف شد: $name"
-        }
-    } catch { Write-Warn "حذف استخرها ناقص ماند: $($_.Exception.Message)" }
-
-    # 3) بایندینگ‌های باقی‌مانده روی پورت‌های قبلی پاک می‌شوند چون سایت‌ها حذف شدند
-    Write-Ok "IIS خالی شد؛ از این پس فقط سایت ویزیتور روی پورت $($script:PublicPort) وجود دارد"
-    if ($backup) { Write-Info "در صورت نیاز، بازگردانی از پشتیبان: $backup" }
-    return $true
-}
-
-function New-IisProxy {
-    # فقط شیء جدید می‌سازد (سایت VizitorAPI یا اپ /api)؛ هیچ سایت/آپلیکیشن موجودی را لمس نمی‌کند
-    if (Get-Module -Name WebAdministration -ErrorAction SilentlyContinue) {} else {
-        try { Import-Module WebAdministration -ErrorAction Stop } catch {
-            Write-Warn "ماژول WebAdministration در دسترس نیست؛ نمی‌توانم پروکسی IIS را خودکار بسازم"
-            return $false
-        }
-    }
-    if (-not (Test-UrlRewriteModule) -or -not (Test-ArrModule)) {
-        Write-Info "ماژول‌های URL Rewrite/ARR یافت نشد؛ تلاش برای نصب با winget ..."
-        $winget = Get-Command winget -ErrorAction SilentlyContinue
-        if ($winget) {
-            try { & winget install -e --id Microsoft.UrlRewrite --accept-source-agreements --accept-package-agreements 2>$null | Out-Null } catch {}
-            try { & winget install -e --id Microsoft.ARR30 --accept-source-agreements --accept-package-agreements 2>$null | Out-Null } catch {}
-        }
-        if (-not (Test-UrlRewriteModule)) { Write-Warn "URL Rewrite نصب نشد — دستی: https://www.iis.net/downloads/microsoft/url-rewrite" }
-        if (-not (Test-ArrModule)) { Write-Warn "ARR نصب نشد — دستی: https://www.iis.net/downloads/microsoft/application-request-routing" }
-        if (-not (Test-UrlRewriteModule) -or -not (Test-ArrModule)) {
-            Write-Warn "پروکسی IIS ساخته نشد؛ اتصال مستقیم به پورت $($script:InternalPort) فعال است (برنامه اندروید با همان آدرس کار می‌کند)"
-            $script:IisProxyMode = $false
-            return $false
-        }
-    }
-    try {
-        if ((Get-Service W3SVC).Status -ne "Running") { Start-Service W3SVC; Start-Sleep -Seconds 2 }
-    } catch { Write-Warn "شروع سرویس IIS ناموفق بود" }
-    $iisWebDir = Join-Path $script:AppHome "iis"
-    New-Item -ItemType Directory -Force -Path $iisWebDir | Out-Null
-    $target = "http://127.0.0.1:$($script:InternalPort)/{R:1}"
-    $webCfg = @"
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-  <system.webServer>
-    <proxy enabled="true" reverseRewriteHostHeader="true" />
-    <urlRewrite>
-      <inboundRules>
-        <rule name="VizitorProxy" patternSyntax="Explicit" stopProcessing="true">
-          <match url="(.*)" />
-          <action type="Rewrite" url="$target" />
-        </rule>
-      </inboundRules>
-    </urlRewrite>
-  </system.webServer>
-</configuration>
-"@
-    Set-Content -Path (Join-Path $iisWebDir "web.config") -Value $webCfg -Encoding UTF8
-
-    # --- ساخت سایت تازه روی پورت 9595 (پورت پیش‌فرض سامانه) ---------------
-    $siteName = "Vizitor"
-    $poolName = "VizitorPool"
-    try {
-        if (-not (Get-AppPool -Name $poolName -ErrorAction SilentlyContinue)) {
-            New-WebAppPool -Name $poolName -ErrorAction Stop | Out-Null
-            try { Set-ItemProperty "IIS:\AppPools\$poolName" -Name managedRuntimeVersion -Value "" } catch {}
-            try { Set-ItemProperty "IIS:\AppPools\$poolName" -Name startMode -Value "AlwaysRunning" } catch {}
-            Write-Ok "استخر برنامه ساخته شد: $poolName (No Managed Code)"
-        }
-    } catch { Write-Warn "ساخت استخر برنامه ناموفق بود: $($_.Exception.Message)" }
-
-    $bound = $false
-    try {
-        if (Get-Website -Name $siteName -ErrorAction SilentlyContinue) {
-            Set-ItemProperty "IIS:\Sites\$siteName" -Name physicalPath -Value $iisWebDir -ErrorAction SilentlyContinue
-            try { Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $poolName } catch {}
-            if (-not (Get-WebBinding -Name $siteName -Protocol http -Port $script:PublicPort -ErrorAction SilentlyContinue)) {
-                New-WebBinding -Name $siteName -Protocol http -Port $script:PublicPort -IPAddress "*" | Out-Null
-            }
-            $bound = $true
-        } else {
-            New-Website -Name $siteName -Port $script:PublicPort -PhysicalPath $iisWebDir -ApplicationPool $poolName -HostHeader "" -ErrorAction Stop | Out-Null
-            $bound = $true
-        }
-        if ($bound) {
-            try { Start-Website -Name $siteName -ErrorAction SilentlyContinue | Out-Null } catch {}
-            Write-Ok "سایت IIS آماده است: $siteName روی پورت $($script:PublicPort) (استخر: $poolName)"
-        }
-    } catch {
-        Write-Warn "ساخت سایت $siteName روی پورت $($script:PublicPort) ممکن نشد: $($_.Exception.Message)"
-    }
-    return $bound
-}
-
-if ($script:IisProxyMode -and (Test-IisInstalled) -and -not $SkipIis) {
-    if ($script:IisReset) {
-        Write-Info "طبق انتخاب شما، IIS کاملاً پاک و از نو ساخته می‌شود ..."
-        Reset-IisForVizitor | Out-Null
-    }
-    New-IisProxy | Out-Null
-}
-
-# ---------------------------- گام ۶: فایروال ------------------------------
 Write-Step "بررسی فایروال ویندوز"
 if ($SkipFirewall) {
     Write-Info "بخش «قاعدهٔ فایروال» تیک نخورده بود؛ این مرحله رد شد."
     Write-Info "دستی:  New-NetFirewallRule -DisplayName 'Vizitor API' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:PublicPort"
-} elseif ($script:IisProxyMode) {
-    Write-Info "در حالت IIS، پورت 80 توسط خود IIS باز است؛ قانون جداگانه لازم نیست"
 } else {
     try {
         if (-not (Get-NetFirewallRule -DisplayName "Vizitor API" -ErrorAction SilentlyContinue)) {
@@ -1131,19 +945,8 @@ if ($script:Mode -eq "keep") {
     }
     $script:Proto = "http"
     if ($script:ApiUrl -match '^https://') { $script:Proto = "https" }
-    # تشخیص حالت IIS در نصب موجود: آدرس عمومی پورت 80 است ولی سرویس روی پورت دیگر listen می‌کند
     $script:InternalPort = $script:Port
     $script:PublicPort = $script:Port
-    $script:IisProxyMode = $false
-    if (Test-IisInstalled) {
-        $urlPort = 80
-        if ($script:ApiUrl -match '^[a-z]+://[^:/]+:([0-9]+)') { $urlPort = [int]$Matches[1] }
-        if ($urlPort -eq 80 -and $script:Port -ne 80) {
-            $script:IisProxyMode = $true
-            $script:PublicPort = 80
-            Write-Info "نصب موجود در حالت اتصال از طریق IIS شناسایی شد"
-        }
-    }
 }
 
 # اگر sqlserver انتخاب شد، دیتابیس به‌صورت غیرتلفیقی آماده شود
@@ -1214,16 +1017,7 @@ function Run-Checks {
     $r = Invoke-JsonPost "$base/api/login" $body
     if ($null -eq $r -or $r -notmatch '"ok": *true') { $script:CheckFailures += "login" }
 
-    # ۷) در حالت IIS: مرور از طریق خود IIS (پورت 80)
-    if ($script:IisProxyMode) {
-        if (Invoke-JsonGet "http://127.0.0.1:80/api/ping") {
-            Write-Ok "مرور از طریق IIS (پورت 80) به درستی کار می‌کند"
-        } else {
-            $script:CheckFailures += "iis"
-        }
-    }
-
-    # ۸) قابل‌دستی‌بودن از بیرون (فقط هشدار)
+ از بیرون (فقط هشدار)
     if ($script:PublicIp -and $script:PublicIp -ne $script:LocalIp) {
         $ext = "$($script:Proto)://$($script:Addr)"
         if ($script:Port -ne 80 -and $script:Port -ne 443) { $ext = "$ext:$($script:Port)" }
@@ -1243,34 +1037,16 @@ function Repair {
                 Restart-VizitorService
                 Start-Sleep -Seconds 3
                 if (-not (Test-PortUp $script:InternalPort)) {
-                    if ($script:IisProxyMode) {
-                        # در حالت IIS، پورت عمومی ثابت 80 است؛ فقط پورت داخلی جابه‌جا می‌شود
-                        Write-Info "پورت داخلی $($script:InternalPort) درگیر است؛ به‌صورت هوشمند پورت جایگزین انتخاب می‌شود"
-                        foreach ($tryPort in @(8090, 8180, 8280, 8081, 8082)) {
-                            if (Test-PortFree $tryPort) {
-                                $script:InternalPort = $tryPort
-                                New-IisProxy | Out-Null
-                                Write-ConfigJson | Out-Null
-                                Restart-VizitorService
-                                Start-Sleep -Seconds 3
-                                break
-                            }
-                        }
-                    }
-                    else {
-                        foreach ($tryPort in @(8090, 8180, 8280, 8081, 8082)) {
-                            if (Test-PortFree $tryPort) {
-                                Write-Info "پورت $($script:PublicPort) درگیر است؛ به‌صورت هوشمند پورت $tryPort انتخاب می‌شود"
-                                $script:InternalPort = $tryPort
-                                $script:PublicPort = $tryPort
-                                $script:ApiUrl = "$($script:Proto)://$($script:Addr)"
-                                if ($script:PublicPort -ne 80 -and $script:PublicPort -ne 443) { $script:ApiUrl = "$script:ApiUrl:$($script:PublicPort)" }
-                                $script:ApiUrl = "$script:ApiUrl/api"
-                                Write-ConfigJson | Out-Null
-                                Restart-VizitorService
-                                Start-Sleep -Seconds 3
-                                break
-                            }
+                    foreach ($tryPort in @(9597, 9598, 9600, 9601, 9602)) {
+                        if (Test-PortFree $tryPort) {
+                            Write-Info "پورت $($script:PublicPort) درگیر است؛ پورت $tryPort انتخاب می‌شود"
+                            $script:InternalPort = $tryPort
+                            $script:PublicPort = $tryPort
+                            $script:ApiUrl = "$($script:Proto)://$($script:Addr):$($script:PublicPort)/api"
+                            Write-ConfigJson | Out-Null
+                            Restart-VizitorService
+                            Start-Sleep -Seconds 3
+                            break
                         }
                     }
                 }
@@ -1292,12 +1068,6 @@ function Repair {
                 Seed-Db
                 Restart-VizitorService
                 Start-Sleep -Seconds 3
-                break
-            }
-            'iis' {
-                Write-Info "تعمیر: بازنویسی پیکربندی پروکسی IIS و راه‌اندازی مجدد W3SVC ..."
-                New-IisProxy | Out-Null
-                Start-Sleep -Seconds 2
                 break
             }
             'activation|login' {
@@ -1423,14 +1193,11 @@ if ($verifyOk) {
 }
 
 Write-Hr
-Write-Host "  آدرس API برای برنامه اندروید:"
-Write-Host "     $script:ApiUrl" -ForegroundColor Green
-Write-Host "  آدرس دریافت خودکار تنظیمات (برای اپ):"
-Write-Host "     $($script:ApiUrl -replace '/api$', '/api/config')" -ForegroundColor Cyan
+Write-Host "  اتصال برنامهٔ اندروید: مستقیم به SQL Server روی پورت 1433 (بدون IIS و بدون API)"
+Write-Host "     سرور: $script:Addr   |   دیتابیس حسابداری: $script:ErpDb   |   کاربر: $script:AndroidLogin" -ForegroundColor Green
+Write-Host "  پنل مدیریت و وضعیت سامانه (اختیاری):"
+Write-Host "     $($script:ApiUrl -replace '/api$', '/api/health')" -ForegroundColor Cyan
 Write-Hr
-if ($script:IisProxyMode) {
-    Write-Host "  اتصال        : از طریق IIS (پروکسی معکوس، پورت عمومی 80 → پورت داخلی $($script:InternalPort))"
-}
 if ($script:DbEngine -eq "sqlserver") {
     Write-Host "  دیتابیس      : sqlserver  ($($script:DbName) @ $($script:DbHost):$($script:DbDPort) ، احراز: $($script:DbAuth) ، کاربر: $($script:DbUser))"
 } else {
