@@ -104,28 +104,53 @@ def sql_files(text: str):
         r"(?:SELECT|INSERT|UPDATE|DELETE)[^;]*?(?:;|\n\s*GO\b)", text, flags=re.S | re.I)]
 
 
+NOT_ALIAS = ("ON", "WHERE", "ORDER", "GROUP", "HAVING", "INNER", "LEFT", "RIGHT",
+             "FULL", "CROSS", "JOIN", "WITH", "AS", "SET", "VALUES")
+
+
 def alias_map(sql: str):
-    """alias/table -> real table name, from FROM/JOIN clauses."""
+    """alias/table -> real table name, from FROM/JOIN clauses and DML targets.
+
+    The DML targets matter: an app INSERT names its columns in a bare list
+    (`INSERT INTO dbo.subsailtemp_pish (mod, shfacfo, ...) VALUES (...)`), and
+    those names are exactly the ones that must never be guessed - so the table
+    of an INSERT / UPDATE / DELETE is mapped too, and its columns are validated.
+    """
     amap = {}
-    for m in re.finditer(
-            r"\b(?:FROM|JOIN)\s+((?:\[?\w+\]?\.)?\[?\w+\]?)(?:\s+(?:AS\s+)?(\w+))?", sql, flags=re.I):
-        raw, alias = m.group(1), m.group(2)
+
+    def add(raw: str, alias=None):
         table = raw.replace("[", "").replace("]", "")
         key = table.lower()
         if key.split(".")[0] in SYSTEM_SCHEMAS:
             amap[table.lower()] = key          # counted, but never column-validated
-            if alias and alias.upper() not in ("ON", "WHERE", "ORDER", "GROUP", "HAVING", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "JOIN", "WITH", "AS"):
+            if alias and alias.upper() not in NOT_ALIAS:
                 amap[alias.lower()] = key
-            continue
-        if key not in SCHEMA and f"dbo.{key}" in SCHEMA:
-            key = f"dbo.{key}"
+            return
         if key not in SCHEMA:
-            continue
+            # accept both spellings: the schema file may hold "dbo.sailfact_pish"
+            # while the SQL says "sailfact_pish", or the other way round.
+            short_key = key.split(".")[-1]
+            if short_key in SCHEMA:
+                key = short_key
+            elif f"dbo.{short_key}" in SCHEMA:
+                key = f"dbo.{short_key}"
+            else:
+                return
         amap[table.lower()] = key
         short = key.split(".")[-1]                    # also accept "inventory.col"
         amap.setdefault(short, key)
-        if alias and alias.upper() not in ("ON", "WHERE", "ORDER", "GROUP", "HAVING", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "JOIN", "WITH", "AS"):
+        if alias and alias.upper() not in NOT_ALIAS:
             amap[alias.lower()] = key
+
+    for m in re.finditer(
+            r"\b(?:FROM|JOIN)\s+((?:\[?\w+\]?\.)?\[?\w+\]?)(?:\s+(?:AS\s+)?(\w+))?", sql, flags=re.I):
+        add(m.group(1), m.group(2))
+
+    for m in re.finditer(
+            r"\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+((?:\[?\w+\]?\.)?\[?\w+\]?)",
+            sql, flags=re.I):
+        add(m.group(1))
+
     return amap
 
 
@@ -196,8 +221,12 @@ def check_statement(sql: str, amap: dict):
     # output aliases are not columns - both spellings are used in these scripts:
     #   SELECT name AS alias  and  SELECT alias = expression
     output_aliases = {m.group(1).lower() for m in re.finditer(r"\bAS\s+(\w+)", sql, flags=re.I)}
-    output_aliases |= {m.group(1).lower() for m in re.finditer(
-        r"(?:\bSELECT\b|,)\s*(\w+)\s*=", sql, flags=re.I)}
+    # `SELECT x = ...` and the comma-list after it are aliases - but the same shape
+    # appears in `UPDATE t SET a = 1, b = 2`, where the names ARE columns. Gating
+    # this on SELECT is what makes the guard catch a typo in an UPDATE.
+    if re.search(r"\bSELECT\b", sql, flags=re.I):
+        output_aliases |= {m.group(1).lower() for m in re.finditer(
+            r"(?:\bSELECT\b|,)\s*(\w+)\s*=", sql, flags=re.I)}
     # Kotlin string interpolation names inside the SQL text
     interpolation = {m.group(1).lower() for m in re.finditer(r"\$\{?(\w+)", sql)}
 
@@ -320,11 +349,44 @@ def check(path: pathlib.Path):
     return True
 
 
+
+def selftest():
+    """Prove the guard catches a guessed column in an INSERT/UPDATE, not only SELECT.
+
+    Real motivation: the app's write path is INSERT into dbo.subsailtemp_pish and
+    UPDATE dbo.sailfact_pish; before this, alias_map only saw FROM/JOIN, so those
+    two statements were silently skipped and their column names unchecked.
+    """
+    good_insert = "INSERT INTO dbo.subsailtemp_pish (mod, shfacfo, rdf__, rdf, linesum, active) VALUES (1, ?, ?, ?, ?, ?)"
+    bad_insert = "INSERT INTO dbo.subsailtemp_pish (mod, shfacfo, rdf__, rdf, linesum, aktiv) VALUES (1, ?, ?, ?, ?, ?)"
+    bad_update = "UPDATE dbo.sailfact_pish SET active = 'f', ismodofy = 't' WHERE shfacfo = ?"
+    good_update = "UPDATE dbo.sailfact_pish SET active = 'f', ismodify = 't' WHERE shfacfo = ? AND active = 't'"
+    cases = [
+        ("INSERT with real columns", good_insert, True),
+        ("INSERT with a guessed column", bad_insert, False),
+        ("UPDATE with a guessed column", bad_update, False),
+        ("UPDATE with real columns", good_update, True),
+    ]
+    failed = 0
+    for name, sql, expect_ok in cases:
+        amap = alias_map(sql)
+        problems = check_statement(sql, amap)
+        ok = not problems
+        mark = "ok" if ok == expect_ok else "WRONG"
+        print(f"  [{mark}] {name}: {'clean' if ok else problems[0]}")
+        if ok != expect_ok:
+            failed += 1
+    print("SELFTEST:", "PASSED" if failed == 0 else f"{failed} case(s) wrong")
+    return failed == 0
+
+
 SCHEMA = load_schema()
 VALUES = load_values()
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if args and args[0] == "--selftest":
+        sys.exit(0 if selftest() else 1)
     files = [pathlib.Path(a) for a in args] if args else \
         sorted(list(ROOT.glob("*.kt")) + list(ROOT.glob("*.sql")))
     print(f"schema: {len(SCHEMA)} tables, {sum(len(v) for v in SCHEMA.values())} columns, "

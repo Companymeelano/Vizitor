@@ -357,3 +357,24 @@ implementation("com.microsoft.sqlserver:mssql-jdbc:12.4.2.jre8")
 -keep class com.microsoft.sqlserver.jdbc.** { *; }
 -keepclassmembers class com.microsoft.sqlserver.jdbc.** { *; }
 ```
+
+## بخش ۸ — مسیر نوشتن پیش‌فاکتور پیاده شد (2026-09-18)
+
+* `MeelanoDataSource.kt` حالا **نوشتن** هم دارد، دقیقاً با همان مسیری که خودِ ERP می‌رود:
+  1. `{call dbo.add_sail_pish(...)}` با ۲۶ پارامتر موضعی → `@id_en` = شمارهٔ پیش‌فاکتور؛
+  2. برای هر قلم یک `INSERT INTO dbo.subsailtemp_pish (...)` با `mod = 1` → تریگر
+     `trig_sst_pish` خودش سطر را در `dbo.subsailfact_pish` می‌نویسد و `rdf__` سربرگِ زنده
+     را روی آن می‌گذارد؛
+  3. تأیید با `preInvoiceLines()` که با جوین درست `(shfacfo, rdf__)` می‌خواند.
+* `preInvoiceHealth()` **پیش از هر نوشتن** وجود اشیا و همان ۲۵ ستونِ جدول میانی را چک
+  می‌کند؛ اگر دیتابیس نسخهٔ دیگری از ERP باشد، نام دقیقِ چیزِ غایب را می‌گوید (بدون حدس).
+* `retirePreInvoice()` هم هست (همان `active='f'`, `ismodify='t'` که `Edit_sail_pish` با
+  نسخهٔ قبلی می‌کند) ولی **تا تأیید کارفرما در مسیر خودکار استفاده نمی‌شود**.
+* تحلیل کامل: `docs/write-path/IMPLEMENTATION-pre-invoice.md` · گزارش نهایی ۱۴بندی:
+  `docs/FINAL-REPORT.md`.
+* ابزار `check_sql_columns.py` دو باگ واقعی گرفت و رفع کرد: (۱) `INSERT`/`UPDATE` هیچ‌وقت
+  اعتبارسنجی نمی‌شدند (فقط `FROM/JOIN` دیده می‌شد) — حالا هدفِ DML هم نگاشت می‌شود؛
+  (۲) الگوی «نام‌های بعد از کاما = alias» روی `UPDATE ... SET a=1, b=2` هم اعمال می‌شد و
+  ستونِ غلط را از چشم ابزار پنهان می‌کرد — حالا فقط برای `SELECT` فعال است. هر دو در
+  `--selftest` تست دارند.
+
