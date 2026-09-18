@@ -108,3 +108,30 @@ SELECT ORD = c.column_id,
  WHERE c.object_id = OBJECT_ID('dbo.subsailfact_pish')
  ORDER BY c.column_id;
 GO
+
+/* 6) every database of THIS instance that keeps a sal_mali table ------------
+   the real question is answered here: which database does the ERP itself treat
+   as the fiscal database - the one whose sal_mali row has [Current] = 1.
+   Read-only. A database without sal_mali is skipped, never an error.         */
+DECLARE @dbs TABLE (rn INT IDENTITY(1,1) PRIMARY KEY, dbname SYSNAME);
+INSERT INTO @dbs (dbname)
+SELECT name FROM sys.databases WHERE database_id > 4 AND state_desc = 'ONLINE' ORDER BY name;
+
+DECLARE @i INT = 1, @n INT, @db SYSNAME, @q NVARCHAR(MAX);
+SELECT @n = COUNT(*) FROM @dbs;
+WHILE @i <= @n
+BEGIN
+    SELECT @db = dbname FROM @dbs WHERE rn = @i;
+    SET @q = N'IF EXISTS (SELECT 1 FROM ' + QUOTENAME(@db) + N'.sys.tables WHERE name = N''sal_mali'') '
+           + N'SELECT ''SALMALI|'' + ' + QUOTENAME(@db, '''') + N' AS DB_, rdf, name, nam_db, '
+           + N'       StartDate, EndDate, [Current] '
+           + N'FROM ' + QUOTENAME(@db) + N'.dbo.sal_mali ORDER BY rdf;';
+    BEGIN TRY
+        EXEC sp_executesql @q;
+    END TRY
+    BEGIN CATCH
+        SELECT DB_ = N'SALMALI|' + @db, ERR = ERROR_MESSAGE();
+    END CATCH
+    SET @i = @i + 1;
+END
+GO
