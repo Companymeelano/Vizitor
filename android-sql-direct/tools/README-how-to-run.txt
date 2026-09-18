@@ -75,3 +75,39 @@
     ۴) بعد همان فایل را با دیتابیس  Atiran14050603  انتخاب‌شده هم اجرا کن و بفرست.
     ستون  last_write  نشان می‌دهد آخرین بار چه زمانی در آن دیتابیس نوشته شده؛
     دیتابیس زنده تاریخ امروز را دارد.
+
+راه ۶ (مستقیم در SSMS — بدون فایل، بدون حلقه؛ فقط کپی کن و F5)
+    هر دستور را در یک پنجرهٔ جدید SSMS بچسبان. دیتابیس انتخاب‌شده در نوار بالا مهم است.
+
+    الف) فهرست و طول متن پروسیجرها/ویویی که هنوز لازم است (خروجی کوچک، اول این را بفرست):
+        SELECT o.name, o.type_desc, LEN(m.definition) AS chars
+        FROM sys.sql_modules AS m
+        JOIN sys.objects AS o ON o.object_id = m.object_id
+        WHERE o.name IN ('Edit_sail_pish','AddFromAtiranDetailsForVisitors',
+                         'SelectPriceAndTedvahForushVisitorhaByDate','FixManCustomer',
+                         'UpdateMojodiInventory','UpdateMojodiInventoryAnbars',
+                         'UpdateMojodiInventoryAnbarsPS','VW_InventoryAnbars')
+        ORDER BY o.name;
+
+    ب) متن کامل همان پروسیجرها/ویو (همان WHERE را نگه دار، فقط ستون‌ها را عوض کن):
+        SELECT o.name, m.definition
+        FROM sys.sql_modules AS m
+        JOIN sys.objects AS o ON o.object_id = m.object_id
+        WHERE o.name IN ('Edit_sail_pish','AddFromAtiranDetailsForVisitors',
+                         'SelectPriceAndTedvahForushVisitorhaByDate','FixManCustomer',
+                         'UpdateMojodiInventory','UpdateMojodiInventoryAnbars',
+                         'UpdateMojodiInventoryAnbarsPS','VW_InventoryAnbars')
+        ORDER BY o.name;
+        برای کپی یک خانه: روی خانه کلیک کن، Ctrl+A، Ctrl+C
+        برای متن‌های بزرگ: Query -> Results To -> Results to File و بعد F5
+
+    پ) کدام دیتابیس زنده است؟ (بدون فایل)
+        SELECT d.name AS db, MAX(s.last_user_update) AS last_write
+        FROM sys.databases AS d
+        LEFT JOIN sys.dm_db_index_usage_stats AS s ON s.database_id = d.database_id
+        WHERE d.database_id > 4
+        GROUP BY d.name
+        ORDER BY last_write DESC;
+
+        و سال مالی جاری: یک بار با Meelano انتخاب‌شده و یک بار با Atiran14050603:
+        SELECT DB_NAME() AS db, rdf, name, nam_db, [Current] FROM dbo.sal_mali;
