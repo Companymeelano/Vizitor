@@ -7,6 +7,10 @@ docs/schema/meelano-columns.tsv, which was extracted from the live server audit
 output. Any column that does not exist on the real database is reported - so a
 typo or an invented column can never reach the app.
 
+NOTE: this is a PYTHON tool. Never open it and never run it inside SSMS - T-SQL
+would answer with "Msg 137 @echo", "Msg 911 Database 'REM' does not exist" and
+a wall of syntax errors. In SSMS you only ever run the .sql files in sql/.
+
 Usage:
     python3 check_sql_columns.py                 # scans ../*.kt and ../*.sql
     python3 check_sql_columns.py file1 file2 ...  # scans specific files
@@ -131,11 +135,41 @@ SQL_FUNCTIONS = {
     "rtrim", "replace", "abs", "floor", "ceiling", "datediff", "dateadd", "convert",
     "row_number", "rank", "dense_rank", "string_agg", "concat", "iif", "try_cast",
     "try_convert", "format", "object_id", "schema_name", "scope_identity", "error_message",
+    "datalength", "len", "isnumeric", "quotename", "replicate", "space", "translate",
+    "string_split", "rowcount_big", "checksum", "hashbytes", "newid", "suser_sname",
+    "user_name", "suser_sid", "is_srvrolemember", "has_perms_by_name", "sysdatetime",
+    "getutcdate", "datepart", "datename", "eomonth", "choose", "parse", "trim",
 }
 
 
 def _ci(columns):
     return {c.lower(): c for c in columns}
+
+
+def strip_literals(sql: str) -> str:
+    """Replace every string literal - with or without the N prefix - by a space.
+
+    The old regex `'[^']*'` left the N of N'...' behind, and that stray N was
+    then reported as 'unknown unqualified column N'."""
+    out, i, n = [], 0, len(sql)
+    while i < n:
+        c = sql[i]
+        if c == "'" or (c in "Nn" and sql[i + 1:i + 2] == "'"):
+            j = i + 2 if c != "'" else i + 1
+            while j < n:
+                if sql[j] == "'":
+                    if sql[j + 1:j + 2] == "'":
+                        j += 2
+                        continue
+                    j += 1
+                    break
+                j += 1
+            out.append(" ")
+            i = j
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
 
 
 def check_statement(sql: str, amap: dict):
@@ -165,7 +199,7 @@ def check_statement(sql: str, amap: dict):
 
     # unqualified names, only when exactly one table is involved
     if single:
-        body = re.sub(r"'[^']*'", " ", sql)
+        body = strip_literals(sql)
         body = re.sub(r"@\w+", " ", body)
         body = re.sub(r"[+\-*/=<>(),;]", " ", body)
         for token in re.findall(r"\b([A-Za-z_]\w*)\b", body):
@@ -189,8 +223,40 @@ def check_statement(sql: str, amap: dict):
 
 
 def strip_sql_comments(sql: str) -> str:
-    sql = re.sub(r"/\*.*?\*/", " ", sql, flags=re.S)
-    return re.sub(r"--[^\n]*", " ", sql)
+    """Remove comments, but never inside a string literal.
+
+    Real case: a print line containing '=== sections reported ===' is fine, but
+    the same line built with '---' separators made a plain regex eat the rest of
+    the line and report a phantom column named 'N'."""
+    out, i, n = [], 0, len(sql)
+    while i < n:
+        c = sql[i]
+        if c == "'" or (c in "Nn" and sql[i + 1:i + 2] == "'"):
+            j = i + 2 if c != "'" else i + 1
+            while j < n:
+                if sql[j] == "'":
+                    if sql[j + 1:j + 2] == "'":
+                        j += 2
+                        continue
+                    j += 1
+                    break
+                j += 1
+            out.append(sql[i:j])
+            i = j
+        elif sql.startswith("/*", i):
+            j = sql.find("*/", i + 2)
+            j = n if j == -1 else j + 2
+            out.append("".join(ch if ch == "\n" else " " for ch in sql[i:j]))
+            i = j
+        elif sql.startswith("--", i):
+            j = sql.find("\n", i)
+            j = n if j == -1 else j
+            out.append(" " * (j - i))
+            i = j
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
 
 
 def check(path: pathlib.Path):

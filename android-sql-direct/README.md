@@ -15,6 +15,23 @@
 | `SqlConnectionManager.kt` | فاز ۲: pool + validation + retry + transaction + StateFlow + پیام فارسی خطا |
 | `SecureDbStore.kt` | فاز ۲: ذخیرهٔ امن اطلاعات اتصال (AES-GCM + Android Keystore) |
 
+## ⚠️ چه فایلی را کجا اجرا کنیم (این اشتباه یک‌بار اتفاق افتاده است)
+
+| فایل | کجا اجرا می‌شود | کجا هرگز |
+|---|---|---|
+| `sql/00` … `sql/07` (`*.sql`) | فقط در **SSMS** روی سرور — کل فایل: `Ctrl+A` بعد `F5` | — |
+| `tools/run_audit.bat` | فقط در **ویندوز سرور**: راست‌کلیک → «Run as administrator» | در SSMS باز/اجرا **نشود** |
+| `tools/verify_tsql.py` و `tools/check_sql_columns.py` | فقط با **پایتون** (روی کامپیوتر توسعه): `python3 tools/verify_tsql.py` | در SSMS باز/اجرا **نشود** |
+| `patches/*.patch`، `*.kt`، `*.md`، `*.tsv` | ویرایشگر / گیت / Android Studio | در SSMS باز **نشوند** |
+
+اگر فایل پایتون یا batch در SSMS اجرا شود، تب Messages دقیقاً این‌ها را نشان می‌دهد
+(هیچ‌کدام خطای دیتابیس نیست):
+`Msg 137 Must declare the scalar variable "@echo"` /
+`Msg 911 Database 'REM' does not exist` /
+`Msg 102 Incorrect syntax near '!'` /
+`Msg 103 The identifier that starts with ... is too long. Maximum length is 128`.
+یعنی «کدِ پایتون/دستورِ ویندوز دارد به‌عنوان SQL اجرا می‌شود».
+
 ## تاریخچهٔ `sql/00_audit_atiran2.sql`
 * **v1** → روی سرور خطا داد: `Msg 102, Level 15, State 1, Line 142 — Incorrect syntax near '@pwSql'.`
   علت: کل فایل یک batch واحد بود (بدون `GO`) و همان یک دستور `EXEC sp_executesql STUFF(...)`
@@ -176,6 +193,24 @@ WHERE user_name = ? AND CONVERT(varchar(50), user_password) = ? AND active = 1
 * `sql/07_login_verify.sql` **جدید**: شرط ورود اپ را با رمز واقعی تست می‌کند (فقط
   MATCH/NO MATCH چاپ می‌شود؛ هیچ رمزی چاپ نمی‌شود)، رد شدن رمز غلط را تأیید می‌کند،
   و ستون‌های `security.ConfirmUser`/`LoginDetails` و `dbo.sal_mali` را می‌آورد.
+
+## تاریخچهٔ `sql/07_login_verify.sql` (v1 → v2)
+* **v1** → روی سرور شکست خورد: `Msg 137 Must declare the scalar variable "@testUser"`
+  در خطوط ۵۵/۶۱/۶۷/۷۰/۷۸ و در پایان فقط `*** no output - please report this ***`.
+  علت **اشتباه خود ما بود**: سه متغیر تست بالای یک `GO` `DECLARE` شده بودند و پایینِ همان
+  `GO` استفاده می‌شدند؛ در T-SQL متغیر از `GO` عبور نمی‌کند. بنر چاپ شد ولی آن batch
+  هیچ خروجی نداد (یعنی بار دیگر «یک batch = همه‌یا‌هیچ» ما را زمین زد).
+* **v2 (فعلی)** → ساختار عوض شد: سه مقدار تست داخل جدول موقت `#cfg` هستند و **هر بخش یک
+  batch مستقل** است که آن‌ها را از `#cfg` می‌خواند. پس نه یک `GO` می‌تواند متغیر را یتیم
+  کند و نه خطای یک بخش، بقیهٔ بخش‌ها را از بین می‌برد. خط اول خروجی می‌گوید چند بخش
+  گزارش داده‌اند: `=== sections reported: N of 6 ======`.
+* `tools/verify_tsql.py` یک چک جدید گرفت: **دامنهٔ متغیر در هر batch** (`variable scope
+  per batch`) — اگر متغیری در batch خودش `DECLARE` نشده باشد → FAIL. خودآزما: همان الگوی
+  v1 («DECLARE بالای `GO`، استفاده پایین آن») تشخیص داده می‌شود.
+* همان‌جا یک باگ خودِ ابزار هم پیدا و رفع شد: حذف کامنت با regex ساده، `--` داخل رشتهٔ
+  متنی را کامنت می‌گرفت و رشته را می‌شکست (خط خروجی با جداکنندهٔ `---`). حالا هر دو ابزار
+  کامنت‌شکنِ **رشته‌آگاه** دارند و `check_sql_columns.py` پیشوند `N` رشته‌ها را هم درست
+  حذف می‌کند (قبلاً ستون جعلی «N» گزارش می‌کرد).
 
 ## تغییرات لازم در `viz` (برای re-apply روی ریپازیتوری اصلی)
 `app/build.gradle.kts` → افزودن:

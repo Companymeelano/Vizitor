@@ -13,8 +13,14 @@ catches the whole class of mistakes that already burned us once:
      comments only, because SSMS 2014 encoding of non-ASCII inside code is risky)
   4. known-bad catalog columns are rejected (sys.index_columns has no
      is_primary_key; sys.parameters has no PARAMETER_NAME)
+  5. every variable is declared in the same GO-batch that uses it: a DECLARE
+     above a GO is invisible below it, which is exactly how part 7 v1 died
+     with "Must declare the scalar variable @testUser" (Msg 137)
 
-Usage:  python3 verify_tsql.py ../sql/00_audit_atiran2.sql ../sql/01_setup_vizitor_user.sql
+Run it with:  python3 tools/verify_tsql.py            (checks all of sql/*.sql)
+              python3 tools/verify_tsql.py --selftest (checks the checker itself)
+
+NOTE: this is a PYTHON tool. It must never be opened or run inside SSMS.
 Requires: pip install sqlglot
 """
 import re
@@ -30,8 +36,41 @@ MARK = "\x00"  # sentinel used while tokenizing T-SQL string literals
 
 
 def strip_comments(text: str) -> str:
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
-    return re.sub(r"--[^\n]*", "", text)
+    """Remove /*...*/ and --... comments while leaving string literals alone.
+
+    A plain regex is wrong here: '---' inside a literal (used as a separator in
+    printed output) would be eaten as a comment and unbalance the quotes, which
+    is how part 7 v2 first failed this tool's parse. Line breaks are preserved.
+    """
+    out, i, n = [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == "'" or (c in "Nn" and text[i + 1:i + 2] == "'"):
+            j = i + 2 if c != "'" else i + 1
+            while j < n:
+                if text[j] == "'":
+                    if text[j + 1:j + 2] == "'":
+                        j += 2
+                        continue
+                    j += 1
+                    break
+                j += 1
+            out.append(text[i:j])
+            i = j
+        elif text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            j = n if j == -1 else j + 2
+            out.append("".join(ch if ch == "\n" else " " for ch in text[i:j]))
+            i = j
+        elif text.startswith("--", i):
+            j = text.find("\n", i)
+            j = n if j == -1 else j
+            out.append(" " * (j - i))
+            i = j
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
 
 
 def batches(text: str):
@@ -233,6 +272,31 @@ def check_reserved_identifiers(text: str):
     return sorted(set(problems))
 
 
+def check_variable_scope(text: str):
+    """Variables must be declared in the same GO-batch that uses them.
+
+    Real case (part 7 v1): DECLARE @testUser ... GO ... WHERE user_name =
+    @testUser -> the batch below the GO fails to compile with
+    "Msg 137 Must declare the scalar variable" and produces no rows at all.
+
+    Temp tables (#x) do survive a GO, so they are not checked here."""
+    problems = []
+    for n, batch in enumerate(batches(text), 1):
+        code = re.sub(r"'(?:[^']|'')*'", "''", batch)   # drop string literals
+        declared = set()
+        for m in re.finditer(r"\bDECLARE\s+@", code, flags=re.I):
+            end = code.find(";", m.end())               # one declarator list
+            stmt = code[m.start():end if end != -1 else len(code)]
+            declared.update(v.lower() for v in re.findall(r"(?<!@)@(\w+)", stmt))
+        used = {v.lower() for v in re.findall(r"(?<!@)@(\w+)", code)}
+        for var in sorted(used - declared):
+            problems.append(
+                f"batch {n} uses @{var} but does not declare it in that batch "
+                f"(a DECLARE above a GO is invisible below it -> Msg 137, "
+                f"and the whole batch produces no output)")
+    return problems
+
+
 def split_statements(batch: str):
     """Split one batch at top-level semicolons (depth 0, BEGIN/END balanced).
 
@@ -423,10 +487,46 @@ def check(path: pathlib.Path) -> bool:
     else:
         print("  CTE scope ................... OK")
 
+    scope = check_variable_scope(text)
+    if scope:
+        ok = False
+        for pr in scope:
+            print(f"  [FAIL] {pr}")
+    else:
+        print("  variable scope per batch .... OK (every @var is declared in its batch)")
+
     return ok
 
 
+def selftest():
+    """Prove the checker fires on the real mistakes it exists for."""
+    buggy_scope = ("DECLARE @testUser NVARCHAR(80) = N'Admin';\nGO\n"
+                   "SELECT user_name FROM dbo.sys_users WHERE user_name = @testUser;\n")
+    good_scope = ("DECLARE @testUser NVARCHAR(80) = N'Admin';\n"
+                  "SELECT user_name FROM dbo.sys_users WHERE user_name = @testUser;\n")
+    cases = [
+        ("variable used below a GO", check_variable_scope(buggy_scope), True),
+        ("variable declared in its batch", check_variable_scope(good_scope), False),
+        ("reserved object name unbracketed",
+         check_reserved_identifiers("SELECT * FROM EMS.user;"), True),
+        ("reserved object name bracketed",
+         check_reserved_identifiers("SELECT * FROM [EMS].[user];"), False),
+    ]
+    failed = 0
+    for name, found, should_find in cases:
+        hit = bool(found)
+        mark = "OK  " if hit == should_find else "FAIL"
+        if hit != should_find:
+            failed += 1
+        print(f"  [{mark}] selftest: {name} -> {'caught' if hit else 'clean'}"
+              f"{'' if hit == should_find else ' (wrong expectation)'}")
+    print("  selftest result:", "all expectations met" if not failed else f"{failed} wrong")
+    return failed == 0
+
+
 def main(argv):
+    if "--selftest" in argv:
+        return 0 if selftest() else 1
     paths = [pathlib.Path(p) for p in argv[1:]] or sorted(
         pathlib.Path(__file__).resolve().parent.parent.glob("sql/*.sql"))
     all_ok = all(check(p) for p in paths)

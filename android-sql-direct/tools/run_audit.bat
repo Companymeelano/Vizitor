@@ -1,4 +1,7 @@
 @echo off
+REM  *** WINDOWS BATCH FILE - NEVER OPEN IT OR RUN IT IN SSMS ***
+REM  *** In SSMS you only ever run the .sql files in the sql\ folder (00..07). ***
+REM  *** This file is double-clicked (or Run as administrator) on Windows.     ***
 REM ===========================================================================
 REM  Vizitor - run the read-only audits on the server and write them to files
 REM  ---------------------------------------------------------------------------
