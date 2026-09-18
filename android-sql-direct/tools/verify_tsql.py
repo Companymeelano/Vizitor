@@ -85,20 +85,24 @@ def split_chain(expr: str):
 
 
 def chain_of(text: str, var: str, before: int) -> str:
-    """Text between '=' and the terminating ';' of the nearest assignment,
-    scanned so that semicolons INSIDE string literals are ignored."""
+    """Text of the assignment that produced @var just before the EXEC at
+    position `before`. Handles both `SET @v = ...` / `SET @v = @v + ...` and
+    `DECLARE @v <type> = ...`, and ignores semicolons inside string literals."""
     head = text[:before]
-    m = None
-    for m in re.finditer(r"SET\s+@" + var + r"\s*=\s*@" + var + r"\s*\+", head, flags=re.I):
-        pass  # prefer a self-accumulating loop assignment when present
-    if m is None:
-        decls = list(re.finditer(r"DECLARE\s+@" + var + r"\s+\w+\s*(?:\([^)]*\))?\s*=", head, flags=re.I))
-        if not decls:
-            raise ValueError(f"no DECLARE/SET for @{var}")
-        start = decls[-1].end()
-    else:
-        start = m.end()
-    i, paren = start, 0
+    patterns = [
+        r"SET\s+@" + var + r"\s*=\s*@" + var + r"\s*\+",   # accumulating loop
+        r"SET\s+@" + var + r"\s*=",
+        r"DECLARE\s+@" + var + r"\s+\w+\s*(?:\([^)]*\))?\s*=",
+    ]
+    best = None                                   # (end position of the match)
+    for pat in patterns:
+        for m in re.finditer(pat, head, flags=re.I):
+            if best is None or m.end() > best:
+                best = m.end()
+    if best is None:
+        raise ValueError(f"no DECLARE/SET for @{var}")
+
+    i, paren = best, 0
     while i < len(text):
         c = text[i]
         if (c in "Nn" and text[i + 1:i + 2] == "'") or c == "'":
@@ -119,7 +123,7 @@ def chain_of(text: str, var: str, before: int) -> str:
         elif c == ";" and paren == 0:
             break
         i += 1
-    return text[start:i]
+    return text[best:i]
 
 
 def eval_operand(token: str) -> str:
@@ -129,7 +133,7 @@ def eval_operand(token: str) -> str:
     if t in SAMPLES:
         return SAMPLES[t]
     if t.startswith("@"):
-        return ""                                     # runtime variable: drop
+        return "\x00"                                 # runtime variable: stand-in
     up = t.upper()
     if up.startswith("QUOTENAME(") and t.endswith(")"):
         return "[" + eval_operand(t[t.index("(") + 1:t.rindex(")")]).strip("[]") + "]"
@@ -151,7 +155,9 @@ def eval_operand(token: str) -> str:
             return eval_operand(args[0]).replace(eval_operand(args[1]), eval_operand(args[2]))
     if "+" in t:
         return "".join(eval_operand(p) for p in split_chain(t))
-    return ""                                         # anything else: drop
+    # anything else (CAST/ISNULL/... over a variable): keep a stand-in so the
+    # surrounding SQL stays syntactically complete for the candidate checks
+    return "\x00" if "@" in t else ""
 
 
 def simulate_dynamic_sql(text: str):
@@ -271,14 +277,26 @@ def check(path: pathlib.Path) -> bool:
         if not gen.strip():
             print(f"  [skip] @{var}: runtime variables only, no literal text")
             continue
-        err = parse(gen)
-        if err:
+
+        # the chain may mix literals with variables (table names, column lists).
+        # Try a few harmless stand-ins; if none parses, the literal parts are
+        # broken. Report which stand-in was needed.
+        candidates = [("", gen)]
+        for sub in ("[Meelano]", "N'x'", "1"):
+            candidates.append((sub, gen.replace("\x00", sub)))
+        err = None
+        for used, cand in candidates:
+            err = parse(cand)
+            if not err:
+                note = "" if used == "" else f" [variable stand-in {used}]"
+                print(f"  dynamic SQL @{var} ........... OK "
+                      f"({len(cand)} chars, quotes balanced: "
+                      f"{cand.count(chr(39)) % 2 == 0}){note}")
+                break
+        else:
             ok = False
             print(f"  [FAIL] dynamic SQL of @{var}: {err[:160]}")
             print("         generated: " + gen[:400].replace("\n", " "))
-        else:
-            print(f"  dynamic SQL @{var} ........... OK "
-                  f"({len(gen)} chars, quotes balanced: {gen.count(chr(39)) % 2 == 0})")
 
     raw = path.read_bytes()
     if raw.startswith(b"\xef\xbb\xbf"):

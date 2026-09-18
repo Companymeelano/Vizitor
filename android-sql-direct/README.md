@@ -62,6 +62,29 @@
   (LoginMode = 2) هست یا نه — چون ورود کاربر SQL بدون آن ممکن نیست.
 * عضویت نقش idempotent است و ردیف `02_ROLE_CHECK` صحت آن را نشان می‌دهد.
 
+## فایل‌های جدید پس از اجرای v5 روی سرور (خروجی واقعی رسید)
+| فایل | توضیح |
+|---|---|
+| `docs/VERIFIED-SCHEMA-Meelano.md` | **اسکیمای تأییدشدهٔ واقعی**: سرور، schemaها، ستون‌های جدول‌های کلیدی، پاسخ ۵ مورد VERIFY، تعداد ردیف‌ها، فلؤ نوشتن با SPها |
+| `sql/02_fill_gaps.sql` | ممیزی دوم با **خروجی کوچک**: پورت واقعی TCP + LoginMode، روش تأیید رمز (`PWDCOMPARE`)، بدنهٔ توابع کوتاه لاگین، محتوای جدول‌های تنظیمات و نمونه‌داده‌ها، تعریف viewهای مورد نیاز |
+| `sql/03_dump_proc_bodies.sql` | بدنهٔ کامل ۴ پروسیجر کلیدی (`add_sail_pish`, `AddInvoice`, `new_cust`, `FixMojodi`) — ترجیحاً با `sqlcmd -o file` تا فایل ضمیمه شود |
+| `tools/verify_tsql.py` | ابزار چک استاتیک (parse هر batch، بازسازی SQL داینامیک، توازن پرانتز/BEGIN-END، رد BOM و غیر-ASCII) |
+
+### یافته‌های کلیدی ممیزی واقعی (2026-09-18)
+* سرور SQL Server **2014 Enterprise**، instance پیش‌فرض، دیتابیس **Meelano**،
+  collation `SQL_Latin1_General_CP1256_CI_AS` (case-insensitive).
+* ماژول موبایل در schema جداگانهٔ **`Hamrah`** است (`Visit`, `TabletCustomer`,
+  `PishDaryaft*`, `Device*`) و **همه خالی‌اند (0 ردیف)** → تأیید قطعی «اولین استقرار».
+* `new_cust` یک **STORED PROCEDURE** است نه جدول (به همین دلیل در 07 به‌عنوان MISSING آمد).
+* **لاگین**: `dbo.sys_users.user_password` از نوع `varbinary(50)` است → رمز در اپ
+  بازسازی نمی‌شود؛ تأیید سمت SQL با `PWDCOMPARE` انجام می‌شود (اسکریپت 02 این را probe می‌کند).
+* هیچ `vwVizitor*` روی سرور وجود ندارد (لایهٔ PHP نصب نشده).
+* پروسیجرهای موجود برای مسیر نوشتن: `dbo.add_sail_pish` (۲۵ پارامتر)،
+  `dbo.AddInvoice` (۳۹ پارامتر + `@shpish`)، `dbo.FixMojodi`، `dbo.new_cust` (۵۰ پارامتر).
+* قیمت‌گذاری تأیید شد: `CUSTOMERS.group_rdf` → `custgroup.price` (تیر ۱..۵) →
+  `forosh_price.forosh1..forosh5` (+ `mp*, pv*`).
+* جدول‌های `sailfact_pish` / `subsailfact_pish` **صفر ردیف** → هیچ پیش‌فاکتوری ثبت نشده است.
+
 ## تغییرات لازم در `viz` (برای re-apply روی ریپازیتوری اصلی)
 `app/build.gradle.kts` → افزودن:
 ```kotlin
