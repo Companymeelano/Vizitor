@@ -119,7 +119,7 @@ index 35bac85..11f04b1 100644
                  trustServerCert = o.optBoolean("trustServerCert", true),
                  connectTimeoutSec = o.optInt("connectTimeoutSec", 10),
 diff --git a/android-sql-direct/SettingsScreen.kt b/android-sql-direct/SettingsScreen.kt
-index fc58a54..f63060a 100644
+index fc58a54..502d1b1 100644
 --- a/android-sql-direct/SettingsScreen.kt
 +++ b/android-sql-direct/SettingsScreen.kt
 @@ -1,7 +1,7 @@
@@ -225,9 +225,7 @@ index fc58a54..f63060a 100644
 +                        )
 +                    }
 +
-                     OutlinedTextField(
--                        value = dbHost, onValueChange = { dbHost = it },
--                        label = { Text("آدرس سرور SQL") },
++                    OutlinedTextField(
 +                        value = dbHostExternal,
 +                        onValueChange = {
 +                            dbHostExternal = it
@@ -238,7 +236,9 @@ index fc58a54..f63060a 100644
 +                        singleLine = true, colors = fieldColors,
 +                        modifier = Modifier.fillMaxWidth()
 +                    )
-+                    OutlinedTextField(
+                     OutlinedTextField(
+-                        value = dbHost, onValueChange = { dbHost = it },
+-                        label = { Text("آدرس سرور SQL") },
 +                        value = dbHostLocal,
 +                        onValueChange = {
 +                            dbHostLocal = it
@@ -381,7 +381,7 @@ index fc58a54..f63060a 100644
  
                      // ── وضعیت زندهٔ اتصال ───────────────────────────────────────
                      val statusText = when (val st = dbState) {
-@@ -314,43 +397,13 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
+@@ -314,44 +397,97 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
                              modifier = Modifier.size(16.dp)
                          )
                          Spacer(Modifier.width(6.dp))
@@ -390,8 +390,9 @@ index fc58a54..f63060a 100644
 -                            style = MaterialTheme.typography.bodySmall,
 -                            color = statusColor
 -                        )
--                    }
--
++                        Text(statusText, style = MaterialTheme.typography.bodySmall, color = statusColor)
+                     }
+ 
 -                    Row {
 -                        NeonGreenButton(
 -                            text = if (dbTesting) "در حال تست…" else "تست اتصال SQL",
@@ -417,46 +418,11 @@ index fc58a54..f63060a 100644
 -                            text = "قطع اتصال",
 -                            enabled = dbState is ConnectionState.Ready,
 -                            onClick = { viewModel.disconnectDb() }
--                        )
-+                        Text(statusText, style = MaterialTheme.typography.bodySmall, color = statusColor)
-                     }
- 
-                     Text(
--                        "رمز عبور فقط به‌صورت رمزنگاری‌شده (Android Keystore) روی همین دستگاه ذخیره می‌شود؛ " +
++                    Text(
 +                        "آی‌پی اختصاصی برای زمانی است که گوشی بیرون از شبکهٔ فروشگاه باشد (پورت ۱۴۳۳ باید " +
 +                                "از بیرون باز/فوروارد شده باشد). داخل فروشگاه همان آی‌پی داخلی کافی است. " +
 +                                "رمز فقط رمزنگاری‌شده (Android Keystore) روی همین دستگاه ذخیره می‌شود؛ " +
-                                 "نه در سرور، نه در فایل پیکربندی و نه در هیچ Log.",
-                         style = MaterialTheme.typography.bodySmall,
-                         color = palette.textSecondary
-@@ -359,6 +412,37 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
-             }
-         }
- 
-+        // ── شناسنامهٔ سامانه و سازنده ───────────────────────────────────────
-+        item { SectionTitle(text = "دربارهٔ سامانه", icon = Icons.Filled.MilitaryTech) }
-+
-+        item {
-+            GlassCard(modifier = Modifier.fillMaxWidth()) {
-+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-+                    Text(
-+                        "سامانهٔ ویزیتور — اتصال مستقیم و امن به SQL Server (پورت ۱۴۳۳)",
-+                        style = MaterialTheme.typography.bodyMedium,
-+                        color = palette.textPrimary
-+                    )
-+                    Text(
-+                        "طراحی و برنامه‌نویسی:  میلاد یقوبی  (Milad Yaghoobi)",
-+                        style = MaterialTheme.typography.bodySmall,
-+                        color = NeonPurple
-+                    )
-+                    Text(
-+                        "گروه نرم‌افزاری:  Meelano Studio Design",
-+                        style = MaterialTheme.typography.bodySmall,
-+                        color = NeonPurple
-+                    )
-+                    Text(
-+                        "نسخهٔ ۱.۳ — بدون IIS و بدون API میانی؛ رمزها فقط رمزنگاری‌شده " +
-+                                "(Android Keystore) روی همین دستگاه می‌مانند.",
++                                "نه در سرور، نه در فایل پیکربندی و نه در هیچ Log.",
 +                        style = MaterialTheme.typography.bodySmall,
 +                        color = palette.textSecondary
 +                    )
@@ -464,10 +430,89 @@ index fc58a54..f63060a 100644
 +            }
 +        }
 +
-         // ── پیکربندی سرور ───────────────────────────────────────────────────
-         item { SectionTitle(text = "پیکربندی سرور آتیران", icon = Icons.Filled.Dns) }
- 
-@@ -815,3 +899,41 @@ private fun HealthRow(ok: Boolean, label: String, value: String?) {
++        // ── شناسنامهٔ سامانه و سازنده (کارت برجسته با نور و لبه) ───────────
++        item { SectionTitle(text = "دربارهٔ سامانه", icon = Icons.Filled.MilitaryTech) }
++
++        item {
++            Box(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .clip(RoundedCornerShape(20.dp))
++                    .background(
++                        Brush.verticalGradient(
++                            listOf(
++                                NeonPurple.copy(alpha = 0.22f),
++                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
++                                MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
++                            )
+                         )
++                    )
++                    .border(
++                        BorderStroke(1.dp, NeonPurple.copy(alpha = 0.45f)),
++                        RoundedCornerShape(20.dp)
++                    )
++                    .padding(18.dp)
++            ) {
++                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
++                    Row(verticalAlignment = Alignment.CenterVertically) {
++                        Box(
++                            modifier = Modifier
++                                .size(52.dp)
++                                .clip(CircleShape)
++                                .background(
++                                    Brush.linearGradient(
++                                        listOf(NeonPurple, NeonPurple.copy(alpha = 0.25f))
++                                    )
++                                ),
++                            contentAlignment = Alignment.Center
++                        ) {
++                            Icon(
++                                imageVector = Icons.Filled.MilitaryTech,
++                                contentDescription = null,
++                                tint = palette.textPrimary,
++                                modifier = Modifier.size(30.dp)
++                            )
++                        }
++                        Spacer(Modifier.width(12.dp))
++                        Column {
++                            Text(
++                                "سامانهٔ ویزیتور — نسخهٔ ۱.۳",
++                                style = MaterialTheme.typography.titleMedium,
++                                color = palette.textPrimary
++                            )
++                            Text(
++                                "اتصال مستقیم و امن به SQL Server (پورت ۱۴۳۳)",
++                                style = MaterialTheme.typography.bodySmall,
++                                color = palette.textSecondary
++                            )
++                        }
+                     }
+-
++                    Box(
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .height(1.dp)
++                            .background(Brush.horizontalGradient(listOf(NeonPurple, Color.Transparent)))
++                    )
+                     Text(
+-                        "رمز عبور فقط به‌صورت رمزنگاری‌شده (Android Keystore) روی همین دستگاه ذخیره می‌شود؛ " +
+-                                "نه در سرور، نه در فایل پیکربندی و نه در هیچ Log.",
++                        "طراحی و برنامه‌نویسی:  میلاد یقوبی  (Milad Yaghoobi)",
++                        style = MaterialTheme.typography.bodyMedium,
++                        color = NeonPurple
++                    )
++                    Text(
++                        "گروه نرم‌افزاری:  Meelano Studio Design",
++                        style = MaterialTheme.typography.bodyMedium,
++                        color = NeonPurple
++                    )
++                    Text(
++                        "بدون IIS و بدون API میانی؛ رمزها فقط رمزنگاری‌شده (Android Keystore) " +
++                                "روی همین دستگاه می‌مانند و هیچ‌وقت در لاگ یا گزارش چاپ نمی‌شوند.",
+                         style = MaterialTheme.typography.bodySmall,
+                         color = palette.textSecondary
+                     )
+@@ -815,3 +951,41 @@ private fun HealthRow(ok: Boolean, label: String, value: String?) {
  
  
  /** یک ردیف انتخاب تم: سواچ سه‌رنگ (پس‌زمینه/اصلی/طلایی) + نام + نشان انتخاب. */

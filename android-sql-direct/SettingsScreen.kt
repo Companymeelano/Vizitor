@@ -412,30 +412,82 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
             }
         }
 
-        // ── شناسنامهٔ سامانه و سازنده ───────────────────────────────────────
+        // ── شناسنامهٔ سامانه و سازنده (کارت برجسته با نور و لبه) ───────────
         item { SectionTitle(text = "دربارهٔ سامانه", icon = Icons.Filled.MilitaryTech) }
 
         item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        "سامانهٔ ویزیتور — اتصال مستقیم و امن به SQL Server (پورت ۱۴۳۳)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = palette.textPrimary
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                NeonPurple.copy(alpha = 0.22f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(1.dp, NeonPurple.copy(alpha = 0.45f)),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(18.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(NeonPurple, NeonPurple.copy(alpha = 0.25f))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MilitaryTech,
+                                contentDescription = null,
+                                tint = palette.textPrimary,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "سامانهٔ ویزیتور — نسخهٔ ۱.۳",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = palette.textPrimary
+                            )
+                            Text(
+                                "اتصال مستقیم و امن به SQL Server (پورت ۱۴۳۳)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = palette.textSecondary
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Brush.horizontalGradient(listOf(NeonPurple, Color.Transparent)))
                     )
                     Text(
                         "طراحی و برنامه‌نویسی:  میلاد یقوبی  (Milad Yaghoobi)",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = NeonPurple
                     )
                     Text(
                         "گروه نرم‌افزاری:  Meelano Studio Design",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = NeonPurple
                     )
                     Text(
-                        "نسخهٔ ۱.۳ — بدون IIS و بدون API میانی؛ رمزها فقط رمزنگاری‌شده " +
-                                "(Android Keystore) روی همین دستگاه می‌مانند.",
+                        "بدون IIS و بدون API میانی؛ رمزها فقط رمزنگاری‌شده (Android Keystore) " +
+                                "روی همین دستگاه می‌مانند و هیچ‌وقت در لاگ یا گزارش چاپ نمی‌شوند.",
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.textSecondary
                     )
