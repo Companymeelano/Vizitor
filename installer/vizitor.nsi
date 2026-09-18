@@ -58,6 +58,10 @@ Var /GLOBAL PrevExists
 Var /GLOBAL FreshClean
 Var /GLOBAL PyExe
 Var /GLOBAL hHealth
+Var /GLOBAL hPublicIp
+Var /GLOBAL hExternal
+Var /GLOBAL PublicIpField
+Var /GLOBAL ExternalOk
 Var /GLOBAL hDbList
 Var /GLOBAL hBtnList
 Var /GLOBAL hListStatus
@@ -367,6 +371,8 @@ Function WriteAnswers
   WriteINIStr "$PLUGINSDIR\answers.ini" "android"    "login"        "vizitor_android"
   WriteINIStr "$PLUGINSDIR\answers.ini" "android"    "openfirewall" "1"
   WriteINIStr "$PLUGINSDIR\answers.ini" "db"         "health"       "$HealthWanted"
+  WriteINIStr "$PLUGINSDIR\answers.ini" "android"    "external"     "$ExternalOk"
+  WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "publicip"     "$PublicIpField"
   WriteINIStr "$PLUGINSDIR\answers.ini" "ui"         "source"       "vizitor-setup"
 FunctionEnd
 
@@ -533,7 +539,7 @@ Function PageDbCreate
   ${NSD_CreateLabel} 0 0 100% 9u "رمز فقط برای اتصال همین نصب استفاده می‌شود؛ نه نمایش داده می‌شود و نه در گزارشی نوشته می‌شود."
   Pop $0
 
-  ${NSD_CreateGroupBox} 0 10u 100% 96u "دیتابیس حسابداری روی SQL Server (پورت ۱۴۳۳)"
+  ${NSD_CreateGroupBox} 0 10u 100% 110u "اتصال برنامهٔ اندروید به SQL Server (پورت پیش‌فرض ۱۴۳۳)"
   Pop $0
   ${NSD_CreateLabel} 2% 20u 34% 9u "سرور SQL Server:"
   Pop $0
@@ -566,20 +572,30 @@ Function PageDbCreate
     ${NSD_LB_AddString} $hDbList "$ErpDb"
     ${NSD_LB_SelectString} $hDbList "$ErpDb"
   ${EndIf}
-  ${NSD_CreateLabel} 2% 89u 96% 8u "دیتابیس حسابداری را از لیست انتخاب کنید."
+  ${NSD_CreateLabel} 2% 89u 96% 8u "دیتابیس برنامه را از لیست انتخاب کنید (هیچ دیتابیسی اجباری نیست)."
   Pop $hListStatus
 
-  ${NSD_CreateGroupBox} 0 108u 100% 34u "نام دیتابیس خود سامانه و بررسی سلامت"
+  ${NSD_CreateLabel} 2% 99u 34% 9u "آی‌پی اختصاصی/اینترنتی سرور SQL (اختیاری):"
   Pop $0
-  ${NSD_CreateLabel} 2% 118u 34% 9u "دیتابیس خود ویزیتور:"
+  ${NSD_CreateText} 38% 98u 60% 12u "$PublicIpField"
+  Pop $hPublicIp
+  ${NSD_CreateCheckBox} 2% 110u 96% 9u "اجازهٔ اتصال به ۱۴۳۳ از بیرون شبکه (آی‌پی اختصاصی / فوروارد پورت در روتر)"
+  Pop $hExternal
+  ${If} $ExternalOk == "1"
+    ${NSD_SetState} $hExternal ${BST_CHECKED}
+  ${EndIf}
+
+  ${NSD_CreateGroupBox} 0 122u 100% 30u "نام دیتابیس خود سامانه و بررسی سلامت"
   Pop $0
-  ${NSD_CreateText} 38% 117u 60% 12u "$DbName"
+  ${NSD_CreateLabel} 2% 132u 34% 9u "دیتابیس خود ویزیتور:"
+  Pop $0
+  ${NSD_CreateText} 38% 131u 60% 12u "$DbName"
   Pop $hDbName
-  ${NSD_CreateCheckBox} 2% 130u 96% 9u "بررسی سلامت اتصال و جدول‌های لازم در پایان نصب (پیشنهادی)"
+  ${NSD_CreateCheckBox} 2% 144u 96% 9u "بررسی سلامت اتصال و جدول‌های لازم در پایان نصب (پیشنهادی)"
   Pop $hHealth
   ${NSD_SetState} $hHealth ${BST_CHECKED}
 
-  ${NSD_CreateLabel} 0 146u 100% 20u "$Detected"
+  ${NSD_CreateLabel} 0 160u 100% 20u "$Detected"
   Pop $hStatus
 
   Call ToggleSqlFields
@@ -614,7 +630,15 @@ Function PageDbLeave
     StrCpy $DbName "vizitor"
   ${EndIf}
   ${If} $ErpDb == ""
-    StrCpy $ErpDb "Meelano"
+    MessageBox MB_ICONEXCLAMATION "دیتابیس برنامه را از لیست انتخاب کنید (یا نامش را دستی بنویسید). هیچ دیتابیسی اجباری نیست."
+    Abort
+  ${EndIf}
+  ${NSD_GetText} $hPublicIp $PublicIpField
+  ${NSD_GetState} $hExternal $0
+  ${If} $0 == ${BST_CHECKED}
+    StrCpy $ExternalOk "1"
+  ${Else}
+    StrCpy $ExternalOk "0"
   ${EndIf}
   ${If} $SqlAuth == "sql"
     ${If} $SqlUser == ""
@@ -714,7 +738,7 @@ Function .onInit
   StrCpy $SqlUser "sa"
   StrCpy $SqlPass ""
   StrCpy $DbName "vizitor"
-  StrCpy $ErpDb "Meelano"
+  StrCpy $ErpDb ""
   StrCpy $AdminUser "admin"
   StrCpy $ActCode ""
   StrCpy $ActLater "0"
@@ -727,6 +751,8 @@ Function .onInit
   StrCpy $PyExe ""
   StrCpy $DbCount "0"
   StrCpy $HealthWanted "1"
+  StrCpy $PublicIpField ""
+  StrCpy $ExternalOk "0"
 
   InitPluginsDir
   File /oname=$PLUGINSDIR\preflight.ps1 "nsi\preflight.ps1"
@@ -764,7 +790,7 @@ Function .onInit
     ${If} $3 == ""
       StrCpy $Detected "$Detected  •  درایور ODBC: باید نصب شود"
     ${EndIf}
-    StrCpy $Detected "$Detected$\r$\nاتصال اندروید: مستقیم به SQL Server روی پورت 1433 — بدون IIS و بدون API"
+    StrCpy $Detected "$Detected$\r$\nاتصال اندروید: مستقیم به SQL Server روی پورت 1433 — اگر آی‌پی اختصاصی داشته باشید، از بیرون شبکه هم وصل می‌شود"
   preflight_done:
 
   IfSilent skip_prev_check

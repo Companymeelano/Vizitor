@@ -61,9 +61,10 @@ $script:ScriptDir  = $PSScriptRoot
 # استفاده می‌شوند. هیچ‌کدام از این مقادیر چاپ نمی‌شوند (رمز SQL هرگز).
 $script:Unattended     = $false
 $script:Ans            = @{}
-$script:ErpDb          = "Meelano"
+$script:ErpDb          = ""          # هیچ دیتابیسی اجباری نیست؛ کاربر از لیست انتخاب می‌کند
 $script:AndroidLogin   = "vizitor_android"
 $script:AndroidFirewall = $true
+$script:AndroidExternal = $false     # اجازهٔ اتصال از بیرون شبکه (آی‌پی اختصاصی / فوروارد پورت)
 $script:AndroidOk      = $false
 $script:HealthWanted   = $true      # تیک «بررسی سلامت اتصال» در نصب‌کننده
 
@@ -403,9 +404,10 @@ if (-not $script:PrevActCode)   { $script:PrevActCode   = Get-Answer "activation
 $script:HealthWanted    = ((Get-Answer "db/health" "1") -ne "0")
 $script:HostLan         = Get-Answer "server/lanip" ""
 $script:HostPublic      = Get-Answer "server/publicip" ""
-$script:ErpDb           = Get-Answer "android/erpdb" "Meelano"
+$script:ErpDb           = Get-Answer "android/erpdb" ""
 $script:AndroidLogin    = Get-Answer "android/login" "vizitor_android"
 $script:AndroidFirewall = ((Get-Answer "android/openfirewall" "1") -ne "0")
+$script:AndroidExternal = ((Get-Answer "android/external" "0") -ne "0")
 
 # آدرس پیش‌فرض هوشمند: اجبار کاربر > آدرس قبلی > IP عمومی > IP داخلی
 if ($Ip) { $script:DefaultAddr = $Ip }
@@ -812,8 +814,12 @@ function Invoke-AndroidPrep {
     }
     $erp   = $script:ErpDb
     $login = $script:AndroidLogin
-    if (-not $erp)   { $erp   = "Meelano" }
     if (-not $login) { $login = "vizitor_android" }
+    if (-not $erp) {
+        Write-Warn "هیچ دیتابیس حسابداری انتخاب نشده بود؛ این بخش رد شد."
+        Write-Info "پس از نصب، میان‌بر «اتصال مستقیم SQL» را اجرا کنید و دیتابیس را از لیست انتخاب کنید."
+        return $false
+    }
 
     $pwFile  = Join-Path $script:DataDir "android_app_password.txt"
     $jsonOut = Join-Path $script:DataDir "android_sql_info.json"
@@ -860,11 +866,17 @@ function Invoke-AndroidPrep {
     }
 
     if ($script:AndroidFirewall) {
-        Write-Info "قاعدهٔ فایروال پورت 1433 فقط برای شبکهٔ محلی ..."
+        if ($script:AndroidExternal) {
+            Write-Warn "طبق انتخاب شما، پورت 1433 برای اتصال از بیرون شبکه (آی‌پی اختصاصی) باز می‌شود."
+            Write-Info "توصیه: حتماً کاربر محدود $login با رمز قوی + VPN یا محدودسازی IP در فایروال/روتر."
+        } else {
+            Write-Info "قاعدهٔ فایروال پورت 1433 فقط برای شبکهٔ محلی ..."
+        }
         $done = $false
+        $remote = if ($script:AndroidExternal) { "Any" } else { "LocalSubnet" }
         try {
             if (-not (Get-NetFirewallRule -DisplayName "Vizitor SQL 1433" -ErrorAction SilentlyContinue)) {
-                New-NetFirewallRule -DisplayName "Vizitor SQL 1433" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 1433 -RemoteAddress LocalSubnet -Profile Any | Out-Null
+                New-NetFirewallRule -DisplayName "Vizitor SQL 1433" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 1433 -RemoteAddress $remote -Profile Any | Out-Null
             }
             $done = $true
         } catch { $done = $false }
@@ -877,7 +889,10 @@ function Invoke-AndroidPrep {
                 $done = $true
             } catch { $done = $false }
         }
-        if ($done) { Write-Ok "پورت 1433 فقط برای شبکهٔ محلی باز شد (Vizitor SQL 1433)" }
+        if ($done) {
+            if ($script:AndroidExternal) { Write-Ok "پورت 1433 برای شبکهٔ محلی و آی‌پی اختصاصی باز شد (Vizitor SQL 1433)" }
+            else { Write-Ok "پورت 1433 فقط برای شبکهٔ محلی باز شد (Vizitor SQL 1433)" }
+        }
         else { Write-Warn "قاعدهٔ فایروال ساخته نشد؛ دستی:  netsh advfirewall firewall add rule name=`"Vizitor SQL 1433`" dir=in action=allow protocol=TCP localport=1433 remoteip=localsubnet" }
     }
     # --- کارت اتصال + کد QR برای برنامهٔ اندروید ---------------------------
@@ -1099,7 +1114,10 @@ for ($round = 1; $round -le 4; $round++) {
 function Test-VizitorSqlHealth {
     if ($script:DbEngine -ne "sqlserver") { return }
     $erp = $script:ErpDb
-    if (-not $erp) { $erp = "Meelano" }
+    if (-not $erp) {
+        Write-Info "دیتابیس حسابداری انتخاب نشده بود؛ بررسی سلامت رد شد (میان‌بر «اتصال مستقیم SQL» را بعداً اجرا کنید)."
+        return
+    }
     $jsonOut = Join-Path $script:DataDir "sql_health.json"
     Write-Info "بررسی سلامت اتصال و وجود جدول‌های لازم در دیتابیس [$erp] ..."
     $script:HealthOk = $false
@@ -1152,6 +1170,10 @@ try {
     }
     if ($script:AndroidOk) {
         $lines += "androidsqlserver=$script:Addr,1433"
+        if ($script:HostPublic -or $script:PublicIp) {
+            $lines += "androidsqlserverpublic=$(if ($script:HostPublic) { $script:HostPublic } else { $script:PublicIp }),1433"
+        }
+        $lines += "androidexternal=$([int]$script:AndroidExternal)"
         $lines += "androidsqldatabase=$script:ErpDb"
         $lines += "androidsqllogin=$script:AndroidLogin"
         $lines += "androidsqlpasswordfile=$script:DataDir\android_app_password.txt"

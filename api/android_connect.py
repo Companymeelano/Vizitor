@@ -122,7 +122,7 @@ def main():
     ap.add_argument("--package-dir", default="", help="folder for the safe card / QR (e.g. C:\\Vizitor\\setup)")
     ap.add_argument("--host-lan", default="", help="LAN address of the server (inside the shop)")
     ap.add_argument("--host-public", default="", help="fixed / public address of the server (optional)")
-    ap.add_argument("--erp-db", default="", help="ERP database (default: taken from config / Meelano)")
+    ap.add_argument("--erp-db", default="", help="accounting database chosen by the operator (required)")
     ap.add_argument("--login", default="", help="restricted SQL login (default: vizitor_android)")
     ap.add_argument("--password-file", default="", help="file that holds the SQL password for that login")
     ap.add_argument("--update-config", action="store_true", help="record the direct_sql block in config.json")
@@ -138,7 +138,12 @@ def main():
     prev = cfg.get("direct_sql") or {}
 
     host, host_public = host_addresses(cfg, args.host_lan, args.host_public)
-    erp = (args.erp_db or prev.get("database") or "Meelano").strip()
+
+    erp = (args.erp_db or prev.get("database") or "").strip()
+    if not erp:
+        say("01|FAILED|no accounting database was chosen - run the installer, pick the database "
+            "from the list and try again (nothing is forced: any database on your server works)")
+        return 2
     login = (args.login or prev.get("login") or "vizitor_android").strip()
     pw_file = (args.password_file or prev.get("password_file")
                or os.path.join(data_dir, "android_app_password.txt")).strip()
@@ -222,30 +227,25 @@ def main():
     with open(text_path, "w", encoding="utf-8") as fh:
         fh.write("کارت اتصال برنامهٔ اندروید ویزیتور — اتصال مستقیم به SQL Server\r\n")
         fh.write("========================================================================\r\n\r\n")
-        fh.write("نشانی سرور (شبکهٔ داخلی) : %s\r\n" % host)
+        fh.write("۱) نشانی سرور — هر کدام را که دارید:\r\n")
         if host_public:
-            fh.write("نشانی ثابت / اینترنتی    : %s\r\n" % host_public)
-        fh.write("پورت SQL Server          : %d\r\n" % SQL_PORT)
-        fh.write("دیتابیس حسابداری         : %s\r\n" % erp)
-        fh.write("کاربر محدود سامانه       : %s   (اختیاری — برای استفادهٔ روزمره)\r\n" % login)
-        fh.write("رمز کاربر محدود          : در فایل «%s» روی همین سرور (فقط مدیر)\r\n" % pw_file)
-        fh.write("\r\n--------------------------------------------------------------\r\n")
-        fh.write("تنظیم یک‌باره در برنامهٔ اندروید (انجام می‌دهید، بعد تمام):\r\n")
-        fh.write("--------------------------------------------------------------\r\n")
-        fh.write("  ۱) در برنامه بخش «اتصال به دیتابیس» را باز کنید\r\n")
-        fh.write("  ۲) نشانی سرور را بزنید: %s   (یا QR کنار همین فایل را اسکن کنید)\r\n" % host)
-        fh.write("  ۳) پورت: %d\r\n" % SQL_PORT)
-        fh.write("  ۴) نام کاربری و کلمهٔ عبور دیتابیس با دسترسی کامل را وارد کنید\r\n")
-        fh.write("     (همان کاربری که در برنامهٔ حسابداری استفاده می‌کنید)\r\n")
-        fh.write("  ۵) دکمهٔ «دریافت لیست دیتابیس‌ها» را بزنید و دیتابیس حسابداری («%s») را انتخاب کنید\r\n" % erp)
-        fh.write("  ۶) برنامه تنظیمات لازم را از خود دیتابیس می‌خواند و «بررسی سلامت اتصال» را انجام می‌دهد\r\n")
-        fh.write("\r\nاز این پس هر ویزیتور فقط نام کاربری و کلمهٔ عبور خودش را در برنامه وارد می‌کند\r\n")
+            fh.write("     • آی‌پی اختصاصی (از بیرون شبکه): %s   ← اگر بیرون از فروشگاه هستید\r\n" % host_public)
+        fh.write("     • آی‌پی داخلی شبکهٔ فروشگاه      : %s   ← اگر داخل فروشگاه هستید\r\n" % host)
+        fh.write("   پورت: %d (پیش‌فرض)\r\n" % SQL_PORT)
+        fh.write("\r\n۲) در برنامه: آدرس را بزنید → نام کاربری و کلمهٔ عبور ورود به SQL Server\r\n")
+        fh.write("\r\n۳) دکمهٔ «تأیید و دریافت لیست دیتابیس‌ها» → لیست دیتابیس‌های همان سرور می‌آید\r\n")
+        fh.write("\r\n۴) دیتابیس برنامه را انتخاب کنید: %s   (هیچ دیتابیسی اجباری نیست)\r\n" % erp)
+        fh.write("\r\n۵) «اعمال تنظیمات و تست اتصال» → بررسی سلامت → تمام\r\n")
+        fh.write("\r\nاز این پس هر ویزیتور فقط نام کاربری و کلمهٔ عبور خودش را وارد می‌کند\r\n")
         fh.write("و می‌تواند پیش‌فاکتور ثبت و ارسال کند.\r\n")
-        fh.write("\r\nمتن QR (در صورت نیاز به تایپ دستی):\r\n  %s\r\n" % uri)
-        fh.write("  معنی کلیدها: h=نشانی شبکهٔ داخلی، p=پورت، d=دیتابیس، u=کاربر محدود، H=نشانی ثابت\r\n")
-        fh.write("\r\nشکل خوانا:  %s\r\n" % pretty)
-        fh.write("\r\nنکتهٔ امنیتی: دسترسی پورت ۱۴۳۳ فقط در شبکهٔ محلی باز است.\r\n")
-        fh.write("رمز SQL Server را در اختیار کسی نگذارید؛ برای استفادهٔ روزمره «%s» کافی است.\r\n" % login)
+        fh.write("\r\nکاربر محدود سامانه: %s   (رمز: %s)\r\n" % (login, pw_file))
+        fh.write("\r\nمتن QR:  %s\r\n" % uri)
+        fh.write("  معنی کلیدها: h=آی‌پی داخلی، p=پورت، d=دیتابیس، u=کاربر محدود، H=آی‌پی اختصاصی\r\n")
+        if host_public:
+            fh.write("\r\nنکته: برای اتصال از بیرون، پورت %d باید در روتر به همین سرور فوروارد شده باشد\r\n" % SQL_PORT)
+            fh.write("و در فایروال ویندوز هم اجازهٔ «از هر آدرس» داشته باشد (تیک مربوطه در نصب‌کننده).\r\n")
+        else:
+            fh.write("\r\nنکته: اتصال فعلی فقط در شبکهٔ داخلی باز است (آی‌پی اختصاصی وارد نشده).\r\n")
     say("05|OK|Persian connection card: %s" % text_path)
 
     if not args.no_qr:

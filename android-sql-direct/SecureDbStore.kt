@@ -48,30 +48,46 @@ object SecureDbStore {
         prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     }
 
-    /** ذخیرهٔ تنظیمات (کل بلوک، از جمله رمز، رمزنگاری می‌شود). */
+    /**
+     * ذخیرهٔ تنظیمات (کل بلوک، از جمله رمز، رمزنگاری می‌شود).
+     *
+     * دو نشانی سرور هم همراه همان بلوک نگه داشته می‌شوند تا برنامه بداند کاربر
+     * از «آی‌پی اختصاصی/اینترنتی» وصل شده یا از «آی‌پی داخلی شبکه».
+     */
     fun save(settings: DbSettings) {
-        val json = JSONObject().apply {
-            put("host", settings.host)
-            put("port", settings.port)
-            put("database", settings.database)
-            put("username", settings.username)
-            put("password", settings.password)
-            put("useEncryption", settings.useEncryption)
-            put("trustServerCert", settings.trustServerCert)
-            put("connectTimeoutSec", settings.connectTimeoutSec)
-            put("queryTimeoutSec", settings.queryTimeoutSec)
-        }.toString()
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, key())
-        val iv = cipher.iv
-        val enc = cipher.doFinal(json.toByteArray(Charsets.UTF_8))
-        // IV + ciphertext در یک رشته Base64
-        val blob = Base64.encodeToString(iv + enc, Base64.NO_WRAP)
-        prefs.edit().putString(KEY_BLOB, blob).apply()
+        val o = currentJson() ?: JSONObject()
+        o.put("host", settings.host)
+        o.put("port", settings.port)
+        o.put("database", settings.database)
+        o.put("username", settings.username)
+        o.put("password", settings.password)
+        o.put("useEncryption", settings.useEncryption)
+        o.put("trustServerCert", settings.trustServerCert)
+        o.put("connectTimeoutSec", settings.connectTimeoutSec)
+        o.put("queryTimeoutSec", settings.queryTimeoutSec)
+        writeJson(o)
     }
 
-    /** خواندن تنظیمات؛ اگر چیزی ذخیره نشده یا خطا بود → null. */
-    fun load(): DbSettings? {
+    /** نگه‌داشتن هر دو نشانی سرور و این‌که کدام‌یک فعال است. */
+    fun saveAddresses(hostExternal: String, hostLocal: String, useExternal: Boolean) {
+        val o = currentJson() ?: JSONObject()
+        o.put("hostExternal", hostExternal.trim())
+        o.put("hostLocal", hostLocal.trim())
+        o.put("useExternal", useExternal)
+        writeJson(o)
+    }
+
+    /** هر دو نشانی سرور + نشانی فعال، بدون ذخیره‌سازی دوباره. */
+    fun loadAddresses(): Triple<String, String, Boolean> {
+        val o = currentJson() ?: return Triple("", "", false)
+        return Triple(
+            o.optString("hostExternal", ""),
+            o.optString("hostLocal", o.optString("host", "")),
+            o.optBoolean("useExternal", false)
+        )
+    }
+
+    private fun currentJson(): JSONObject? {
         if (!this::appContext.isInitialized) return null
         val blob = prefs.getString(KEY_BLOB, null) ?: return null
         return try {
@@ -80,14 +96,32 @@ object SecureDbStore {
             val ct = raw.copyOfRange(GCM_IV_LENGTH, raw.size)
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(GCM_TAG_LENGTH, iv))
-            val json = String(cipher.doFinal(ct), Charsets.UTF_8)
-            val o = JSONObject(json)
+            JSONObject(String(cipher.doFinal(ct), Charsets.UTF_8))
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun writeJson(o: JSONObject) {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, key())
+        val iv = cipher.iv
+        val enc = cipher.doFinal(o.toString().toByteArray(Charsets.UTF_8))
+        // IV + ciphertext در یک رشته Base64
+        val blob = Base64.encodeToString(iv + enc, Base64.NO_WRAP)
+        prefs.edit().putString(KEY_BLOB, blob).apply()
+    }
+
+    /** خواندن تنظیمات؛ اگر چیزی ذخیره نشده یا خطا بود → null. */
+    fun load(): DbSettings? {
+        val o = currentJson() ?: return null
+        return try {
             DbSettings(
-                host = o.getString("host"),
+                host = o.optString("host", ""),
                 port = o.optInt("port", 1433),
-                database = o.getString("database"),
-                username = o.getString("username"),
-                password = o.getString("password"),
+                database = o.optString("database", ""),
+                username = o.optString("username", ""),
+                password = o.optString("password", ""),
                 useEncryption = o.optBoolean("useEncryption", true),
                 trustServerCert = o.optBoolean("trustServerCert", true),
                 connectTimeoutSec = o.optInt("connectTimeoutSec", 10),

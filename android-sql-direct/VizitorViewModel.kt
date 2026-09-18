@@ -306,6 +306,38 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ── دو نشانی سرور: آی‌پی اختصاصی (بیرون شبکه) و آی‌پی داخلی شبکه ──────────
+    private val savedAddresses = SecureDbStore.loadAddresses()
+
+    private val _dbHostExternal = MutableStateFlow(savedAddresses.first)
+    val dbHostExternal: StateFlow<String> = _dbHostExternal.asStateFlow()
+
+    private val _dbHostLocal = MutableStateFlow(savedAddresses.second)
+    val dbHostLocal: StateFlow<String> = _dbHostLocal.asStateFlow()
+
+    /** true = اتصال از بیرون شبکه با آی‌پی اختصاصی، false = آی‌پی داخلی شبکه. */
+    private val _dbUseExternal = MutableStateFlow(savedAddresses.third)
+    val dbUseExternal: StateFlow<Boolean> = _dbUseExternal.asStateFlow()
+
+    /** نشانی فعال بر اساس انتخاب کاربر (پیش‌فرض: بیرون شبکه اگر آی‌پی اختصاصی پر باشد). */
+    fun activeDbHost(): String {
+        val ext = _dbHostExternal.value.trim()
+        val loc = _dbHostLocal.value.trim()
+        return if (_dbUseExternal.value) ext.ifBlank { loc } else loc.ifBlank { ext }
+    }
+
+    fun setDbAddresses(hostExternal: String, hostLocal: String, useExternal: Boolean) {
+        _dbHostExternal.value = hostExternal.trim()
+        _dbHostLocal.value = hostLocal.trim()
+        _dbUseExternal.value = useExternal
+        SecureDbStore.saveAddresses(hostExternal, hostLocal, useExternal)
+    }
+
+    fun setDbUseExternal(useExternal: Boolean) {
+        _dbUseExternal.value = useExternal
+        SecureDbStore.saveAddresses(_dbHostExternal.value, _dbHostLocal.value, useExternal)
+    }
+
     // ── لیست دیتابیس‌های سرور (مرحلهٔ انتخاب دیتابیس حسابداری) ───────────────
     private val _dbOptions = MutableStateFlow<List<String>>(emptyList())
     val dbOptions: StateFlow<List<String>> = _dbOptions.asStateFlow()
@@ -315,6 +347,7 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
 
     /** لیست دیتابیس‌ها را با همان کاربر/رمزِ واردشده می‌گیرد (فقط خواندن). */
     fun loadDatabases(settings: DbSettings) = viewModelScope.launch {
+        // لیست با همان کاربر/رمزِ واردشده گرفته می‌شود؛ رمز جایی log نمی‌شود.
         if (_dbListLoading.value) return@launch
         _dbListLoading.value = true
         try {
