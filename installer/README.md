@@ -173,6 +173,11 @@ Vizitor-Setup-1.0.0.exe /S
 C:\Vizitor\setup\android-connect.png     ← کد QR ؛ با برنامه اسکن کنید
 C:\Vizitor\setup\android-connect.txt     ← کارت متنی فارسی (سرور، دیتابیس، کاربر، کد راه‌اندازی)
 C:\Vizitor\setup\android-connect.json    ← همان اطلاعات برای برنامه‌نویس اندروید (بدون رمز)
+
+> **برنامهٔ اندروید:** همان طرح/همان اطلاعات در پروژهٔ آمادهٔ ساخت `android-app/`
+> پیاده شده است («ویزیتور مستقیم»). این کارت را می‌توان در برنامه با **اسکن QR**،
+> **خواندن فایل `android-connect.json`** یا **چسباندن متن کارت** وارد کرد؛ بعد از آن
+> دیتابیس از فهرست `sys.databases` انتخاب (یا دستی تایپ) می‌شود. جزئیات: `android-app/README.md`.
 C:\ProgramData\Vizitor\android_config.json  ← نسخهٔ کامل با رمز (دسترسی: فقط SYSTEM و Administrators)
 ```
 

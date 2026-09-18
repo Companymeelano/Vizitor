@@ -12,7 +12,7 @@
 | `ATIRAN-SCHEMA-EXTRACTED.md` | ۵۵ جدول/نمای Atiran با تمام ستون‌ها/PK/FK (استخراج‌شده از مدل EF واقعی ERP) |
 | `sql/00_audit_atiran2.sql` | اسکریپت **فقط‌خواندنی** ممیزی سرور واقعی — **نسخهٔ v2** (خروجی را به agent بفرستید) |
 | `sql/01_setup_vizitor_user.sql` | آماده‌سازی غیرتلفیقی سرور: کاربر فقط‌خواندنی `vizitor_android` + فایروال فقط LAN |
-| `SqlConnectionManager.kt` | فاز ۲: pool + validation + retry + transaction + StateFlow + پیام فارسی خطا |
+| `SqlConnectionManager.kt` | فاز ۲: pool + validation + retry + transaction + StateFlow + پیام فارسی خطا — **اصلاح‌شده ۲۰۲۶-۰۹-۱۸:** این فایل هرگز کامپایل نشده بود و ۱۱ خطای واقعی داشت (۶ کاراکتر تک‌کوتیشن چندحرفی در `jdbcUrl()`، `@Synchronized` روی تابع `suspend`، خطای نوع برگشتی حلقهٔ بی‌پایان در `withConnection`، `.close()` روی مقدار Boolean در `ping`، و `e.message.lines()` روی مقدار nullable). همه رفع شد و فایل با کامپایلر واقعی Kotlin بدون خطا/هشدار کامپایل می‌شود |
 | `SecureDbStore.kt` | فاز ۲: ذخیرهٔ امن اطلاعات اتصال (AES-GCM + Android Keystore) |
 
 ## ⚠️ چه فایلی را کجا اجرا کنیم (این اشتباه یک‌بار اتفاق افتاده است)

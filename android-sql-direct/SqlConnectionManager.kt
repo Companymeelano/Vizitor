@@ -65,12 +65,12 @@ data class DbSettings(
     /** JDBC URL — بدون هیچ مقادیر حساس. */
     fun jdbcUrl(): String = buildString {
         append("jdbc:sqlserver://").append(host).append(':').append(port)
-        append(';databaseName=').append(database)
-        append(';encrypt=').append(if (useEncryption) "true" else "false")
-        append(';trustServerCertificate=').append(if (trustServerCert) "true" else "false")
-        append(';loginTimeout=').append(connectTimeoutSec)
-        append(';sendStringParametersAsUnicode=true')
-        append(';applicationName=VizitorAndroid')
+        append(";databaseName=").append(database)
+        append(";encrypt=").append(if (useEncryption) "true" else "false")
+        append(";trustServerCertificate=").append(if (trustServerCert) "true" else "false")
+        append(";loginTimeout=").append(connectTimeoutSec)
+        append(";sendStringParametersAsUnicode=true")
+        append(";applicationName=VizitorAndroid")
     }
 
     /** نمایش امن (برای UI و لاگ): بدون رمز. */
@@ -100,9 +100,11 @@ object SqlConnectionManager {
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val state: StateFlow<ConnectionState> = _state.asStateFlow()
 
-    /** برقراری اتصال + اعتبارسنجی با SELECT 1. */
-    @Synchronized
+    /** برقراری اتصال + اعتبارسنجی با SELECT 1. (هرگز دو اتصال هم‌زمان ساخته نمی‌شود) */
     suspend fun connect(s: DbSettings): Boolean = withContext(Dispatchers.IO) {
+        if (connecting) return@withContext false
+        connecting = true
+        try {
         if (s.host.isBlank() || s.database.isBlank() || s.username.isBlank()) {
             _state.value = ConnectionState.Error("آدرس سرور دیتابیس، نام دیتابیس یا نام کاربری خالی است.")
             return@withContext false
@@ -121,6 +123,9 @@ object SqlConnectionManager {
         } catch (e: Exception) {
             _state.value = ConnectionState.Error("خطای غیرمنتظره در اتصال: ${e.javaClass.simpleName}")
             false
+        }
+        } finally {
+            connecting = false
         }
     }
 
@@ -193,7 +198,10 @@ object SqlConnectionManager {
      * اجرای یک بلوک روی یک اتصال اعتبارسنجی‌شده، با retry برای خطاهای گذرا.
      * اتصال همیشه (حتی در خطا) به استخر برمی‌گردد یا بسته می‌شود — leak ندارد.
      */
-    suspend fun <T> withConnection(block: (Connection) -> T): T = withContext(Dispatchers.IO) {
+    suspend fun <T> withConnection(block: (Connection) -> T): T =
+        withContext(Dispatchers.IO) { runWithRetry(block) }
+
+    private suspend fun <T> runWithRetry(block: (Connection) -> T): T {
         requireNotNull(settings) { "قبل از هر کوئری باید اتصال برقرار باشد" }
         var attempt = 0
         while (true) {
@@ -202,7 +210,7 @@ object SqlConnectionManager {
             try {
                 val result = block(c)
                 recycle(c)
-                return@withContext result
+                return result
             } catch (e: SQLException) {
                 killQuietly(c)
                 if (isTransient(e) && attempt <= MAX_RETRIES) {
@@ -249,7 +257,7 @@ object SqlConnectionManager {
     private fun ping(c: Connection) {
         c.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY).use { st ->
             st.queryTimeout = 5
-            st.execute("SELECT 1").close()
+            st.execute("SELECT 1")
         }
     }
 
@@ -315,7 +323,7 @@ object SqlConnectionManager {
         val code = e.errorCode
         val state = e.sqlState
         return when {
-            code == 18456 -> "ورود به دیتابیس ناموفق بود — نام کاربری/رمز را بررسی کنید (SQL $code، دلایل: ${e.message.lines().firstOrNull()})"
+            code == 18456 -> "ورود به دیتابیس ناموفق بود — نام کاربری/رمز را بررسی کنید (SQL $code، دلایل: ${e.message?.lines()?.firstOrNull()})"
             code == 4060 -> "دیتابیس با نام واردشده پیدا نشد یا دسترسی ندارید (SQL $code)"
             code == 40197 -> "این حساب اجازهٔ اتصال به این دیتابیس را ندارد (SQL $code)"
             code == 53 -> "به سرور دیتابیس نمی‌توان رسید — IP/پورت را بررسی کنید یا مطمئن شوید فایروال سرور باز است (SQL $code)"
