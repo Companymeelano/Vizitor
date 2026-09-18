@@ -7,7 +7,7 @@
 | | |
 |---|---|
 | نام فایل | `release/Vizitor-Setup-1.0.0.exe` |
-| حجم | ۹۷۴٬۳۵۲ بایت (≈ ۹۵۲ KiB) + فایل `release/Vizitor-Setup-1.0.0.exe.sha256` — بسته‌بندی پوشهٔ پنل (`panel/`) شامل همهٔ فایل‌های پنل و فونت‌ها |
+| حجم | ~ ۹۷۴ کیلوبایت (≈ ۹۵۲ KiB) — عدد دقیق هر ساخت در `release/Vizitor-Setup-1.0.0.exe.sha256` و `installer/exe-build-report.txt`؛ بسته‌بندی پوشهٔ پنل (`panel/`) شامل همهٔ فایل‌های پنل و فونت‌ها |
 | دانلود | [ریلیز vizitor-setup-v1.0.0](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-setup-v1.0.0) |
 | ساخت خودکار | هر تغییر روی `install.ps1` یا `installer/**`، ورک‌فلوی `verify-installer.yml` این فایل را از نو می‌سازد، با 7-Zip بررسی می‌کند `install.ps1` داخلش **دقیقاً** همان فایل مخزن باشد و گزارش را در `installer/exe-build-report.txt` ثبت می‌کند |
 | بررسی سلامت | `certutil -hashfile Vizitor-Setup-1.0.0.exe SHA256` (هش در هر ساخت دوباره تغییر می‌کند) |

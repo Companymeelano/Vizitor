@@ -146,7 +146,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Port 9000 -Ip 1.2.3.4
 برای نصب روی **ویندوز ۷ / ۸ / ۱۰ / ۱۱** یک فایل نصب گرافیکی تک‌فایلی هم آماده است:
 
 ```
-release/Vizitor-Setup-1.0.0.exe   ۹۷۴٬۳۵۲ بایت (~ ۹۵۲ KiB) — عدد دقیق و sha256 در `release/Vizitor-Setup-1.0.0.exe.sha256`
+release/Vizitor-Setup-1.0.0.exe   ~ ۹۷۴ کیلوبایت (≈ ۹۵۲ KiB) — عدد دقیق و sha256 در
+`release/Vizitor-Setup-1.0.0.exe.sha256` و در `installer/exe-build-report.txt` ثبت می‌شود
 
 **دانلود مستقیم:** [ریلیز vizitor-setup-v1.0.0](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-setup-v1.0.0)
 ```
