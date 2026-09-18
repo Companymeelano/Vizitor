@@ -61,6 +61,13 @@ android {
         compose = true
         buildConfig = true
     }
+    tasks.withType<Test>().configureEach {
+        // نتیجهٔ تک‌تک آزمون‌ها در لاگ CI چاپ شود (شواهد قابل‌ثبت در مخزن)
+        testLogging {
+            events("passed", "skipped", "failed")
+            showStandardStreams = false
+        }
+    }
     testOptions {
         // آزمون‌های JVM به APIهای اندروید دست نمی‌زنند؛ این گزینه فقط جلوی
         // «Method not mocked» را در صورت لمس تصادفی می‌گیرد.

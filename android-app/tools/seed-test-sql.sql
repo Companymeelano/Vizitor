@@ -142,13 +142,47 @@ CREATE TABLE dbo.subsailtemp_pish (
     active CHAR(1) NULL, amani BIT NULL, Pavarez FLOAT NULL, Avarez BIGINT NULL,
     Ptax FLOAT NULL, Tax BIGINT NULL, PerPromotion FLOAT NULL, modpar INT NULL);
 GO
+-- پروسیجر سربرگ: امضای ۲۶ پارامتری، دقیقاً به همان ترتیبی که اپ صدا می‌زند
+-- (doc: docs/write-path/ERP-WRITE-PROCEDURES.md §1). بدنه فقط نقش «ساخت سربرگ و
+--  بازگرداندن شماره» را بازی می‌کند؛ منطق واقعی ERP این‌جا شبیه‌سازی شده است.
 IF OBJECT_ID(N'dbo.add_sail_pish') IS NULL
-EXEC('CREATE PROCEDURE dbo.add_sail_pish @id_en BIGINT OUTPUT AS
-      BEGIN SET NOCOUNT ON; SET @id_en = 1000; END');
+EXEC(N'CREATE PROCEDURE dbo.add_sail_pish
+    @date NVARCHAR(20), @shmo INT, @barbari BIGINT, @tozih NVARCHAR(300), @vis_rdf INT,
+    @sumlineall BIGINT, @all BIGINT, @gainall BIGINT, @tafif BIGINT, @jamtakhgh BIGINT,
+    @done_date NVARCHAR(20), @user NVARCHAR(50), @panevis NVARCHAR(200), @rdf_sarbarg INT,
+    @rdf_tahbarg INT, @modpar INT, @ph_kh INT, @mod INT, @mod_darsad_vis INT, @nah_par INT,
+    @sh_fac BIGINT, @id_en BIGINT OUTPUT, @ted_rooz INT, @sysid INT, @tax BIGINT, @avarez BIGINT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @mod <> 1 RETURN;                      -- مثل پروسیجر واقعی: mod=1 یعنی درج
+    DECLARE @new BIGINT = (SELECT ISNULL(MAX(shfacfo), 0) + 1 FROM dbo.sailfact_pish);
+    INSERT INTO dbo.sailfact_pish (shfacfo, rdf__) VALUES (@new, 1);
+    SET @id_en = @new;
+END');
 GO
+-- تریگر سطر میانی: در ERP واقعی همین تریگر سطر «واقعی» پیش‌فاکتور را می‌سازد.
+--  این‌جا همان کار انجام می‌شود تا آزمون، کل مسیر نوشتن را بسنجد: اپ یک سطر در
+--  جدول میانی درج می‌کند و تریگر آن را به dbo.subsailfact_pish می‌برد.
 IF OBJECT_ID(N'dbo.trig_sst_pish') IS NULL
-EXEC('CREATE TRIGGER dbo.trig_sst_pish ON dbo.subsailtemp_pish INSTEAD OF INSERT AS
-      BEGIN SET NOCOUNT ON; END');
+EXEC(N'CREATE TRIGGER dbo.trig_sst_pish ON dbo.subsailtemp_pish INSTEAD OF INSERT AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.subsailtemp_pish
+        (mod, shfacfo, rdf__, rdf, shka, rdf_anbar, tedvah, tedjoz, vahprice, jozprice,
+         bastebandi, tedbastebandi, linesum, isret, pertafif, pervis, litakhma, active,
+         amani, Pavarez, Avarez, Ptax, Tax, PerPromotion, modpar)
+    SELECT mod, shfacfo, rdf__, rdf, shka, rdf_anbar, tedvah, tedjoz, vahprice, jozprice,
+           bastebandi, tedbastebandi, linesum, isret, pertafif, pervis, litakhma, active,
+           amani, Pavarez, Avarez, Ptax, Tax, PerPromotion, modpar
+      FROM inserted;
+    INSERT INTO dbo.subsailfact_pish
+        (RDF, shfacfo, rdf__, SHKA, TEDVAH, TEDJOZ, VAHPRICE, JOZPRICE, LINESUM, litakhma,
+         PERTAFIF, Tax, Avarez, active)
+    SELECT RDF, shfacfo, rdf__, SHKA, TEDVAH, TEDJOZ, VAHPRICE, JOZPRICE, LINESUM, litakhma,
+           PERTAFIF, Tax, Avarez, active
+      FROM inserted;
+END');
 GO
 
 -- ── کاربر محدود، دقیقاً با همان دسترسی‌هایی که نصب‌کننده می‌دهد ─────────────

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Vizitor — نصب‌کننده هوشمند سرور برای ویندوز (Smart Windows Installer)
 
@@ -1012,9 +1012,6 @@ function Invoke-AndroidPrep {
         Write-Warn "ساخت کارت اتصال اندروید ممکن نشد: $($_.Exception.Message)"
     }
 
-    Write-Ok "اتصال مستقیم اندروید آماده است (سرور: $script:Addr ، پورت: 1433 ، دیتابیس: $erp ، کاربر: $login)"
-    Write-Info "جزئیات (بدون رمز): $jsonOut"
-
     # ---- بررسی TCP/IP ۱۴۳۳: تنها چیزی که بین «سرور سالم» و «گوشی وصل می‌شود» فاصله است
     Write-Step "بررسی شنوندهٔ شبکهٔ SQL Server روی پورت ۱۴۳۳"
     if (-not (Test-SqlTcpListener)) {
@@ -1039,6 +1036,9 @@ function Invoke-AndroidPrep {
             Write-Info "  Restart-Service $($script:SqlServiceName)   (یا ری‌استارت از services.msc)"
         }
     }
+    Write-Ok "اتصال مستقیم اندروید آماده است (سرور: $script:Addr ، پورت: 1433 ، دیتابیس: $erp ، کاربر: $login)"
+    Write-Info "جزئیات (بدون رمز): $jsonOut"
+
     return $true
 }
 

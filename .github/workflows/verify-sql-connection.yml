@@ -98,11 +98,11 @@ jobs:
       - name: آزمون اتصال از بیرون کانتینر (مثل گوشی روی شبکه)
         run: |
           # پورت ۱۴۳۳ روی میزبان رانر باز است؛ همان مسیری که گوشی طی می‌کند
-          python3 - <<'PY'
+          python3 - <<'PY' 2>&1 | tee /tmp/outside.log
           import socket
           s = socket.create_connection(("127.0.0.1", 1433), timeout=10)
           s.close()
-          print("TCP 127.0.0.1:1433 باز است ✓")
+          print("TCP 127.0.0.1:1433 از بیرون کانتینر باز است ✓ — همان مسیر گوشی → سرور")
           PY
 
       - name: اجرای آزمون‌های اتصال با کد خودِ برنامه
@@ -110,11 +110,11 @@ jobs:
         run: |
           chmod +x gradlew
           set +e
-          ./gradlew --no-daemon testDebugUnitTest --tests '*RealSqlConnectionTest*' --info 2>&1 | tee sql-test.log
+          ./gradlew --no-daemon testDebugUnitTest --tests '*RealSqlConnectionTest*' 2>&1 | tee sql-test.log
           rc=${PIPESTATUS[0]}
           echo "### نتیجهٔ آزمون اتصال" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          grep -E "\[(driver|list|jtds|info|login|identity|customers|groups|products|price|stock|health|deny|perm)\]|Tests? (run|passed|failed)|FAILED|BUILD" sql-test.log | tail -60 >> "$GITHUB_STEP_SUMMARY" || true
+          grep -E "\[(driver|list|jtds|info|login|identity|customers|groups|products|price|stock|health|deny|perm|write)\]|PASSED|FAILED|BUILD" sql-test.log | tail -60 >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           exit "$rc"
 
@@ -129,17 +129,42 @@ jobs:
             echo "گزارش آزمون اتصال به SQL Server — ویزیتور مستقیم (پورت ۱۴۳۳)"
             echo "تاریخ: $(date -u '+%Y-%m-%d %H:%M:%S UTC')   کامیت: ${GITHUB_SHA}"
             echo "SQL Server: mcr.microsoft.com/mssql/server:2019-latest (کانتینر CI، شبیه‌سازی مسیر گوشی→سرور)"
-            echo "================================================================================"
+            echo "=================================================================================="
             echo ""
-            echo "--- ساخت اسکیمای آزمون و کاربر محدود ---"
-            grep -E "what|sys_users|CUSTOMERS|inventory|customer of|product_version|^[0-9]+ +TCP|Online" /tmp/seed.log 2>/dev/null | head -30
+            echo "--- ۱) اتصال از بیرون کانتینر (مسیر واقعی گوشی → سرور) ---"
+            cut -c1-160 /tmp/outside.log 2>/dev/null
             echo ""
-            echo "--- خروجی آزمون‌های اتصال (کد خود برنامه) ---"
-            grep -E "\[(driver|list|jtds|info|login|identity|customers|groups|products|price|stock|health|deny|perm)\]|Tests? (run|passed|failed)|FAILED|BUILD SUCCESSFUL|BUILD FAILED" android-app/sql-test.log 2>/dev/null | head -80
+            echo "--- ۲) اسکیمای آزمون و کاربر محدود ساخته شد ---"
+            grep -aE "what|sys_users|CUSTOMERS|inventory|customer of|Online|TSQL|ProductVersion" /tmp/seed.log 2>/dev/null | cut -c1-140 | head -25
+            echo ""
+            echo "--- ۳) نتیجهٔ تک‌تک آزمون‌ها (فایل XML گِریدل = مرجع) ---"
+          python3 - <<'PY' 2>/dev/null
+          import glob, xml.etree.ElementTree as ET
+          t = f = e = s = 0
+          for p in sorted(glob.glob("android-app/vizitor-direct/build/test-results/testDebugUnitTest/*.xml")):
+              r = ET.parse(p).getroot()
+              t += int(r.get("tests", 0)); f += int(r.get("failures", 0))
+              e += int(r.get("errors", 0)); s += int(r.get("skipped", 0))
+              for c in r.iter("testcase"):
+                  st = "موفق"
+                  if c.find("failure") is not None: st = "ناموفق"
+                  elif c.find("skipped") is not None: st = "پرش‌داده‌شده"
+                  print("  [" + st + "] " + str(c.get("name")))
+          print("  ── جمع: %d آزمون، %d ناکام، %d خطا، %d پرش" % (t, f, e, s))
+          ok = t > 0 and not (f or e or s)
+          print("  ── نتیجه: " + ("همهٔ آزمون‌ها موفق ✓" if ok else "نیازمند بررسی ✗"))
+          PY
+            echo ""
+            echo "--- ۴) خروجی آزمون‌ها (کد خود برنامه روی SQL Server واقعی) ---"
+            grep -aE "\[(driver|list|jtds|info|login|identity|customers|groups|products|price|stock|health|deny|perm|write)\]|PASSED|FAILED|BUILD SUCCESSFUL|BUILD FAILED" android-app/sql-test.log 2>/dev/null | tail -60
           } > "$R"
           cat "$R"
           git config user.name "vizitor-ci"
           git config user.email "ci@vizitor.local"
           git add -f "$R"
           git commit -m "chore(ci): SQL connection report [skip ci]"
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push "$URL" "HEAD:${GITHUB_REF_NAME}" || {
+            echo "پوش رد شد — یک‌بار ریبس و تلاش دوباره (هم‌زمانی با ورک‌فلوی APK)"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push "$URL" "HEAD:${GITHUB_REF_NAME}"
+          }

@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  Vizitor setup — preflight detection                 (called by vizitor.nsi)
 #  Writes a small INI file that the installer reads with ReadINIStr.
 #  Written for PowerShell 2.0 compatibility so it also runs on a plain

@@ -90,6 +90,9 @@ jobs:
           done
 
       - name: گزارش بازرسی APK (در مخزن ثبت می‌شود تا قابل بررسی باشد)
+        # اگر پوش هم‌زمان با ورک‌فلوی آزمون اتصال رد شود، این مرحله نباید
+        # بارگذاری خروجی و انتشار ریلیز را از کار بیندازد.
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -126,8 +129,12 @@ jobs:
           git config user.name "vizitor-ci"
           git config user.email "ci@vizitor.local"
           git add -f "$R"
-          git commit -m "chore(ci): APK verification report [skip ci]"
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          git diff --cached --quiet || git commit -m "chore(ci): APK verification report [skip ci]"
+          URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push "$URL" "HEAD:${GITHUB_REF_NAME}" || {
+            echo "پوش رد شد — یک‌بار ریبس و تلاش دوباره (هم‌زمانی با ورک‌فلوی آزمون اتصال)"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push "$URL" "HEAD:${GITHUB_REF_NAME}"
+          }
 
       - name: بارگذاری خروجی‌ها (artifact)
         uses: actions/upload-artifact@v4

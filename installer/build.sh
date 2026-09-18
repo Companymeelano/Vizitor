@@ -51,6 +51,22 @@ echo "[ok] makensis : $MAKENSIS"
 echo "[ok] NSISDIR  : $NSISDIR"
 echo "[..] ساخت نصب‌کننده ..."
 
+# اسکریپت‌های PowerShell داخل exe با «Windows PowerShell 5.1» اجرا می‌شوند؛
+# آن‌ها فایل بدون BOM را با ANSI می‌خوانند و متن فارسی به‌هم می‌ریزد. پس BOM لازم است.
+python3 - <<'PSBOM' || true
+for p in ('install.ps1', 'installer/nsi/preflight.ps1'):
+    try:
+        d = open(p, 'rb').read()
+    except OSError:
+        print('[!!] پیدا نشد: ' + p)
+        continue
+    if not d.startswith(b'\xef\xbb\xbf'):
+        open(p, 'wb').write(b'\xef\xbb\xbf' + d)
+        print('[ok] BOM به ' + p + ' اضافه شد')
+    else:
+        print('[ok] BOM موجود است: ' + p)
+PSBOM
+
 # NSIS فایل .nsi را باید UTF-8 با BOM بخواند (متن فارسی)
 python3 - "$NSI" <<'PY' || true
 import sys

@@ -9,6 +9,10 @@
 //    ۴) ورود ویزیتور با جدول dbo.sys_users (رمز varbinary + مقایسهٔ CONVERT)
 //    ۵) مشتریان مجاز، گروه‌ها و تیر قیمت، کالاها، موجودی انبار، هویت ویزیتور
 //    ۶) بررسی سلامت مسیر پیش‌فاکتور (بدون هیچ نوشتنی)
+//    ۷) کاربر محدود اجازهٔ DELETE ندارد (فقط خواندن)
+//    ۸) مسیر کاملِ نوشتن پیش‌فاکتور با همان کاربر محدود: EXEC dbo.add_sail_pish
+//       + INSERT در جدول میانی + اجرای تریگر — این آزمون فقط روی دیتابیس
+//       یک‌بارمصرفِ کانتینر CI می‌نویسد، نه روی دیتابیس واقعی مشتری
 //
 //  متغیرهای محیطی (در نبودشان آزمون رد می‌شود و بیلد عادی را خراب نمی‌کند):
 //    VIZ_TEST_SQL_HOST, VIZ_TEST_SQL_PORT, VIZ_TEST_SQL_DB,
@@ -125,10 +129,13 @@ class RealSqlConnectionTest {
         println("[login] ok user=${row.username} id=${row.userId} company=${row.companyId}")
 
         assertEquals("رمز اشتباه نباید وارد شود", null, ds.login("vizitor1", "غلط"))
+        println("[login] رمز اشتباه رد شد ✔")
         assertEquals("حساب غیرفعال (active=0) نباید وارد شود", null, ds.login("vizitor2", "2"))
+        println("[login] حساب غیرفعال (active=0) رد شد ✔")
         val locked = ds.login("lockuser", "3")
         assertNotNull("کاربر قفل‌شده باید شناخته و بعد توسط برنامه رد شود", locked)
         assertTrue("پرچم قفل باید true برگردد", locked!!.locked)
+        println("[login] حساب قفل‌شده (IsLocked=1) شناخته شد و locked=true برگشت ✔")
     }
 
     @Test
@@ -212,5 +219,59 @@ class RealSqlConnectionTest {
             false
         }
         assertTrue("خواندن جدول میانی باید مجاز باشد (db_datareader)", canInsert)
+    }
+    @Test
+    fun `۸- ثبت پیش‌فاکتور با کاربر محدود (EXEC + INSERT + تریگر)`() = runBlocking {
+        requireEnv()
+        assertTrue(SqlConnectionManager.connect(settings()))
+        val ds = MeelanoDataSource(SqlConnectionManager)
+
+        val head = MeelanoDataSource.DbPreInvoiceHead(
+            shmo = 5001,                    // مشتری مجاز همین ویزیتور
+            visRdf = 101,                   // dbo.visitors.vis_rdf
+            userName = "vizitor1",
+            date = "1405/06/27",
+            doneDate = "1405/06/27",
+            sumLineAll = 2_500_000,
+            finalAmount = 2_500_000,
+            tafif = 0,
+            jamTakhgh = 0,
+            tax = 0,
+            avarez = 0,
+            barbari = 0,
+            tozih = "آزمون خودکار مسیر نوشتن",
+            panevis = "ذکر نشده",
+            rdfSarbarg = 1,
+            rdfTahbarg = 2,
+            modpar = 0,
+            phKh = 0,
+            modDarsadVis = 0,
+            nahPar = 1,
+            tedRooZ = 3,
+            gainAll = 0,
+            sysId = 1,
+        )
+        val line = MeelanoDataSource.DbPreInvoiceLine(
+            shka = 9002,
+            rdfAnbar = 1,
+            tedVah = 1.0,
+            tedJoz = 0,
+            vahPrice = 2_500_000,
+            jozPrice = 2_500_000,
+            lineSum = 2_500_000,
+            rdf = 0,
+        )
+
+        val res = ds.createPreInvoice(head, listOf(line))
+        res.error?.let { throw AssertionError("ثبت پیش‌فاکتور خطا داد: ${it.message}", it) }
+        assertTrue("شمارهٔ پیش‌فاکتور باید برگردد", res.shfacfo > 0)
+        assertEquals("یک قلم باید نوشته شود", 1, res.linesWritten)
+        println("[write] سربرگ ${res.shfacfo} با ${res.linesWritten} قلم ثبت شد " +
+            "(EXEC dbo.add_sail_pish + INSERT در جدول میانی)")
+
+        val rows = ds.preInvoiceLines(res.shfacfo)
+        assertEquals("تریگر باید سطر واقعی پیش‌فاکتور را بسازد", 1, rows.size)
+        assertEquals(2_500_000L, rows.first().lineSum)
+        println("[write] اقلام خوانده‌شده: ${rows.map { it.shka to it.lineSum }} ✔")
     }
 }
