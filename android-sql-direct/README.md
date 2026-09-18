@@ -20,7 +20,7 @@
 | فایل | کجا اجرا می‌شود | کجا هرگز |
 |---|---|---|
 | `sql/00` … `sql/07` (`*.sql`) | فقط در **SSMS** روی سرور — کل فایل: `Ctrl+A` بعد `F5` | — |
-| `tools/run_audit.bat` | فقط در **ویندوز سرور**: راست‌کلیک → «Run as administrator» | در SSMS باز/اجرا **نشود** |
+| `tools/run_audit.bat` | فقط در **ویندوز سرور**: در File Explorer راست‌کلیک → «Run as administrator» (فایل را **اجرا** کن) | در SSMS و در **PowerShell** اجرا **نشود**؛ متنش را کپی/پیست **نکن** (خطاهای `REM: The term 'REM' is not recognized` یعنی متن فایل به‌جای اجرای فایل، در کنسول چسبانده شده) |
 | `tools/verify_tsql.py` و `tools/check_sql_columns.py` | فقط با **پایتون** (روی کامپیوتر توسعه): `python3 tools/verify_tsql.py` | در SSMS باز/اجرا **نشود** |
 | `patches/*.patch`، `*.kt`، `*.md`، `*.tsv` | ویرایشگر / گیت / Android Studio | در SSMS باز **نشوند** |
 
@@ -31,6 +31,16 @@
 `Msg 102 Incorrect syntax near '!'` /
 `Msg 103 The identifier that starts with ... is too long. Maximum length is 128`.
 یعنی «کدِ پایتون/دستورِ ویندوز دارد به‌عنوان SQL اجرا می‌شود».
+اگر متن `.bat` داخل **PowerShell** چسبانده شود، خطاها این‌هاست:
+`ParserError: Unexpected token 'off'`، `REM: The term 'REM' is not recognized`،
+`setlocal: The term 'setlocal' is not recognized` — یعنی «دستورهای cmd دارند در
+PowerShell اجرا می‌شوند»؛ فایل باید اجرا شود، نه کپی.
+
+**راه جایگزین بدون `sqlcmd`:** فایل `sql/03b_bodies_file.sql` همان چهار بدنهٔ
+پروسیجر را به‌صورت **result set** برمی‌گرداند (نه `PRINT`)، پس در SSMS با
+`Ctrl+Shift+F` (Query → Results To → Results to File) و سپس `F5` کامل داخل یک فایل
+ذخیره می‌شود. راهنمای کاملِ سه روش در `tools/README-how-to-run.txt` است
+(و همان فایل‌ها به‌صورت یک بستهٔ `Vizitor-audit-files.zip` هم کنار ریپو هست).
 
 ## تاریخچهٔ `sql/00_audit_atiran2.sql`
 * **v1** → روی سرور خطا داد: `Msg 102, Level 15, State 1, Line 142 — Incorrect syntax near '@pwSql'.`
