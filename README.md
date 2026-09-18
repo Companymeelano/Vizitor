@@ -16,7 +16,7 @@
 | `database/schema_sqlite.sql` | اسکیم دیتابیس SQLite |
 | `database/schema_sqlserver.sql` | اسکیم دیتابیس Microsoft SQL Server (T-SQL، ای‌دی‌ام‌پتنت) |
 | `ANDROID_INTEGRATION.md` | راهنمای ساخت **بخش اتصال هوشمند اندروید** (چند کلیک + لحظه‌ای) با کد آمادهٔ Kotlin |
-| `android-app/` | **پروژهٔ کامل برنامهٔ اندروید «ویزیتور مستقیم»** — اتصال مستقیم به SQL Server روی پورت ۱۴۳۳، آمادهٔ ساخت APK با Android Studio/Gradle ([راهنما](android-app/README.md)) |
+| `android-app/` | **برنامهٔ اندروید «ویزیتور مستقیم»** — اتصال مستقیم به SQL Server روی پورت ۱۴۳۳. **فایل APK آمادهٔ نصب:** [ریلیز v1.0.0](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-direct-v1.0.0) ([راهنما](android-app/README.md)) |
 | `android-sql-direct/` | لایهٔ داده و ممیزی SQL (جایگزین‌شدنی در برنامهٔ موجود) + مستندات طرح و اسکریپت‌های فقط‌خواندنی سرور |
 | `INSTALL.md` | راهنمای کامل نصب و پیکربندی (Linux + Windows) |
 

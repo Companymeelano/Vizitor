@@ -178,6 +178,8 @@ C:\Vizitor\setup\android-connect.json    ← همان اطلاعات برای ب
 > پیاده شده است («ویزیتور مستقیم»). این کارت را می‌توان در برنامه با **اسکن QR**،
 > **خواندن فایل `android-connect.json`** یا **چسباندن متن کارت** وارد کرد؛ بعد از آن
 > دیتابیس از فهرست `sys.databases` انتخاب (یا دستی تایپ) می‌شود. جزئیات: `android-app/README.md`.
+> **فایل APK آماده:** [ریلیز vizitor-direct-v1.0.0](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-direct-v1.0.0)
+> (`VizitorDirect-1.0.0.apk` — ۷٫۶ مگابایت، امضاشده، شامل هر دو درایور SQL و اسکنر QR).
 C:\ProgramData\Vizitor\android_config.json  ← نسخهٔ کامل با رمز (دسترسی: فقط SYSTEM و Administrators)
 ```
 

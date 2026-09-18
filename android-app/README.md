@@ -14,7 +14,40 @@
 
 ---
 
-## ۱) ساخت فایل APK
+## ۰) فایل APK آمادهٔ نصب (دانلود مستقیم)
+APK ساخته شد و در صفحهٔ ریلیز همین مخزن قابل دانلود است:
+
+```
+https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-direct-v1.0.0
+```
+
+| فایل | حجم | sha256 | امضا |
+|---|---|---|---|
+| `VizitorDirect-1.0.0.apk` | ۷٫۶ مگابایت (۷٬۶۲۳٬۴۱۵ بایت) | `49b8b94fc33a7631f06aee151c018a77902022efaccf24d395751c57488bcf7d` | کلید «Vizitor Direct / Meelano Studio Design» — طرح‌های v2 و v3 |
+| `VizitorDirect-1.0.0-debug.apk` | ۱۰ مگابایت | `3a89d78393f28bcff7d237e23f0a705f15aec15cc941fad9d3f43b27f09fe7ce` | کلید آزمون اندروید (در کنار نسخهٔ اصلی نصب می‌شود) |
+
+نصب روی گوشی: فایل `VizitorDirect-1.0.0.apk` را انتقال دهید → روی گوشی باز کنید →
+اگر پیام «نصب از منابع ناشناس» آمد اجازه دهید → نصب.
+
+**چه چیزی داخل APK بررسی شده است** (گزارش کامل: `apk-report.txt`):
+* `apksigner verify` → `Verifies` (طرح امضای v2 + v3، گواهی سازنده).
+* ۲ فایل dex در نسخهٔ ریلیز؛ هر دو درایور داخل بسته‌اند
+  (`com/microsoft/sqlserver/jdbc/SQLServerDriver` و `net/sourceforge/jtds/jdbc/Driver`).
+* کلاس‌های خود برنامه (`ir/atiran/vizitor/direct/MainActivity`,
+  `ir/atiran/vizitor/data/sql/MeelanoDataSource`) و اسکنر QR (`com/journeyapps/barcodescanner`) داخل dex.
+* مجوز فونت وزیرمتن: `assets/licenses/Vazirmatn-OFL.txt`.
+
+> 🔑 **نگه‌داری کلید امضا:** نسخهٔ ریلیز با کلیدی امضا شده که خودِ CI ساخته است
+> (`vizitor-ci.jks` در بخش artifactهای همان اجرا، فقط برای اعضای مخزن قابل دانلود).
+> برای نسخه‌های بعدی، همان فایل کلید را در `android-app/keystore.properties` بدهید تا
+> به‌روزرسانی روی همان نصب قبلی انجام شود؛ وگرنه باید برنامه را حذف و دوباره نصب کنید.
+
+### ساخت خودکار در گیت‌هاب
+ورک‌فلوی `.github/workflows/build-android-direct.yml` با هر تغییر در `android-app/`
+اجرا می‌شود: JDK 17 → ساخت کلید → `assembleDebug assembleRelease` → بررسی امضا و محتوای dex →
+ثبت گزارش در `android-app/apk-report.txt` → انتشار ریلیز با APKها.
+
+## ۱) ساخت فایل APK روی کامپیوتر خودتان
 
 ### راه اول — Android Studio (ساده‌ترین)
 1. پوشهٔ `android-app` را در Android Studio باز کنید (Open → همین پوشه).
@@ -47,9 +80,8 @@ gradlew.bat assembleRelease
 
 **نیازمندی‌ها:** JDK 17 (همراه Android Studio می‌آید) + اتصال اینترنت در زمان ساخت + Android SDK 34.
 
-> ⚠️ در سندباکس لینوکسی (جایی که این کد نوشته و بررسی شد) SDK اندروید و مخازن Maven در دسترس نیستند،
-> پس **فایل APK اینجا ساخته نشد**؛ ولی همهٔ کدهای غیررابط‌کاربری با کامپایلر واقعی Kotlin کامپایل و
-> بررسی شده‌اند (بخش ۵ را ببینید). ساخت APK باید یک‌بار روی ویندوز خودتان انجام شود.
+> APK رسمی همین حالا در بخش ۰ موجود است (ساختهٔ رانر گیت‌هاب با همان کد این پوشه).
+> ساخت محلی فقط وقتی لازم است که بخواهید کد را تغییر دهید.
 
 ---
 
@@ -119,8 +151,10 @@ gradlew.bat assembleRelease
 * نسخهٔ اصلاح‌شده هم در همین پروژه (`android-app/.../SqlConnectionManager.kt`) و هم در فایل
   جایگزینِ برنامهٔ خودتان (`android-sql-direct/SqlConnectionManager.kt`) به‌روزرسانی شد.
 * توازن ساختاری و کامل بودن ایمپورت‌های همهٔ فایل‌های رابط کاربری (Compose) با بررسی خودکار.
-* ⛔ **آنچه بررسی نشده:** ساخت واقعی APK، و اجرای آن روی گوشی/شبیه‌ساز (نیاز به Android SDK و
-  اتصال به مخازن Maven که در سندباکس در دسترس نیست). این یک بار روی ویندوز خودتان انجام شود.
+* **ساخت واقعی APK** روی رانر گیت‌هاب (JDK 17 + Android SDK 34) سه بار پشت‌سرهم: `assembleDebug`
+  و `assembleRelease` هر دو موفق، `apksigner verify` → `Verifies`، گزارش در `apk-report.txt`.
+* ⛔ **آنچه بررسی نشده:** اجرای برنامه روی گوشی/شبیه‌ساز و اتصال واقعی به SQL Server از داخل
+  برنامه (این را باید روی گوشی خودتان با کارت اتصال نصب‌کننده امتحان کنید).
 
 ---
 
