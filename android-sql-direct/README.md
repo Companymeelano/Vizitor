@@ -54,6 +54,31 @@
 * نتیجهٔ آخرین اجرای ابزار: `15/15` و `2/2` batch سالم، هر سه دستور داینامیک
   بازسازی و parse شدند، بدون BOM، ASCII خالص → **ALL CHECKS PASSED**.
 
+## فاز ۲ — اتصال UI به لایهٔ SQL (انجام‌شده، 2026-09-18)
+یک patch کامل و آماده برای apply روی ریپازیتوری `Companymeelano/viz`:
+`patches/phase2-sql-ui-wiring.patch` (۶ فایل، ۶۲۸ خط افزودن)
+
+| فایل | تغییر |
+|---|---|
+| `app/build.gradle.kts` | افزودن `com.microsoft.sqlserver:mssql-jdbc:12.4.2.jre8` |
+| `app/proguard-rules.pro` | keep برای `com.microsoft.sqlserver.jdbc.**` + dontwarn |
+| `data/sql/SqlConnectionManager.kt` | **جدید** — pool، retry، transaction، StateFlow، پیام فارسی خطا |
+| `data/local/SecureDbStore.kt` | **جدید** — ذخیرهٔ رمزنگاری‌شدهٔ پیکربندی (AES-GCM + Keystore) |
+| `VizitorViewModel.kt` | `dbState`/`dbTesting`/`dbConfig` + `testDbConnection()`/`refreshDbState()`/`disconnectDb()`/`clearDbConfig()` |
+| `ui/screens/SettingsScreen.kt` | بخش جدید «اتصال مستقیم SQL Server»: فیلدهای سرور/پورت/دیتابیس/کاربر/رمز + دکمهٔ «تست اتصال SQL» + نمایش زندهٔ وضعیت |
+
+نکات پیاده‌سازی:
+* مقادیر پیش‌فرض فرم از **ممیزی واقعی** پر شده‌اند: `192.168.1.150`، پورت `1433`،
+  دیتابیس `Meelano`، کاربر `vizitor_android`.
+* پیکربندی **فقط پس از اتصال موفق** ذخیره می‌شود (نه صرفاً با زدن دکمه).
+* رمز عبور با `PasswordVisualTransformation` نمایش داده می‌شود، هرگز Log نمی‌شود و
+  فقط رمزنگاری‌شده در Keystore دستگاه می‌ماند.
+* هیچ عنصر UI قبلی حذف/بازطراحی نشد؛ فقط یک بخش به صفحهٔ تنظیمات اضافه شد.
+
+وضعیت: **کد نوشته شده ولی کامپایل نشده** (در sandbox نه Android SDK هست و نه JDK) —
+اعتبارسنجی انجام‌شده: تعادل ساختاری هر ۴ فایل Kotlin، بررسی وجود همهٔ symbolهای
+ارجاع‌داده‌شده، و تطابق امضاهای `SqlConnectionManager`/`SecureDbStore` با مصرف‌کننده‌ها.
+
 ## تاریخچهٔ `sql/01_setup_vizitor_user.sql`
 * نام دیتابیس به یک متغیر در بالای فایل منتقل شد (`DECLARE @dbName = N'Meelano'`) و
   ساخت کاربر/نقش با dynamic SQL انجام می‌شود تا مستقل از دیتابیسِ بازِ پنجرهٔ SSMS باشد.
