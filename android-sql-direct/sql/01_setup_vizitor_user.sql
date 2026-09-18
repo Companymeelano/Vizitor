@@ -12,6 +12,17 @@
    ۳) قانون فایروال فقط برای شبکهٔ داخلی (192.168.1.0/24) — نه اینترنت!
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ── ۰) نام دیتابیس ERP ───────────────────────────────────────────────────
+   ↓↓↓ فقط اگر نام دیتابیس روی سرور شما چیز دیگری است، همین یک خط را عوض کنید.
+   (طبق خروجی ممیزی، نام فعلی روی سرور «Meelano» است.) */
+DECLARE @dbName SYSNAME = N'Meelano';
+
+IF DB_ID(@dbName) IS NULL
+    PRINT N'*** دیتابیس [' + @dbName + N'] روی این سرور پیدا نشد.'
+        + N' نام درست را در خط DECLARE @dbName (بالای همین فایل) بگذارید و دوباره اجرا کنید.'
+        + N' هیچ تغییری روی سرور انجام نشد. ***';
+GO
+
 /* ── ۱) LOGIN سروری (فقط اگر نباشد) ─────────────────────────────────────── */
 IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'vizitor_android')
 BEGIN
@@ -23,36 +34,52 @@ BEGIN
 END
 GO
 
-/* ── ۲) ادامهٔ کار داخل دیتابیس Atiran2 ────────────────────────────────────
-   مهم: اگر این خط نباشد و اتصال شما روی master باز باشد، کاربر اشتباهاً
-   در master ساخته می‌شود. اگر دیتابیس نباشد، خودِ همین خط با پیام واضح
-   خطا می‌دهد (چیزی خراب نمی‌شود). */
-USE [Atiran2];
+/* ── ۱ب) LOGIN باید در حالت احراز هویت ترکیبی مجاز باشد ────────────────────
+   اگر LoginMode = 1 باشد (فقط Windows)، ورود کاربر SQL ممکن نیست؛ نسخهٔ
+   فعلی مقدار را فقط گزارش می‌کند و چیزی را تغییر نمی‌دهد. */
+SELECT '01_LOGINMODE_CHECK' AS section,
+       CAST(value_data AS NVARCHAR(16)) AS login_mode,
+       CASE WHEN CAST(value_data AS NVARCHAR(16)) = N'2'
+            THEN N'OK: mixed mode (SQL logins allowed)'
+            ELSE N'ATTENTION: only Windows authentication is enabled -> enable mixed mode in SSMS > Server Properties > Security' END AS note
+FROM sys.dm_server_registry
+WHERE value_name = N'LoginMode';
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'vizitor_android')
-    CREATE USER vizitor_android FOR LOGIN vizitor_android;
-GO
+/* ── ۲) کاربر دیتابیس + نقش فقط‌خواندنی، داخل دیتابیس ERP ─────────────────
+   از dynamic SQL استفاده می‌شود تا هر دیتابیسی که در کادر بالای فایل
+   نوشته شده، مستقیماً هدف قرار گیرد — دیگر مهم نیست پنجرهٔ SSMS روی
+   master باز است یا روی خود دیتابیس. همهٔ کارها idempotent است. */
+DECLARE @dbName SYSNAME = N'Meelano';   -- ← فقط این خط (اگر نام دیتابیس فرق دارد)
 
-/* عضویت در نقش فقط‌خواندنی — idempotent: اجرای دوبارهٔ اسکریپت خطا نمی‌دهد */
-IF NOT EXISTS (SELECT 1
-                 FROM sys.database_role_members rm
-                 JOIN sys.database_principals rp ON rp.principal_id = rm.role_principal_id
-                 JOIN sys.database_principals mp ON mp.principal_id = rm.member_principal_id
-                WHERE rp.name = N'db_datareader'
-                  AND mp.name = N'vizitor_android')
-    ALTER ROLE db_datareader ADD MEMBER vizitor_android;
-GO
-
-/* ── ۳) تأیید نهایی: باید یک ردیف با role_name = db_datareader ببینید ───── */
-SELECT '02_ROLE_CHECK' AS section,
-       DB_NAME() AS database_name,
-       mp.name   AS member_name,
-       rp.name   AS role_name
-FROM sys.database_role_members rm
-JOIN sys.database_principals rp ON rp.principal_id = rm.role_principal_id
-JOIN sys.database_principals mp ON mp.principal_id = rm.member_principal_id
-WHERE mp.name = N'vizitor_android';
+IF DB_ID(@dbName) IS NOT NULL
+BEGIN
+    DECLARE @sql NVARCHAR(MAX) =
+        N'USE ' + QUOTENAME(@dbName) + N';
+          IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N''vizitor_android'')
+              CREATE USER vizitor_android FOR LOGIN vizitor_android;
+          IF NOT EXISTS (SELECT 1
+                           FROM sys.database_role_members rm
+                           JOIN sys.database_principals rp ON rp.principal_id = rm.role_principal_id
+                           JOIN sys.database_principals mp ON mp.principal_id = rm.member_principal_id
+                          WHERE rp.name = N''db_datareader''
+                            AND mp.name = N''vizitor_android'')
+              ALTER ROLE db_datareader ADD MEMBER vizitor_android;
+          SELECT N''02_ROLE_CHECK'' AS section, DB_NAME() AS database_name,
+                 mp.name AS member_name, rp.name AS role_name
+            FROM sys.database_role_members rm
+            JOIN sys.database_principals rp ON rp.principal_id = rm.role_principal_id
+            JOIN sys.database_principals mp ON mp.principal_id = rm.member_principal_id
+           WHERE mp.name = N''vizitor_android'';';
+    BEGIN TRY
+        EXEC (@sql);
+    END TRY
+    BEGIN CATCH
+        PRINT N'ایجاد کاربر/نقش ناموفق بود: ' + ERROR_MESSAGE();
+    END CATCH
+END
+ELSE
+    PRINT N'دیتابیس [' + @dbName + N'] پیدا نشد → بخش ۲ اجرا نشد. نام درست را در DECLARE @dbName بگذارید.';
 GO
 
 /* پیام یادآوری (در نتیجهٔ کوئری نمایش داده می‌شود):

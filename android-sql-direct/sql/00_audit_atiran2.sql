@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Vizitor — Atiran2 audit  ·  v2  ·  2026-09-18  ·  READ ONLY
+   Vizitor — ERP database audit  ·  v3  ·  2026-09-18  ·  READ ONLY
+   (the live ERP database on the server is named: Meelano)
    ═══════════════════════════════════════════════════════════════════════════
    This script NEVER writes, NEVER drops, NEVER alters anything.
    It only reads system catalogs (sys.*) plus a few COUNT/MIN/MAX checks.
@@ -12,9 +13,22 @@
      not exist in this database, and additional sections were added
      (network config, object-name discovery).
 
+   WHY v3 (found by running v2 on the real server):
+     · Msg 208 "Invalid object name 'wanted'": in T-SQL a CTE name lives only
+       until the end of the SINGLE statement that follows the CTE, but section
+       07 reused its CTE in a second statement. Section 07 now uses a table
+       variable (@wanted) instead of a CTE.
+     · The live ERP database is NOT named Atiran2, so the hard-coded name check
+       is gone: this script audits whatever database you are connected to,
+       prints that name, and probes dbo.CUSTOMERS to prove the ERP tables are
+       really there.
+     · Every object-name comparison now uses COLLATE Latin1_General_CI_AS, so
+       the audit also behaves correctly on a case-sensitive-collation database.
+
    HOW TO RUN (SSMS on the server):
-     1. Connect to the server and select database [Atiran2] in the dropdown
-        (the script prints which database it actually ran in — check it).
+     1. Connect to the server and select the ERP database (on this server it
+        is named Meelano) in the SSMS database dropdown. The script prints the
+        name it actually ran in, plus a dbo.CUSTOMERS probe — verify both.
      2. Ctrl+T  → Results to Text  (much easier to copy back)
         Optional: Tools ▸ Options ▸ Query Results ▸ SQL Server ▸ Results to Text
         → "Maximum number of characters displayed in each column" = 8000.
@@ -49,11 +63,19 @@ SET NOCOUNT ON;
 GO
 
 /* ── database context guard ─────────────────────────────────────────────── */
-IF DB_NAME() <> N'Atiran2'
-    PRINT N'*** WARNING: the current database is [' + DB_NAME() + N'] but the expected database is [Atiran2].'
-        + N' Switch the database dropdown to Atiran2 and run the script again. ***';
+/* The script audits whatever database you are connected to (its name is
+   printed below), so no edit is needed when the ERP database is named
+   differently. It only refuses to look at a system database. */
+IF DB_NAME() IN (N'master', N'model', N'msdb', N'tempdb')
+    PRINT N'*** WARNING: you are connected to the system database [' + DB_NAME() + N'].'
+        + N' Pick the ERP database in the SSMS dropdown and run the script again. ***';
 ELSE
-    PRINT N'OK: running in [Atiran2].';
+    PRINT N'OK: running in [' + DB_NAME() + N'].';
+
+PRINT N'probe dbo.CUSTOMERS: '
+    + CASE WHEN OBJECT_ID(N'dbo.CUSTOMERS') IS NOT NULL THEN N'found'
+           WHEN OBJECT_ID(N'dbo.customers') IS NOT NULL THEN N'found as dbo.customers (case differs!)'
+           ELSE N'NOT found - possibly the wrong database' END;
 GO
 
 
@@ -94,7 +116,7 @@ SELECT '01_TABLES' AS section,
        SCHEMA_NAME(o.schema_id) AS object_schema          -- e.g. dbo
 FROM wanted w
 LEFT JOIN sys.objects o
-       ON o.name = w.name
+       ON o.name COLLATE Latin1_General_CI_AS = w.name
       AND o.type IN (N'U', N'V')
 ORDER BY CASE WHEN o.object_id IS NULL THEN 1 ELSE 0 END, w.name;
 GO
@@ -124,7 +146,7 @@ SELECT '02_COLUMNS' AS section,
 FROM sys.tables t
 JOIN sys.columns c  ON c.object_id = t.object_id
 JOIN sys.types   ty ON ty.user_type_id = c.user_type_id
-WHERE t.name IN (N'sys_users', N'Roles', N'new_cust', N'ka_act',
+WHERE t.name COLLATE Latin1_General_CI_AS IN (N'sys_users', N'Roles', N'new_cust', N'ka_act',
                  N'CUSTOMERS', N'custgroup', N'CITYS', N'Province', N'regions',
                  N'inventory', N'kagroup', N'forosh_price', N'prizePercent',
                  N'anbars', N'inventory_anbars',
@@ -147,7 +169,8 @@ SELECT '03_VIEWS' AS section,
 FROM sys.views v
 JOIN sys.sql_modules m ON m.object_id = v.object_id
 CROSS JOIN (SELECT TOP (60) ROW_NUMBER() OVER (ORDER BY object_id) AS n FROM sys.all_objects) num
-WHERE (v.name LIKE N'vwVizitor%' OR v.name LIKE N'%Vizitor%')
+WHERE (v.name COLLATE Latin1_General_CI_AS LIKE N'vwVizitor%'
+    OR v.name COLLATE Latin1_General_CI_AS LIKE N'%Vizitor%')
   AND num.n <= CEILING(LEN(ISNULL(m.definition, N'')) / 200.0)
 ORDER BY v.name, num.n;
 GO
@@ -181,7 +204,7 @@ FROM (VALUES (N'add_sail_pish'), (N'subsailfact_pish'), (N'AddInvoice'),
              (N'FixMojodi'), (N'sp_add_sail_pish'), (N'svcAddSailFactPish'),
              (N'add_sailfact'), (N'subsailfact'), (N'new_cust'), (N'add_new_cust'),
              (N'VizitorLogin'), (N'sp_VizitorLogin')) o(name)
-LEFT JOIN sys.procedures p ON p.name = o.name;
+LEFT JOIN sys.procedures p ON p.name COLLATE Latin1_General_CI_AS = o.name;
 GO
 
 
@@ -196,7 +219,7 @@ SELECT '05a_PROC_LIST' AS section,
             ELSE CAST(LEN(m.definition) AS NVARCHAR(16)) + N' characters' END AS definition_status
 FROM sys.procedures p
 LEFT JOIN sys.sql_modules m ON m.object_id = p.object_id
-WHERE p.name IN (N'add_sail_pish', N'subsailfact_pish', N'AddInvoice', N'FixMojodi',
+WHERE p.name COLLATE Latin1_General_CI_AS IN (N'add_sail_pish', N'subsailfact_pish', N'AddInvoice', N'FixMojodi',
                  N'sp_add_sail_pish', N'svcAddSailFactPish', N'add_sailfact',
                  N'subsailfact', N'new_cust', N'add_new_cust')
 ORDER BY p.name;
@@ -209,7 +232,7 @@ SELECT '05_PROC_BODIES' AS section,
 FROM sys.procedures p
 JOIN sys.sql_modules m ON m.object_id = p.object_id
 CROSS JOIN (SELECT TOP (40) ROW_NUMBER() OVER (ORDER BY object_id) AS n FROM sys.all_objects) num
-WHERE p.name IN (N'add_sail_pish', N'subsailfact_pish', N'AddInvoice', N'FixMojodi',
+WHERE p.name COLLATE Latin1_General_CI_AS IN (N'add_sail_pish', N'subsailfact_pish', N'AddInvoice', N'FixMojodi',
                  N'sp_add_sail_pish', N'svcAddSailFactPish', N'add_sailfact',
                  N'subsailfact', N'new_cust', N'add_new_cust')
   AND num.n <= CEILING(LEN(ISNULL(m.definition, N'')) / 200.0)
@@ -228,8 +251,10 @@ SELECT '06_PASSWORD_COLUMNS' AS section,
 FROM sys.tables t
 JOIN sys.columns c  ON c.object_id = t.object_id
 JOIN sys.types   ty ON ty.user_type_id = c.user_type_id
-WHERE t.name IN (N'sys_users', N'visitors', N'VizitorUsers')
-  AND (c.name LIKE N'%pass%' OR c.name LIKE N'%pwd%' OR c.name LIKE N'%hash%')
+WHERE t.name COLLATE Latin1_General_CI_AS IN (N'sys_users', N'visitors', N'VizitorUsers')
+  AND (c.name COLLATE Latin1_General_CI_AS LIKE N'%pass%'
+    OR c.name COLLATE Latin1_General_CI_AS LIKE N'%pwd%'
+    OR c.name COLLATE Latin1_General_CI_AS LIKE N'%hash%')
 ORDER BY t.name, c.column_id;
 GO
 
@@ -247,8 +272,10 @@ SELECT s.name, t.name, c.name
 FROM sys.tables t
 JOIN sys.schemas s ON s.schema_id = t.schema_id
 JOIN sys.columns c ON c.object_id = t.object_id
-WHERE t.name IN (N'sys_users', N'visitors', N'VizitorUsers')
-  AND (c.name LIKE N'%pass%' OR c.name LIKE N'%pwd%' OR c.name LIKE N'%hash%');
+WHERE t.name COLLATE Latin1_General_CI_AS IN (N'sys_users', N'visitors', N'VizitorUsers')
+  AND (c.name COLLATE Latin1_General_CI_AS LIKE N'%pass%'
+    OR c.name COLLATE Latin1_General_CI_AS LIKE N'%pwd%'
+    OR c.name COLLATE Latin1_General_CI_AS LIKE N'%hash%');
 
 DECLARE @i INT = 1, @n INT, @sch SYSNAME, @tbl SYSNAME, @col SYSNAME;
 DECLARE @sql NVARCHAR(MAX) = N'';
@@ -299,8 +326,10 @@ GO
 DECLARE @missing NVARCHAR(MAX) = N'';
 DECLARE @sql NVARCHAR(MAX) = N'SELECT ''07_ROW_COUNTS'' AS section';
 
-;WITH wanted AS (
-    SELECT name FROM (VALUES
+DECLARE @wanted TABLE (name SYSNAME PRIMARY KEY);
+
+INSERT INTO @wanted (name)
+SELECT DISTINCT v.name FROM (VALUES
         (N'visitors'), (N'sys_vis'), (N'sys_cus'), (N'sys_kal'), (N'sys_anb'),
         (N'masir'), (N'MasirDay'), (N'Visit'), (N'vis_goals'), (N'osystems'),
         (N'CUSTOMERS'), (N'custgroup'), (N'ka_act'), (N'kagroup'),
@@ -309,18 +338,19 @@ DECLARE @sql NVARCHAR(MAX) = N'SELECT ''07_ROW_COUNTS'' AS section';
         (N'PishDaryaft'), (N'PishDaryaftGetCheck'), (N'getchk'), (N'BANK'),
         (N'sys_users'), (N'Roles'), (N'new_cust'), (N'cust_act'),
         (N'TabletCustomer'), (N'Device'), (N'DeviceLocation'), (N'DeviceMessages'), (N'DeviceSettings')
-    ) AS t(name)
-)
+    ) AS v(name);
+
 SELECT @sql = @sql
             + N', (SELECT COUNT(*) FROM ' + QUOTENAME(s.name) + N'.' + QUOTENAME(t.name) + N') AS '
             + QUOTENAME(s.name + N'.' + t.name)
 FROM sys.tables t
 JOIN sys.schemas s ON s.schema_id = t.schema_id
-JOIN wanted w      ON w.name = t.name;
+JOIN @wanted w     ON t.name COLLATE Latin1_General_CI_AS = w.name;
 
 SELECT @missing = STUFF((SELECT N', ' + w2.name
-                           FROM wanted w2
-                          WHERE NOT EXISTS (SELECT 1 FROM sys.tables t2 WHERE t2.name = w2.name)
+                           FROM @wanted w2
+                          WHERE NOT EXISTS (SELECT 1 FROM sys.tables t2
+                                             WHERE t2.name COLLATE Latin1_General_CI_AS = w2.name)
                           ORDER BY w2.name
                             FOR XML PATH('')), 1, 2, N'');
 
@@ -344,7 +374,7 @@ SELECT '08_VIZITOR_OBJECTS' AS section,
        o.name AS object_name,
        o.type_desc AS object_type
 FROM sys.objects o
-WHERE o.name LIKE N'%Vizitor%'
+WHERE o.name COLLATE Latin1_General_CI_AS LIKE N'%Vizitor%'
   AND o.type IN (N'U', N'V', N'P', N'FN', N'IF', N'TF')
 ORDER BY o.type_desc, o.name;
 GO
@@ -357,7 +387,7 @@ SELECT '09_VIZITOR_COUNTS' AS section,
        CAST(SUM(p.rows) AS BIGINT) AS approx_rows
 FROM sys.tables t
 JOIN sys.partitions p ON p.object_id = t.object_id AND p.index_id IN (0, 1)
-WHERE t.name LIKE N'%Vizitor%'
+WHERE t.name COLLATE Latin1_General_CI_AS LIKE N'%Vizitor%'
 GROUP BY SCHEMA_NAME(t.schema_id), t.name
 ORDER BY t.name;
 GO
@@ -370,10 +400,12 @@ SELECT '10_NAME_SEARCH' AS section,
        o.type_desc AS object_type
 FROM sys.objects o
 WHERE o.type IN (N'U', N'V', N'P', N'FN', N'IF', N'TF')
-  AND (o.name LIKE N'%vis%'    OR o.name LIKE N'%masir%'  OR o.name LIKE N'%pish%'
-    OR o.name LIKE N'%sail%'   OR o.name LIKE N'%anbar%'  OR o.name LIKE N'%cust%'
-    OR o.name LIKE N'%price%'  OR o.name LIKE N'%forosh%' OR o.name LIKE N'%user%'
-    OR o.name LIKE N'%role%'   OR o.name LIKE N'%goal%'   OR o.name LIKE N'%sys_%')
+  AND (o.name COLLATE Latin1_General_CI_AS LIKE N'%vis%'    OR o.name COLLATE Latin1_General_CI_AS LIKE N'%masir%'
+    OR o.name COLLATE Latin1_General_CI_AS LIKE N'%pish%'   OR o.name COLLATE Latin1_General_CI_AS LIKE N'%sail%'
+    OR o.name COLLATE Latin1_General_CI_AS LIKE N'%anbar%'  OR o.name COLLATE Latin1_General_CI_AS LIKE N'%cust%'
+    OR o.name COLLATE Latin1_General_CI_AS LIKE N'%price%'  OR o.name COLLATE Latin1_General_CI_AS LIKE N'%forosh%'
+    OR o.name COLLATE Latin1_General_CI_AS LIKE N'%user%'   OR o.name COLLATE Latin1_General_CI_AS LIKE N'%role%'
+    OR o.name COLLATE Latin1_General_CI_AS LIKE N'%goal%'   OR o.name COLLATE Latin1_General_CI_AS LIKE N'%sys_%')
 ORDER BY o.type_desc, o.name;
 GO
 
