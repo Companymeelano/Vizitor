@@ -107,12 +107,23 @@ data class DbLoginRow(
  */
 class MeelanoDataSource(private val db: SqlConnectionManager) {
 
-    // ── ورود: اعتبارسنجی رمز سمت SQL Server (بدون هش‌سازی در اپ) ─────────────
-    //  ⚠️ روی سرور واقعی: DATALENGTH(user_password) = 1 بایت است، یعنی مقدار
-    //  ذخیره‌شده هش SQL Server نیست. تا روشن شدن روش واقعی ورود ERP
-    //  (اسکریپت 06_login_probe.sql) این تابع غیرفعال نمی‌شود ولی مصرف هم نمی‌شود.
-    //  user_password از نوع varbinary است، پس مقایسه فقط با PWDCOMPARE ممکن است.
-    //  کوئری پارامتری است → هیچ رشته‌ای داخل SQL تزریق نمی‌شود.
+    // ── ورود: مطابق دقیق رفتار خودِ ERP (بدون هیچ حدسی) ──────────────────────
+    //  شواهد از بدنهٔ توابع واقعی ERP روی همین سرور:
+    //    · dbo.SetUserpass:   select convert(varchar(50), user_password) from sys_users ...
+    //    · dbo.ChangeUserPassInSalMali:
+    //          update ... set user_password = CONVERT(varbinary, @PassWord) ...
+    //    · ممیزی روی دادهٔ واقعی: DATALENGTH(user_password)=1 و hex آن '31' (= کاراکتر '1')
+    //  ⇒ رمز در این ERP «متن ساده» داخل varbinary است و SQL Server هش نمی‌کند؛
+    //    پس PWDCOMPARE هرگز جواب نمی‌دهد و مقایسه باید با CONVERT(varchar(50), …) باشد،
+    //    دقیقاً همان‌طور که خودِ ERP رمز را می‌خواند.
+    //
+    //  نکته: collation دیتابیس SQL_Latin1_General_CP1256_CI_AS است، پس مقایسه
+    //  حساس به بزرگی/کوچکی حروف نیست. اگر بعداً معلوم شد ERP حساس است، فقط همین
+    //  عبارت به  sys_users.user_password = CONVERT(varbinary(50), ?)  تغییر می‌کند.
+    //
+    //  امنیت: رمز فقط پارامتر همین کوئری است — در اپ ذخیره نمی‌شود، لاگ نمی‌شود و
+    //  در هیچ پیام خطایی چاپ نمی‌شود. (بستهٔ ورود SQL Server نیز در همان handshake
+    //  رمزنگاری می‌شود، ولی توصیهٔ ما فعال بودن TLS روی اتصال است.)
     suspend fun login(username: String, password: String): DbLoginRow? =
         db.withConnection { c ->
             c.prepareStatement(
@@ -128,12 +139,13 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                        sys_users.shmo
                   FROM dbo.sys_users
                  WHERE sys_users.user_name = ?
-                   AND PWDCOMPARE(?, sys_users.user_password) = 1
+                   AND CONVERT(varchar(50), sys_users.user_password) = ?
+                   AND sys_users.active = 1
                 """.trimIndent()
             ).use { ps ->
                 ps.queryTimeout = 15
                 ps.setString(1, username)
-                ps.setString(2, password)          // رمز فقط در همین نقطه مصرف می‌شود
+                ps.setString(2, password)
                 ps.executeQuery().use { rs ->
                     if (!rs.next()) null else DbLoginRow(
                         userId = rs.getInt("user_id"),

@@ -148,6 +148,35 @@
   `PWDCOMPARE` منطقی نیست. اسکریپت `sql/06_login_probe.sql` شواهد لازم را جمع می‌کند
   (طبقه‌بندی آن بایت، جدول‌های کاندید رمز، و بدنهٔ توابع `SetUserpass`/`GetUser`).
 
+## ورود (Login) — حل شد ✅ (۲۰۲۶-۰۹-۱۸)
+از بدنهٔ توابع خودِ ERP روی سرور:
+```sql
+-- dbo.SetUserpass
+set @result=(select convert(varchar(50),user_password) from sys_users where user_id=@UserID)
+-- dbo.ChangeUserPassInSalMali  (نحوهٔ نوشتن رمز توسط ERP)
+set user_password = CONVERT(varbinary, @PassWord)
+```
+و دادهٔ واقعی: `DATALENGTH(user_password)=1` با hex `31` (= کاراکتر «1»).
+⇒ رمز در این ERP **متن ساده داخل varbinary** است؛ `PWDCOMPARE` هیچ‌وقت جواب نمی‌دهد.
+شرط ورود اپ دقیقاً مطابق ERP پیاده شد:
+```sql
+WHERE user_name = ? AND CONVERT(varchar(50), user_password) = ? AND active = 1
+```
+* رمز فقط پارامتر است: در SQL الحاق نمی‌شود، در اپ ذخیره/لاگ نمی‌شود، در پیام خطا چاپ نمی‌شود.
+* `IsLocked` برگردانده می‌شود تا UI پیام «حساب قفل است» بدهد (نه ردِ بی‌دلیل).
+* ⚠️ این ERP رمزها را قابل‌بازیابی نگه می‌دارد (مشکل خود ERP است، نه اپ)؛ تدابیر اپ:
+  کاربر SQL مجازِ کم‌دسترسی، فقط LAN، ترجیح TLS، رمزنگاری روی دستگاه با Keystore، و
+  عملیات «پاک‌کردن پیکربندی».
+
+## تاریخچهٔ `sql/06_login_probe.sql` (v3)
+* **v1** → `Msg 156 ... near the keyword 'user'`: `FROM EMS.user` بدون براکت (کل batch مرد).
+* **v2** → هر بخش `GO` جدا + جدول موقت `#o`؛ اما دو بخش با `Msg 8155 No column name was
+  specified for column 1 of 'x'` شکست خوردند (الگوی `FROM (SELECT 1) x`).
+* **v3 (فعلی)** → آن الگو حذف شد (بدون `FROM`)؛ خلاصهٔ v3 در سرصفحه فایل.
+* `sql/07_login_verify.sql` **جدید**: شرط ورود اپ را با رمز واقعی تست می‌کند (فقط
+  MATCH/NO MATCH چاپ می‌شود؛ هیچ رمزی چاپ نمی‌شود)، رد شدن رمز غلط را تأیید می‌کند،
+  و ستون‌های `security.ConfirmUser`/`LoginDetails` و `dbo.sal_mali` را می‌آورد.
+
 ## تغییرات لازم در `viz` (برای re-apply روی ریپازیتوری اصلی)
 `app/build.gradle.kts` → افزودن:
 ```kotlin

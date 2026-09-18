@@ -1,8 +1,14 @@
 /* ===========================================================================
-   Vizitor - audit part 6: how does the ERP really verify a login?  - v2
+   Vizitor - audit part 6: how does the ERP really verify a login?  - v3
    2026-09-18  -  READ ONLY, pure ASCII, no BOM
    ---------------------------------------------------------------------------
-   v2 FIXES TWO MISTAKES OF v1 (which produced only the header line):
+   v3 FIXES "Msg 8155 No column name was specified for column 1 of 'x'" that
+   broke L3a/L3b in v2: the helper pattern "FROM (SELECT 1) x" was invalid, so
+   those statements now run without a FROM clause. The login question itself is
+   already ANSWERED (see sql/07_login_verify.sql); this file is kept for the
+   remaining columns of security.ConfirmUser/LoginDetails and helper bodies.
+
+   v2 FIXED TWO MISTAKES OF v1 (which produced only the header line):
      1. "Msg 156 ... Incorrect syntax near the keyword 'user'": v1 wrote
         FROM EMS.user.  USER is a reserved T-SQL keyword, so the table must be
         written [EMS].[user]. (Same for any other reserved-name object.)
@@ -78,8 +84,7 @@ BEGIN TRY
                            JOIN sys.types ty ON ty.user_type_id = c.user_type_id
                           WHERE c.object_id = OBJECT_ID(N'security.ConfirmUser')
                           ORDER BY c.column_id FOR XML PATH('')), 1, 1, N'')
-                + CHAR(10)
-    FROM (SELECT 1) x;
+                + CHAR(10);
     SELECT @out = @out + N'L3|security.ConfirmUser|rows=' + CAST(COUNT(*) AS NVARCHAR(10)) + CHAR(10)
     FROM security.ConfirmUser;
 END TRY
@@ -99,8 +104,7 @@ BEGIN TRY
                            JOIN sys.types ty ON ty.user_type_id = c.user_type_id
                           WHERE c.object_id = OBJECT_ID(N'[EMS].[user]')
                           ORDER BY c.column_id FOR XML PATH('')), 1, 1, N'')
-                + CHAR(10)
-    FROM (SELECT 1) x;
+                + CHAR(10);
     SELECT @out = @out + N'L3|EMS.user|rows=' + CAST(COUNT(*) AS NVARCHAR(10)) + CHAR(10)
     FROM [EMS].[user];
 END TRY

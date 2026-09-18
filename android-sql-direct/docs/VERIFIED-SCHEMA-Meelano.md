@@ -333,6 +333,79 @@ that byte, the other candidate credential stores (`security.ConfirmUser`,
 `EMS.user`, `dbo.sys_use`), and the real bodies of the ERP helpers
 `SetUserpass` / `SetUsername` / `GetUser` / `getEmsUsername`.
 
+
+## 13. LOGIN — SOLVED (evidence from the ERP's own code, audit part 6)
+
+### What the ERP does
+
+The stored value is **plain text inside a `varbinary` column**, not a hash:
+
+```sql
+-- dbo.SetUserpass   (function used by the ERP itself)
+set @result = (select convert(varchar(50), user_password) from sys_users where user_id = @UserID)
+
+-- dbo.ChangeUserPassInSalMali   (how the ERP WRITES a password)
+set @sql = 'update ' + @NameDB + '.dbo.sys_users set user_password = CONVERT(varbinary, @PassWord) where user_name = @UserName'
+
+-- dbo.AddUser: reads it the same way
+set @UserPass = (select convert(varchar(50), user_password) from sys_users where user_id = @UserID)
+```
+
+Live data confirms it: `DATALENGTH(user_password) = 1` and its hex is `31`, i.e.
+the single character `1` — for **both** users (`Admin`, `مدير`). A SQL Server
+password hash would be 20/44/60 bytes and `PWDCOMPARE` returns 0, so hashing was
+never involved.
+
+### The app's login predicate (now implemented)
+
+```sql
+SELECT TOP (1) user_id, user_name, user_fname, user_lname, role_id, active, IsLocked, shmo
+  FROM dbo.sys_users
+ WHERE user_name = ?
+   AND CONVERT(varchar(50), user_password) = ?
+   AND active = 1
+```
+
+* `user_name` is compared with the database collation `..._CI_AS`
+  (case-insensitive), exactly like the ERP's own `dbo.get_role_id(@user__)`.
+* The password comparison mirrors how the ERP *reads* the value. If the ERP later
+  turns out to be case-sensitive, the one-line switch is
+  `sys_users.user_password = CONVERT(varbinary(50), ?)`.
+* The password is only ever a JDBC parameter: never concatenated into SQL, never
+  stored by the app, never logged, never echoed in an error message.
+* `IsLocked` is returned so the UI can say "account locked" instead of silently
+  refusing the login.
+
+### Security consequences (stated plainly)
+
+This ERP keeps application passwords in recoverable form, so **anyone with read
+rights on the database can read them** — that is a property of the ERP, not of
+this app, and it cannot be fixed from the Android side. Mitigations in the app: a
+dedicated least-privilege SQL login (`vizitor_android`, read-only), passwords sent
+only over the shop LAN, a TLS-encrypted JDBC connection preferred
+(`useEncryption=true, trustServerCertificate=true` handles the self-signed
+certificate), credentials encrypted with the Android Keystore on the device
+(`SecureDbStore`), and a "clear configuration" action that wipes them.
+
+### Other candidate stores, checked and excluded
+
+`L6` scanned the whole database for password-like columns — there are only three:
+`dbo.sys_users.user_password`, `dbo.CUSTOMERS.Password` (customer portal, not the
+staff login) and `dbo.visitors.Password` (0 non-null rows). `L7` listed the other
+auth-shaped objects: `dbo.Create_Login`, `dbo.ChangePassword`,
+`dbo.dt_validateloginparams(_u)`, `security.ConfirmUser`, `security.LoginDetails`,
+`dbo.SettingForPopUpWhenLogin` — none is used by the app's login path;
+`sql/07_login_verify.sql` re-checks `security.ConfirmUser`/`LoginDetails` and the
+ERP helpers for completeness.
+
+### Fiscal-year databases
+
+`dbo.ChangeUserPassInSalMali` iterates `select nam_db from dbo.sal_mali` and
+updates `sys_users` in **each** fiscal-year database, so this ERP can span several
+databases. The app targets the current one (`Meelano`);
+`sql/07_login_verify.sql` lists what `dbo.sal_mali` contains, so we know whether a
+fiscal-year switch has to be handled later.
+
 ## 10. Still open (filled by scripts 02 and 03)
 
 * ~~real TCP port~~ → **RESOLVED: 1433** (`sys.dm_tcp_listener_states` shows
