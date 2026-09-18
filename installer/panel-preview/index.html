@@ -82,6 +82,13 @@
   }
   .card > h2 .sp{margin-inline-start:auto; font-size:11.5px; font-weight:500; color:var(--muted)}
 
+  /* ═══ نوار یادآوری ═══ */
+  .warnbar{
+    background:rgba(227,185,103,.12); border:1px solid var(--line-2); color:#ffe7bd;
+    border-radius:var(--r-input); padding:10px 14px; font-size:12.5px; margin-bottom:var(--s4)
+  }
+  .warnbar a{color:#ffe7bd; font-weight:700; text-decoration:underline}
+
   /* ═══ نوار بالا ═══ */
   .topbar{
     display:grid; grid-template-columns:auto 1fr auto; gap:var(--s3); align-items:center;
@@ -211,6 +218,13 @@
 
 <body>
 <div class="container">
+
+  <!-- ════════ یادآوری: این صفحه پنل است، نه نصب‌کننده ════════ -->
+  <div class="warnbar">
+    این صفحه <b>پیش‌نمایش طرح پنل مدیریت</b> است (داده‌های نمونه، فقط برای بازبینی ظاهر) — نه نصب‌کننده.
+    نصب‌کنندهٔ واقعی فایل <b>Vizitor-Setup-1.0.0.exe</b> است و ظاهر آن را می‌توانید در
+    <a href="wizard.html">پیش‌نمایش ویزارد نصب</a> ببینید.
+  </div>
 
   <!-- ════════ نوار بالا ════════ -->
   <header class="topbar">
