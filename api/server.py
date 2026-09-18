@@ -267,13 +267,17 @@ class Handler(BaseHTTPRequestHandler):
 
 
     def _send(self, code, obj):
+        """Send one JSON answer; a client that hangs up first is not an error."""
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            self.close_connection = True
 
     def _send_file(self, rel):
         """Serve a panel asset; only whitelisted extensions, never outside the panel folder."""
@@ -304,7 +308,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            self.close_connection = True
         return True
 
     def _body(self):
@@ -410,10 +417,13 @@ class Handler(BaseHTTPRequestHandler):
                 self._list_visitors_since()
             else:
                 self._send(404, {"error": "not_found", "path": self.path})
-        except BrokenPipeError:
+        except (BrokenPipeError, ConnectionResetError):
             pass
         except Exception as exc:
-            self._send(500, {"error": "internal", "detail": str(exc)})
+            try:
+                self._send(500, {"error": "internal", "detail": str(exc)})
+            except Exception:
+                pass
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
@@ -432,13 +442,18 @@ class Handler(BaseHTTPRequestHandler):
                 self._create_visitor()
             else:
                 self._send(404, {"error": "not_found", "path": self.path})
-        except BrokenPipeError:
+        except (BrokenPipeError, ConnectionResetError):
             pass
         except Exception as exc:
-            self._send(500, {"error": "internal", "detail": str(exc)})
+            try:
+                self._send(500, {"error": "internal", "detail": str(exc)})
+            except Exception:
+                pass
 
     # ----------------------------------------------------------- endpoints
 
+    def _activate(self):
+        """Activate the system: the first code wins, later ones must match it."""
         db = get_db()
         if not db:
             self._send(500, {"ok": False, "error": "db_unavailable", "detail": STATE["db_error"]})
