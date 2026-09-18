@@ -30,3 +30,5 @@ dbo.NCustomers	RowID,NShmo,NMan,NDate,BlackList
 security.ConfirmUser	RowID,RealUserID,RealUserName,FakeUserID,FakeUserName,P,SumMab,SumPos,SumCheck,Shmo,Moname,RealPlusFake,Ghno
 security.LoginDetails	RowID,UserID,DateClient,DateServer,ComputerIP,ComputerName
 EMS.user	UserID,AtiranUserID,Username,Tell,Cellphone,Address,NationalCode,Email,PersonalID
+dbo.sal_mali	sal_maliID,rdf,name,nam_db,StartDate,EndDate,Current
+

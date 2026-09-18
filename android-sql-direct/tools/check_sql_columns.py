@@ -94,8 +94,14 @@ def kotlin_sql_strings(text: str):
 
 
 def sql_files(text: str):
-    """SQL statement blocks of a .sql file (between ; and GO)."""
-    return re.findall(r"(SELECT|INSERT|UPDATE|DELETE)[^;]*?(?:;|\nGO)", text, flags=re.S | re.I)
+    """SQL statement blocks of a .sql file (up to ; or GO).
+
+    Comments must be stripped before this runs, and the full match is returned:
+    an earlier version returned only the keyword and then a crude
+    `[^;]{0,4000}` regex grabbed comment text along with the statement, which
+    both hid real statements and invented columns from prose."""
+    return [m.group(0) for m in re.finditer(
+        r"(?:SELECT|INSERT|UPDATE|DELETE)[^;]*?(?:;|\n\s*GO\b)", text, flags=re.S | re.I)]
 
 
 def alias_map(sql: str):
@@ -187,8 +193,11 @@ def check_statement(sql: str, amap: dict):
     if single is not None and single not in SCHEMA:
         single = None                     # the statement only touches a catalogue
 
-    # output aliases ("AS name") are not columns
+    # output aliases are not columns - both spellings are used in these scripts:
+    #   SELECT name AS alias  and  SELECT alias = expression
     output_aliases = {m.group(1).lower() for m in re.finditer(r"\bAS\s+(\w+)", sql, flags=re.I)}
+    output_aliases |= {m.group(1).lower() for m in re.finditer(
+        r"(?:\bSELECT\b|,)\s*(\w+)\s*=", sql, flags=re.I)}
     # Kotlin string interpolation names inside the SQL text
     interpolation = {m.group(1).lower() for m in re.finditer(r"\$\{?(\w+)", sql)}
 
@@ -214,9 +223,18 @@ def check_statement(sql: str, amap: dict):
         body = strip_literals(sql)
         body = re.sub(r"@\w+", " ", body)
         body = re.sub(r"[+\-*/=<>(),;]", " ", body)
+        # a name that is a table in this statement is not a column (even when the
+        # table itself is not in the schema file, e.g. dbo.overal_setting)
+        referenced = {m.group(1).strip("[]").lower() for m in re.finditer(
+            r"\b(?:FROM|JOIN)\s+(?:\w+\s*\.\s*)?(\[?\w+\]?)", sql, flags=re.I)}
+        # a name used as a call is a function, not a column - this also covers
+        # the ERP's own functions called as dbo.IsAccountingSystemStarted()
+        called = {m.group(1).lower() for m in re.finditer(r"\b([A-Za-z_]\w*)\s*\(", sql)}
         for token in re.findall(r"\b([A-Za-z_]\w*)\b", body):
             low = token.lower()
             if low in SQL_KEYWORDS or low in SQL_FUNCTIONS or low in IGNORE_QUALIFIERS:
+                continue
+            if low in referenced or low in called:
                 continue
             if low in output_aliases or low in interpolation:
                 continue
@@ -276,8 +294,7 @@ def check(path: pathlib.Path):
     if path.suffix == ".kt":
         statements = kotlin_sql_strings(text)
     elif path.suffix == ".sql":
-        statements = [s if isinstance(s, str) else s[0] for s in sql_files(text)]
-        statements = re.findall(r"(?:SELECT|INSERT|UPDATE|DELETE)[^;]{0,4000}", text, flags=re.S | re.I)
+        statements = sql_files(strip_sql_comments(text))
     else:
         return True
 
