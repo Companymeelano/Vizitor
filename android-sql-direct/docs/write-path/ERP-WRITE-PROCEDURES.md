@@ -339,3 +339,115 @@ back with 12 modules that mention the line tables:
 
 Next: the two triggers (with their parent tables) and these views/functions. Until the
 trigger body is read, the app still does not insert lines.
+
+## 12. The staging tables and their two triggers (part 9, 2026-09-18)
+
+Verbatim bodies: `docs/audit-runs/out_13_trigger_bodies.txt`.
+
+| trigger | table | kind | writes |
+|---|---|---|---|
+| `dbo.trig_sst_pish` | `dbo.subsailtemp_pish` | INSTEAD OF INSERT, enabled | `dbo.subsailfact_pish` (pre-invoice lines) |
+| `dbo.InvoiceTrigger` | `dbo.subsailtemp` | INSTEAD OF INSERT, enabled | `dbo.subsailfact` (invoice lines) **and** `dbo.ka_act` (inventory ledger) |
+
+That closes the hole of §1.7 and §2.11: the ERP never inserts the line tables directly,
+it stages the line and the trigger copies it.
+
+### 12.1 `trig_sst_pish` - the pre-invoice line writer
+
+```
+begin transaction forosh
+if @mod = 0 -> copy the staged row as-is, rdf__ and active come from the row
+if @mod = 1 -> rdf__ = (select max(rdf__) from sailfact_pish where shfacfo = @shfacfo),
+               active = 't'
+commit transaction forosh
+```
+
+Target column list (this IS the line shape the app must produce):
+
+```
+rdf__, shfacfo, shka, rdf_anbar, tedvah, tedjoz, vahprice, jozprice, bastebandi,
+tedbastebandi, linesum, linegain(0), isret, pertafif, rdf, jozgain(0), pervis,
+litakhma, active, amani, Pavarez, Avarez, Ptax, Tax, PerPromotion, Mp(= modpar)
+```
+
+`mod` is a column of `subsailtemp_pish` and is the branch selector. The view
+`pishfactor_body` joins the result back to the head on `shfacfo AND rdf__`, so
+`mod = 1` is the mode that keeps a line on the live version.
+
+### 12.2 `InvoiceTrigger` - the real-invoice line writer (and the only ledger writer we have seen)
+
+Steps, exactly as the body's own comments name them:
+
+1. read every field of the staged row into variables (`rdf__`, `shfacfo`, `shka`,
+   `rdf_anbar`, `tedvah`, `tedjoz`, `vahprice`, `jozprice`, `bastebandi`,
+   `tedbastebandi`, `linesum`, `pertafif`, `rdf`, `pervis`, `litakhma`, `active`, `naka`,
+   `ptax`, `tax`, `avarez`, `pavarez`, `gift`, `date`, `done_date`, `UserID`, `vis_rdf`,
+   `sysid`, `tafifAghlam`, `TafifLine`, `ProductionSeriesID`, `TEDVAHMain`,
+   `TEDJOZMain`, `PerPromotion`, `PromotionValue`, `MultiPishFactor`, `TafifPos`,
+   `TafifNaghd`, `VarietyID`) - the full column set of `dbo.subsailtemp`;
+2. `@tedad = (@tedvah * inventory.mohvah) + @tedjoz`; `@mohvah` from `inventory`;
+3. **date push**: if `MultiPishFactor = 0` and `sailfact.shpish > 0` (the invoice came
+   from a pre-invoice) and there is exactly one `sailfact` row for that number, then if
+   `overal_setting.id = 97 > 0` → `@date = dbo.what_date(@date, @Setting97)`. This is the
+   trigger-side twin of the same shift inside `AddInvoice`;
+4. Step 1: `insert into subsailfact` (40 named columns);
+5. Step 2: `@invepgh = produce.ProductionSeries.PriceEnd` when
+   `ProductionSeriesID is not null`, else `inventory.inventory_price`;
+   `@Gain = dbo.cal_gain(1, @tedad, @JOZPRICE, @invepgh, @litakhma, @pervis)`;
+   `insert into ka_act (...)` with `act_id = 20`, `HAct_id = 20`, `ghno = @shfacfo`,
+   `act_dis = 'فروش فاكتور شماره <n> - <customer name>'`, `rdf_kh = @RDF`,
+   `TamamJoz = FLOOR(@JOZPRICE - (@litakhma / @tedad))`;
+6. `print('')`.
+
+⚠️ The app **does not** write invoices in v1 (it writes pre-invoices). This section is
+recorded because `ka_act` is where stock comes from - if the app ever finalises an
+invoice itself, skipping these rows would silently break `UpdateMojodi*`.
+
+### 12.3 `ListPishFactor` - the ERP's own list screen
+
+`@Mod` selects the set, all branches share the same projection:
+
+| `@Mod` | meaning | filter on top of the shared one |
+|---|---|---|
+| 1 | pending, still inside `ted_rooz` | `sh_f = 0` and `dbo.dif_date(date, @mydate) <= ted_rooz` |
+| 2 | pending, overdue | `sh_f = 0` and `dbo.dif_date(date, @mydate) > ted_rooz` |
+| 3 | invoiced | `sh_f <> 0` |
+| 4 | all confirmed ones | (no `sh_f` filter) |
+
+Shared filter: `TaedForush = 1 and TaedHesabdari = 1 and Rejected = 0 and
+sailfact_pish.active = 't' and <line>.active = 't'`. Joins: `CUSTOMERS`, `masir`,
+`[Quarter]`, `regions`, `CITYS`, `visitors` (left), `subsailfact_pish`, `inventory`.
+Weight = `SUM((inventory.vahwe / inventory.mohvah) * (TEDVAH * inventory.mohvah + TEDJOZ))`.
+
+⚠️ It joins `subsailfact_pish` on `shfacfo` **only** (no `rdf__`), so an edited
+pre-invoice can repeat its lines in this list. Do not copy that join into the app.
+
+### 12.4 The other four objects
+
+* `CalcDetailsPishfactor(@shfacfo)` → `count(rdf__)` of `active = 't'` lines of the head.
+* `pishfactor_body` → the ERP's pre-invoice-with-lines read shape (join on `shfacfo AND
+  rdf__` + `anbars`); `LineSum_Takhfif_Tax = (LINESUM - litakhma) + (Avarez + Tax)`.
+* `subsailFactPish` → thin view (`naka`, qty, `LINESUM`, `litakhma`, `kol = LINESUM - litakhma`);
+  joins `inventory` only, so it carries every version's lines.
+* `VW_Taraz_pish` → customer/route/inventory projection of pending pre-invoices, also
+  joining the lines by `shfacfo` only; `sh_f = 0 and active = 't'`.
+* `VWDeatailspishFactorForush` → thinnest line view (naka, vahsanj, qty, prices, `LINESUM`).
+
+### 12.5 Tables and columns this part added to the picture
+
+`dbo.subsailtemp_pish` (staging, ≥25 columns: `mod`, plus the 24 that the trigger copies),
+`dbo.subsailtemp` (staging, the columns the InvoiceTrigger reads), `dbo.ka_act`
+(column list from the trigger's insert), `dbo.masir(RDF_masir, QuarterID)`,
+`dbo.[Quarter](ID, RegionId, Name)`, `dbo.regions(rdf_region, rdf_city, name_region)`,
+`dbo.CITYS(RDF, name)`, `dbo.anbars(rdf_anbar, name)`, `dbo.sailfact.shpish`,
+`inventory.vahwe / vahsanj / mohvah / inventory_price`,
+`produce.ProductionSeries(ID, PriceEnd)`, `dbo.what_date`, `dbo.cal_gain`,
+`dbo.dif_date`, `CUSTOMERS.c_mel / c_egh / c_pos / tell1 / tell2 / MANAME`.
+
+### 12.6 What is still missing (script "راه ۹")
+
+1. `INFORMATION_SCHEMA.COLUMNS` of `dbo.subsailtemp_pish` / `dbo.subsailfact_pish`
+   (types + nullability + defaults - the app's INSERT must supply every required column);
+2. one real head row + its lines from the ERP's own data (`sailfact` / `subsailfact`,
+   the two tables that do have rows) to learn the numbers convention;
+3. confirmation of `PerPromotion` on `subsailfact_pish` in `Meelano` itself.

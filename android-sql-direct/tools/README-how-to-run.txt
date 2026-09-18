@@ -153,3 +153,35 @@
         ORDER BY o.name;
 
     (برای کپی متن‌های بزرگ: روی خانه کلیک → Ctrl+A → Ctrl+C، یا Results to File.)
+
+راه ۹ (مستقیم در SSMS — سه پرسش کوچک، آخرین ابهام‌ها)
+    نکته: هر سه کوئری خودشان DB_NAME() را چاپ می‌کنند؛ پس اگر نوار ابزار SSMS روی دیتابیس
+    دیگری باشد، خودِ جواب لو می‌دهد.
+
+    ۱) ستون‌های جدول میانی پیش‌فاکتور + جدول اقلام (نوع، نال‌پذیری، پیش‌فرض) — اپ باید
+       همهٔ ستون‌های اجباری را بفرستد:
+
+        SELECT DB_NAME() AS db, TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE,
+               CHARACTER_MAXIMUM_LENGTH AS len, NUMERIC_PRECISION AS pr, NUMERIC_SCALE AS sc,
+               IS_NULLABLE, COLUMN_DEFAULT
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME IN ('subsailtemp_pish','subsailfact_pish')
+        ORDER BY TABLE_NAME, ORDINAL_POSITION;
+
+    ۲) یک نمونهٔ واقعی از داده‌ی خودِ ERP (سه فاکتور آخر) — تا قرارداد
+       tedvah/tedjoz/vahprice/jozprice/linesum را از داده یاد بگیریم نه از حدس:
+
+        SELECT TOP 3 DB_NAME() AS db, * FROM sailfact ORDER BY shfacfo DESC;
+
+        SELECT DB_NAME() AS db, * FROM subsailfact
+        WHERE shfacfo IN (SELECT TOP 3 shfacfo FROM sailfact ORDER BY shfacfo DESC)
+        ORDER BY shfacfo, rdf__, RDF;
+
+    ۳) چه ماژولی «فاکتور» را از «پیش‌فاکتور» می‌سازد (کسی که sailfact را درج می‌کند یا
+       shpish را پر می‌کند) — فقط نام و طول، متن بعداً:
+
+        SELECT DB_NAME() AS db, o.name, o.type_desc, LEN(m.definition) AS len
+        FROM sys.sql_modules AS m JOIN sys.objects AS o ON o.object_id = m.object_id
+        WHERE m.definition LIKE '%shpish%'
+           OR (m.definition LIKE '%insert into sailfact%' AND m.definition NOT LIKE '%sailfact_pish%')
+        ORDER BY o.name;

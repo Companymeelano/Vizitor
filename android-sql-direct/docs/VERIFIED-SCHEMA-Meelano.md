@@ -694,3 +694,34 @@ the app shows what the ERP shows — and it gets both numbers: on-hand
 (`mojkavah`/`mojkajoz`) and sellable after open pre-invoices
 (`MojodiPish_vah`/`MojodiPish_joz`). The ERP's own view also drops inactive products
 (`inventory.active = 't'`), which the raw query did not.
+
+## 17. The write path is now closed (part 9, 2026-09-18)
+
+Full detail: `docs/write-path/PRE-INVOICE-LINES.md` §7-§8 and
+`docs/write-path/ERP-WRITE-PROCEDURES.md` §12. Raw paste:
+`docs/audit-runs/out_13_trigger_bodies.txt`.
+
+* The ERP stages invoice lines in **`dbo.subsailtemp`** and pre-invoice lines in
+  **`dbo.subsailtemp_pish`**; both staging tables carry an **enabled INSTEAD OF INSERT**
+  trigger (`InvoiceTrigger`, `trig_sst_pish`). Nothing is ever stored in the staging
+  tables - the triggers copy the row into `dbo.subsailfact` / `dbo.subsailfact_pish`.
+* `trig_sst_pish` is therefore the answer to "who writes `subsailfact_pish`". A `mod`
+  column selects the branch: `mod = 1` stamps the line with the **live head's** `rdf__`
+  (`max(rdf__) from sailfact_pish where shfacfo = @shfacfo`) and forces `active = 't'`;
+  `mod = 0` copies `rdf__` and `active` from the staged row.
+* `InvoiceTrigger` also writes the **inventory ledger** `dbo.ka_act` (`act_id = 20`,
+  `ghno = shfacfo`, `gain = dbo.cal_gain(...)`, `invepgh` = `ProductionSeries.PriceEnd`
+  or `inventory.inventory_price`) - the only place we have ever seen a sale reach
+  `ka_act`, i.e. the only path that would move stock.
+* `ListPishFactor` (the ERP's pre-invoice list) and three views
+  (`pishfactor_body`, `subsailFactPish`, `VW_Taraz_pish`) confirm the line-to-head link
+  `(shfacfo, rdf__)` - `pishfactor_body` uses it, the other two join on `shfacfo` alone
+  and would repeat the lines of an edited pre-invoice.
+* Both writer procedures (`add_sail_pish`, `Edit_sail_pish`) and the trigger own their
+  own transactions (`forosh` / `Invoice`), so the app's save is three sequential units,
+  never one outer transaction.
+* New objects seen: `subsailtemp_pish`, `ka_act`, `masir`, `Quarter`, `regions`, `CITYS`,
+  `anbars`, `produce.ProductionSeries`, `sailfact.shpish`, `dbo.what_date`,
+  `dbo.cal_gain`, `dbo.dif_date`, `inventory.vahwe`.
+* Open: types/columns of `subsailtemp_pish`, one real example of the ERP's numbers,
+  and whether `Meelano` itself has `PerPromotion` on `subsailfact_pish`.
