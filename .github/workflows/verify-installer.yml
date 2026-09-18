@@ -139,7 +139,7 @@ jobs:
             for f in "$R"; do
               [ -f "/tmp/cargo/$(basename "$f")" ] && cp "/tmp/cargo/$(basename "$f")" "$f"
             done
-            git add -f "$R" 2>/dev/null || true
+            for f in "$R"; do [ -f "$f" ] && git add -f "$f"; done
             git diff --cached --quiet && { echo "چیزی برای ثبت نبود"; pushed=1; break; }
             git commit -q -m "chore(ci): server setup report [skip ci]"
             if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then pushed=1; break; fi
@@ -269,7 +269,9 @@ jobs:
             for f in "$R" release/Vizitor-Setup-1.0.0.exe release/Vizitor-Setup-1.0.0.exe.sha256; do
               [ -f "/tmp/cargo/$(basename "$f")" ] && cp "/tmp/cargo/$(basename "$f")" "$f"
             done
-            git add -f "$R" release/Vizitor-Setup-1.0.0.exe release/Vizitor-Setup-1.0.0.exe.sha256 2>/dev/null || true
+            for f in "$R" release/Vizitor-Setup-1.0.0.exe release/Vizitor-Setup-1.0.0.exe.sha256; do
+              [ -f "$f" ] && git add -f "$f"
+            done
             git diff --cached --quiet && { echo "چیزی برای ثبت نبود"; pushed=1; break; }
             git commit -q -m "build(installer): exe بازسازی‌شده با اصلاحات اتصال اندروید [skip ci]"
             if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then pushed=1; break; fi

@@ -139,7 +139,7 @@ jobs:
             for f in "$R"; do
               [ -f "/tmp/cargo/$(basename "$f")" ] && cp "/tmp/cargo/$(basename "$f")" "$f"
             done
-            git add -f "$R" 2>/dev/null || true
+            for f in "$R"; do [ -f "$f" ] && git add -f "$f"; done
             git diff --cached --quiet && { echo "چیزی برای ثبت نبود"; pushed=1; break; }
             git commit -q -m "chore(ci): APK verification report [skip ci]"
             if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then pushed=1; break; fi
