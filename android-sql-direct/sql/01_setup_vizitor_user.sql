@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════════════════════
    Vizitor — مرحله ۱: آماده‌سازی سرور (غیرتلفیقی، فقط در صورت نبود)
    ═══════════════════════════════════════════════════════════════════════════
    اجرا با حساب مدیر (sa یا sysadmin) در SSMS، روی سرور 192.168.1.150.
@@ -18,9 +18,9 @@
 DECLARE @dbName SYSNAME = N'Meelano';
 
 IF DB_ID(@dbName) IS NULL
-    PRINT N'*** دیتابیس [' + @dbName + N'] روی این سرور پیدا نشد.'
-        + N' نام درست را در خط DECLARE @dbName (بالای همین فایل) بگذارید و دوباره اجرا کنید.'
-        + N' هیچ تغییری روی سرور انجام نشد. ***';
+    PRINT N'*** database [' + @dbName + N'] was NOT found on this server.'
+        + N' Set the correct name in the DECLARE @dbName line at the top of this file'
+        + N' and run the script again. No change was made on the server. ***';
 GO
 
 /* ── ۱) LOGIN سروری (فقط اگر نباشد) ─────────────────────────────────────── */
@@ -75,11 +75,12 @@ BEGIN
         EXEC (@sql);
     END TRY
     BEGIN CATCH
-        PRINT N'ایجاد کاربر/نقش ناموفق بود: ' + ERROR_MESSAGE();
+        PRINT N'Creating the database user/role FAILED: ' + ERROR_MESSAGE();
     END CATCH
 END
 ELSE
-    PRINT N'دیتابیس [' + @dbName + N'] پیدا نشد → بخش ۲ اجرا نشد. نام درست را در DECLARE @dbName بگذارید.';
+    PRINT N'Database [' + @dbName + N'] was not found, so part 2 was skipped.'
+        + N' Set the correct name in DECLARE @dbName.';
 GO
 
 /* پیام یادآوری (در نتیجهٔ کوئری نمایش داده می‌شود):
