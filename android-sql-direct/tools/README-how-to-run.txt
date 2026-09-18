@@ -111,3 +111,23 @@
 
         و سال مالی جاری: یک بار با Meelano انتخاب‌شده و یک بار با Atiran14050603:
         SELECT DB_NAME() AS db, rdf, name, nam_db, [Current] FROM dbo.sal_mali;
+
+راه ۷ (مستقیم در SSMS — تنها سؤال باقی‌ماندهٔ نوشتن)
+    معلوم شد نه add_sail_pish و نه Edit_sail_pish سطرهای subsailfact_pish را
+    نمی‌نویسند. این دستور همهٔ ماژول‌های دیتابیس (پروسیجر، ویو، فانکشن، تریگر) را
+    می‌گردد و می‌گوید چه چیزی این جدول‌ها را دست می‌زند:
+
+        SELECT o.name, o.type_desc
+        FROM sys.sql_modules AS m
+        JOIN sys.objects AS o ON o.object_id = m.object_id
+        WHERE m.definition LIKE '%subsailfact_pish%'
+           OR m.definition LIKE '%subsailtemp%'
+           OR m.definition LIKE '%SubSailSefaresh%'
+        ORDER BY o.name;
+
+    اگر خروجی خالی بود، یعنی خودِ برنامهٔ ERP (کلاینت) سطرها را مستقیم در جدول
+    درج می‌کند و برای الگوی درج باید به مسیر دیگری فکر کنیم (مثلاً همان ستون‌های
+    subsailtemp که ERP پر می‌کند).
+
+    و اگر نام‌های دیگر هم پیدا شد، متنشان را با «راه ۶» بگیر (فقط اسم‌ها را در
+    همان WHERE بگذار).
