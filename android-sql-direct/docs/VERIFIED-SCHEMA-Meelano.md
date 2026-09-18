@@ -12,7 +12,7 @@ Notation: `name type(len) [NOT NULL|NULL] [PK|IDENTITY]`
 | item | value | consequence for the app |
 |---|---|---|
 | server_name / machine | `MIGHTY` | |
-| instance | **default instance** (no instance name) | normally port 1433 (still to confirm with `netstat`) |
+| instance | **default instance** (no instance name) | confirmed listening on **0.0.0.0:1433** and `[::]:1433` (TSQL, ONLINE) |
 | product_version | `12.0.2269.0` (SQL Server **2014**, RTM) | mssql-jdbc must stay on a JDBC-4.0/4.2 compatible build |
 | edition | Enterprise Edition (64-bit) | |
 | database | `Meelano` | connection string database name |
@@ -266,8 +266,10 @@ Functions: `dbo.GetMainMasirID`, `dbo.Func_GetPathByMasirID`,
 
 ## 10. Still open (filled by scripts 02 and 03)
 
-* real TCP port of the instance (`11_SQL_NETWORK_CONFIG` was truncated in the
-  first run; script 02 prints just those registry rows)
+* ~~real TCP port~~ → **RESOLVED: 1433** (`sys.dm_tcp_listener_states` shows
+  `0.0.0.0:1433` + `[::]:1433`, state ONLINE, type TSQL). The `1434` seen in the
+  registry belongs to the DAC/admin connection (`AdminConnection\Tcp`), not to the
+  application endpoint. The app therefore connects to `192.168.1.150:1433`.
 * columns of `sys_kal` / `sys_anb`
 * whether `PWDCOMPARE` accepts the stored `sys_users.user_password` hashes
 * content of the tiny configuration tables (`osystems`, `Roles`, `visitors`,
@@ -275,3 +277,28 @@ Functions: `dbo.GetMainMasirID`, `dbo.Func_GetPathByMasirID`,
 * full bodies of `add_sail_pish`, `AddInvoice`, `new_cust`, `FixMojodi`
   (they define the exact pre-invoice/invoice transaction flow the app must
   follow), and the short bodies of `SetUserpass` / `GetUser` / `get_vis_rdf`
+
+
+## 11. Evidence about the write path (from the partial part-3 output)
+
+Only the 4 `LENGTH=` header lines and the last chunk of `dbo.new_cust` came back
+(the SSMS Messages tab drops long output), but that last chunk is informative:
+
+```
+P|new_cust|20|,@a
+   end
+   exec FixManCustomer @a
+commit transaction t1
+end
+```
+
+So `dbo.new_cust` **opens its own transaction (`t1`), calls `dbo.FixManCustomer`
+inside it and commits** — the app must not wrap it in another transaction, and
+must treat the returned `@id_en` as the new customer number. Full bodies are
+still needed; `tools/run_audit.bat` writes them to a file without truncation.
+
+## 12. Environments observed while auditing (useful for troubleshooting)
+
+* Messages-tab output is silently dropped past a few thousand characters on this
+  SSMS installation → long dumps must go to a file (`sqlcmd -o`, or
+  `tools/run_audit.bat`, or SSMS Ctrl+Shift+F "Results to File").
