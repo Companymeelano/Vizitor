@@ -112,6 +112,18 @@ jobs:
           set +e
           ./gradlew --no-daemon testDebugUnitTest --tests '*RealSqlConnectionTest*' 2>&1 | tee sql-test.log
           rc=${PIPESTATUS[0]}
+          if [ "$rc" != "0" ]; then
+            # شواهد شکست را در مخزن نگه داریم (لاگ سرور CI از این‌جا قابل خواندن نیست)
+            {
+              echo "لاگ شکست آزمون‌های اتصال — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+              echo "=================================================================="
+              grep -aE "FAILED|AssertionError|Exception|expected|actual|> Task|BUILD" sql-test.log | tail -60
+              echo ""
+              echo "--- ۸۰ خط آخر لاگ ---"
+              tail -80 sql-test.log
+            } > sql-test-failure.log
+            cat sql-test-failure.log
+          fi
           echo "### نتیجهٔ آزمون اتصال" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           grep -E "\[(driver|list|jtds|info|login|identity|customers|groups|products|price|stock|health|deny|perm|write)\]|PASSED|FAILED|BUILD" sql-test.log | tail -60 >> "$GITHUB_STEP_SUMMARY" || true
@@ -157,14 +169,34 @@ jobs:
             echo ""
             echo "--- ۴) خروجی آزمون‌ها (کد خود برنامه روی SQL Server واقعی) ---"
             grep -aE "\[(driver|list|jtds|info|login|identity|customers|groups|products|price|stock|health|deny|perm|write)\]|PASSED|FAILED|BUILD SUCCESSFUL|BUILD FAILED" android-app/sql-test.log 2>/dev/null | tail -60
+            echo ""
+            echo "--- ۵) اگر آزمونی رد شد: پیام خطاها ---"
+            if [ -f android-app/sql-test-failure.log ]; then
+              head -40 android-app/sql-test-failure.log
+            else
+              echo "  (همهٔ آزمون‌ها موفق بودند یا لاگ شکست ساخته نشد)"
+            fi
           } > "$R"
           cat "$R"
           git config user.name "vizitor-ci"
           git config user.email "ci@vizitor.local"
-          git add -f "$R"
-          git commit -m "chore(ci): SQL connection report [skip ci]"
+          git add -f "$R" android-app/sql-test-failure.log 2>/dev/null
+          git diff --cached --quiet || git commit -m "chore(ci): SQL connection report [skip ci]"
           URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push "$URL" "HEAD:${GITHUB_REF_NAME}" || {
-            echo "پوش رد شد — یک‌بار ریبس و تلاش دوباره (هم‌زمانی با ورک‌فلوی APK)"
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push "$URL" "HEAD:${GITHUB_REF_NAME}"
-          }
+          ok=0
+          for try in 1 2 3; do
+            if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then ok=1; break; fi
+            echo "پوش رد شد (تلاش $try) — ریبس و تلاش دوباره (سه ورک‌فلو هم‌زمان به این شاخه کامیت می‌کنند)"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || git rebase --abort || true
+            sleep 5
+          done
+          [ "$ok" = "1" ] && echo "گزارش در مخزن ثبت شد ✓" || echo "::warning::گزارش ثبت نشد (پوش رد شد)"
+
+      - name: اعلام نتیجهٔ آزمون‌ها
+        if: always()
+        run: |
+          if [ -f android-app/sql-test-failure.log ]; then
+            echo "::error::آزمون‌های اتصال رد شدند — جزئیات در android-app/sql-test-failure.log"
+            exit 1
+          fi
+          echo "آزمون‌های اتصال همه موفق بودند ✓"

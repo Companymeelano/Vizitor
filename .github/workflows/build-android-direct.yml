@@ -131,10 +131,14 @@ jobs:
           git add -f "$R"
           git diff --cached --quiet || git commit -m "chore(ci): APK verification report [skip ci]"
           URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push "$URL" "HEAD:${GITHUB_REF_NAME}" || {
-            echo "پوش رد شد — یک‌بار ریبس و تلاش دوباره (هم‌زمانی با ورک‌فلوی آزمون اتصال)"
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push "$URL" "HEAD:${GITHUB_REF_NAME}"
-          }
+          ok=0
+          for try in 1 2 3; do
+            if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then ok=1; break; fi
+            echo "پوش رد شد (تلاش $try) — ریبس و تلاش دوباره (سه ورک‌فلو هم‌زمان کامیت می‌کنند)"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || git rebase --abort || true
+            sleep 5
+          done
+          [ "$ok" = "1" ] && echo "گزارش APK در مخزن ثبت شد ✓" || echo "::warning::گزارش ثبت نشد (پوش رد شد)"
 
       - name: بارگذاری خروجی‌ها (artifact)
         uses: actions/upload-artifact@v4

@@ -137,7 +137,7 @@ IF OBJECT_ID(N'dbo.subsailtemp_pish') IS NULL
 CREATE TABLE dbo.subsailtemp_pish (
     mod INT NULL, shfacfo BIGINT NULL, rdf__ INT NULL, rdf INT NULL, shka BIGINT NULL,
     rdf_anbar INT NULL, tedvah FLOAT NULL, tedjoz INT NULL, vahprice BIGINT NULL,
-    jozprice BIGINT NULL, bastebandi BIGINT NULL, tedbastebandi FLOAT NULL, linesum BIGINT NULL,
+    jozprice BIGINT NULL, bastebandi NVARCHAR(30) NULL, tedbastebandi FLOAT NULL, linesum BIGINT NULL,
     isret BIT NULL, pertafif FLOAT NULL, pervis FLOAT NULL, litakhma BIGINT NULL,
     active CHAR(1) NULL, amani BIT NULL, Pavarez FLOAT NULL, Avarez BIGINT NULL,
     Ptax FLOAT NULL, Tax BIGINT NULL, PerPromotion FLOAT NULL, modpar INT NULL);

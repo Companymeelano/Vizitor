@@ -168,7 +168,8 @@ jobs:
       - name: ساخت exe
         run: |
           set -o pipefail
-          ./installer/build.sh 2>&1 | tee /tmp/nsis.log
+          chmod +x installer/build.sh
+          bash installer/build.sh 2>&1 | tee /tmp/nsis.log
 
       - name: باز کردن exe و مقابلهٔ install.ps1 داخلش با فایل مخزن
         run: |
