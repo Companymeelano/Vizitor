@@ -27,7 +27,17 @@ param(
     [switch]$Auto,
     [switch]$Recheck,
     [int]$Port = 0,
-    [string]$Ip = ""
+    [string]$Ip = "",
+    # --- پارامترهای نصب‌کنندهٔ گرافیکی (Vizitor-Setup.exe) --------------------
+    [string]$Answers = "",            # فایل INI پاسخ‌ها (صفحه‌های نصب‌کننده)
+    [string]$AppHome = "",            # پوشهٔ نصب (پیش‌فرض C:\Vizitor)
+    [switch]$SkipPrerequisites,       # بخش «پیش‌نیازهای پایتون» تیک نخورده
+    [switch]$SkipDatabase,            # بخش «دیتابیس سامانه» تیک نخورده
+    [switch]$SkipIis,                 # بخش «پروکسی IIS» تیک نخورده
+    [switch]$SkipFirewall,            # بخش «فایروال» تیک نخورده
+    [switch]$SkipAndroidPrep,         # بخش «اتصال مستقیم اندروید» تیک نخورده
+    [switch]$SkipSelfCheck,           # بخش «بازرسی و تعمیر» تیک نخورده
+    [switch]$AndroidPrepOnly          # فقط آماده‌سازی اتصال مستقیم اندروید
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,6 +55,75 @@ $script:PidFile    = Join-Path $script:DataDir "vizitor.pid"
 $script:TaskName   = "VizitorAPI"
 $script:BatFile    = Join-Path $script:AppHome "run.bat"
 $script:ScriptDir  = $PSScriptRoot
+
+# ---- پاسخ‌های نصب‌کنندهٔ گرافیکی (فایل INI) --------------------------------
+# Vizitor-Setup.exe پاسخ صفحه‌ها را در یک فایل INI می‌نویسد و با -Answers
+# می‌دهد. در این حالت هیچ پرسشی از کاربر پرسیده نمی‌شود و مقادیر همان فایل
+# استفاده می‌شوند. هیچ‌کدام از این مقادیر چاپ نمی‌شوند (رمز SQL هرگز).
+$script:Unattended     = $false
+$script:Ans            = @{}
+$script:AnswerIis      = ""
+$script:ErpDb          = "Meelano"
+$script:AndroidLogin   = "vizitor_android"
+$script:AndroidFirewall = $true
+$script:AndroidOk      = $false
+
+function Get-Answer([string]$Key, [string]$Default = "") {
+    if ($script:Ans.ContainsKey($Key)) {
+        $v = [string]$script:Ans[$Key]
+        if ($v -ne "") { return $v }
+    }
+    return $Default
+}
+
+if ($Answers) {
+    $script:Unattended = $true
+    if (Test-Path $Answers) {
+        # فایل پاسخ‌ها را می‌تواند NSIS به‌صورت ANSI یا UTF-16 بنویسد؛ هر دو
+        # حالت را از روی بایت‌های اول تشخیص می‌دهیم تا مقادیر درست خوانده شوند.
+        $sec = ""
+        $ansText = ""
+        try {
+            $bytes = [System.IO.File]::ReadAllBytes($Answers)
+            if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+                $ansText = [System.Text.Encoding]::Unicode.GetString($bytes, 2, $bytes.Length - 2)
+            } elseif ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+                $ansText = [System.Text.Encoding]::UTF8.GetString($bytes, 3, $bytes.Length - 3)
+            } else {
+                $ansText = [System.Text.Encoding]::UTF8.GetString($bytes)
+                if ($ansText.IndexOf([char]0xFFFD) -ge 0) { $ansText = [System.Text.Encoding]::Default.GetString($bytes) }
+            }
+        } catch {
+            $ansText = (Get-Content $Answers | Out-String)
+        }
+        foreach ($line in ($ansText -split "`r?`n")) {
+            $t = ([string]$line).Trim()
+            if ($t -eq "" -or $t.StartsWith(";") -or $t.StartsWith("#")) { continue }
+            if ($t.StartsWith("[") -and $t.EndsWith("]")) { $sec = $t.Substring(1, $t.Length - 2).ToLower(); continue }
+            $i = $t.IndexOf("=")
+            if ($i -lt 1) { continue }
+            $k = $t.Substring(0, $i).Trim().ToLower()
+            $v = $t.Substring($i + 1).Trim()
+            $script:Ans["$sec/$k"] = $v
+        }
+        Write-Info "پاسخ‌های نصب‌کنندهٔ گرافیکی خوانده شد ($($script:Ans.Count) مقدار)"
+    } else {
+        Write-Warn "فایل پاسخ‌ها پیدا نشد: $Answers — مقادیر پیش‌فرض استفاده می‌شوند"
+    }
+}
+
+# ---- پوشهٔ نصب متفاوت (اگر نصب‌کنندهٔ گرافیکی پوشهٔ دیگری انتخاب کرده باشد) ---
+if ($AppHome) {
+    $script:AppHome = $AppHome
+    $script:BatFile = Join-Path $script:AppHome "run.bat"
+}
+
+# -AndroidPrepOnly فقط بخش «اتصال مستقیم اندروید» را اجرا می‌کند:
+# مثل -Recheck از تنظیمات موجود می‌خواند و پرسشی نمی‌پرسد.
+if ($AndroidPrepOnly) {
+    $Recheck = $true
+    $script:Unattended = $true
+}
 
 # ---------------------------- رنگ‌ها و نمایش ----------------------------
 $script:ColorsOk = $true
@@ -98,6 +177,10 @@ function New-RandomPassword([int]$Len = 16) {
 
 # پرسش از کاربر با مقدار پیش‌فرض؛ در حالت -Auto یا ورودی بسته، پیش‌فرض برگردانده می‌شود
 function Read-Prompt([string]$Prompt, [string]$Default = "") {
+    if ($script:Unattended) {
+        Write-Info "$Prompt [$Default]"
+        return $Default
+    }
     if ($Auto) {
         if ($Default) { Write-Info "$Prompt [$Default]" } else { Write-Info $Prompt }
         return $Default
@@ -111,6 +194,10 @@ function Read-Prompt([string]$Prompt, [string]$Default = "") {
 
 # پرسش راز (پسورد)
 function Read-SecretPrompt([string]$Prompt, [string]$Default = "") {
+    if ($script:Unattended) {
+        Write-Info "$Prompt [*** مقدار از نصب‌کننده ***]"
+        return $Default
+    }
     if ($Auto) {
         Write-Info "$Prompt [*** پیش‌فرض (تولیدشده) ***]"
         return $Default
@@ -286,6 +373,26 @@ if ($script:Existing) {
 # ---------------------------- گام ۳: سؤالات تنظیمات ----------------------
 Write-Step "دریافت اطلاعات ضروری از شما"
 
+# مقادیر نصب‌کنندهٔ گرافیکی جای پیش‌فرض پرسش‌ها می‌نشینند (در حالت -Answers
+# پرسشی پرسیده نمی‌شود و همین مقادیر استفاده می‌شوند).
+$Ip = Get-Answer "server/addr" $Ip
+if ([int]$Port -eq 0) { $Port = [int](Get-Answer "server/port" "0") }
+if (-not $script:PrevAddr)      { $script:PrevAddr      = Get-Answer "server/addr" "" }
+if (-not $script:PrevDbEngine)  { $script:PrevDbEngine  = Get-Answer "db/engine" "" }
+if (-not $script:PrevDbHost)    { $script:PrevDbHost    = Get-Answer "db/host" "" }
+if (-not $script:PrevDbDPort)   { $script:PrevDbDPort   = Get-Answer "db/port" "" }
+if (-not $script:PrevDbAuth)    { $script:PrevDbAuth    = Get-Answer "db/auth" "" }
+if (-not $script:PrevDbUser)    { $script:PrevDbUser    = Get-Answer "db/user" "" }
+if (-not $script:PrevDbPass)    { $script:PrevDbPass    = Get-Answer "db/password" "" }
+if (-not $script:PrevDbName)    { $script:PrevDbName    = Get-Answer "db/name" "" }
+if (-not $script:PrevAdminUser) { $script:PrevAdminUser = Get-Answer "admin/username" "" }
+if (-not $script:PrevAdminPass) { $script:PrevAdminPass = Get-Answer "admin/password" "" }
+if (-not $script:PrevActCode)   { $script:PrevActCode   = Get-Answer "activation/code" "" }
+$script:AnswerIis       = Get-Answer "server/iis" ""
+$script:ErpDb           = Get-Answer "android/erpdb" "Meelano"
+$script:AndroidLogin    = Get-Answer "android/login" "vizitor_android"
+$script:AndroidFirewall = ((Get-Answer "android/openfirewall" "1") -ne "0")
+
 # آدرس پیش‌فرض هوشمند: اجبار کاربر > آدرس قبلی > IP عمومی > IP داخلی
 if ($Ip) { $script:DefaultAddr = $Ip }
 elseif ($script:PrevAddr) { $script:DefaultAddr = $script:PrevAddr }
@@ -421,9 +528,10 @@ $script:IisProxyMode = $false
 $script:InternalPort = $script:Port
 $script:PublicPort = $script:Port
 
-if ($script:Mode -ne "keep" -and (Test-IisInstalled)) {
+if (-not $SkipIis -and $script:Mode -ne "keep" -and (Test-IisInstalled)) {
     $iisAnswer = "آ"
-    if (-not $Auto) {
+    if ($script:AnswerIis -eq "0" -or $script:AnswerIis -eq "خ" -or $script:AnswerIis -eq "n") { $iisAnswer = "خ" }
+    elseif (-not $Auto) {
         $iisAnswer = Read-Prompt "IIS روی سرور نصب است. آیا API از طریق IIS (پروکسی معکوس بدون تغییر پیکربندی‌های موجود IIS) قابل‌دسترسی باشد؟ [آ/خ]" "آ"
     }
     if ($iisAnswer -eq "آ" -or $iisAnswer -eq "y" -or $iisAnswer -eq "yes" -or [string]::IsNullOrEmpty($iisAnswer)) {
@@ -492,14 +600,18 @@ if ($script:DbEngine -eq "sqlserver") {
     }
 
     # 4.2) pyodbc
-    if (-not (Test-PyOdbcInstalled)) {
+    if ($SkipPrerequisites) {
+        Write-Info "بخش «پیش‌نیازهای پایتون» تیک نخورده بود؛ نصب pyodbc انجام نمی‌شود"
+    } elseif (-not (Test-PyOdbcInstalled)) {
         Write-Info "درایور python (pyodbc) نصب می‌شود ..."
         if (Install-PyOdbc) { Write-Ok "pyodbc نصب شد" }
         else { Write-Warn "نصب pyodbc ممکن نشد" }
     } else { Write-Ok "pyodbc از قبل در دسترس است" }
 
     # 4.3) درایور ODBC
-    if (-not (Test-OdbcDriverPresent)) {
+    if ($SkipPrerequisites) {
+        Write-Info "بخش «پیش‌نیازهای پایتون» تیک نخورده بود؛ نصب درایور ODBC انجام نمی‌شود"
+    } elseif (-not (Test-OdbcDriverPresent)) {
         Write-Info "درایور ODBC برای SQL Server یافت نشد؛ تلاش برای نصب با winget ..."
         $winget = Get-Command winget -ErrorAction SilentlyContinue
         if ($winget) {
@@ -524,6 +636,12 @@ if ($script:DbEngine -eq "sqlserver") {
     }
     if ($needFallback) {
         Write-Warn "$fallbackReason"
+        if ($script:Unattended) {
+            Write-Err "نصب متوقف شد: $fallbackReason"
+            Write-Info "۱) سرویس SQL Server در حال اجرا باشد  ۲) پورت $script:DbDPort باز باشد  ۳) درایور ODBC نصب باشد"
+            Write-Info "یا در نصب‌کننده، تیک بخش «دیتابیس سامانه» را بردارید تا سامانه با sqlite نصب شود."
+            exit 1
+        }
         $answer = "آ"
         if (-not $Auto) {
             $answer = Read-Prompt "به‌جای SQL Server از sqlite استفاده شود؟ [آ/خ] (با «خ» نصب متوقف می‌شود)" "آ"
@@ -759,13 +877,16 @@ function New-IisProxy {
     return $true
 }
 
-if ($script:IisProxyMode -and (Test-IisInstalled)) {
+if ($script:IisProxyMode -and (Test-IisInstalled) -and -not $SkipIis) {
     New-IisProxy | Out-Null
 }
 
 # ---------------------------- گام ۶: فایروال ------------------------------
 Write-Step "بررسی فایروال ویندوز"
-if ($script:IisProxyMode) {
+if ($SkipFirewall) {
+    Write-Info "بخش «قاعدهٔ فایروال» تیک نخورده بود؛ این مرحله رد شد."
+    Write-Info "دستی:  New-NetFirewallRule -DisplayName 'Vizitor API' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:PublicPort"
+} elseif ($script:IisProxyMode) {
     Write-Info "در حالت IIS، پورت 80 توسط خود IIS باز است؛ قانون جداگانه لازم نیست"
 } else {
     try {
@@ -778,6 +899,95 @@ if ($script:IisProxyMode) {
     } catch {
         Write-Warn "ساخت قانون فایروال خودکار ممکن نشد — در صورت نیاز دستی: New-NetFirewallRule -DisplayName 'Vizitor API' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:PublicPort"
     }
+}
+
+# ---------------- آماده‌سازی اتصال مستقیم اندروید به SQL Server -------------
+function Invoke-AndroidPrep {
+    if ($script:DbEngine -ne "sqlserver") {
+        Write-Warn "اتصال مستقیم اندروید فقط برای SQL Server معنا دارد (دیتابیس فعلی: $script:DbEngine) — رد شد"
+        return $false
+    }
+    $erp   = $script:ErpDb
+    $login = $script:AndroidLogin
+    if (-not $erp)   { $erp   = "Meelano" }
+    if (-not $login) { $login = "vizitor_android" }
+
+    $pwFile  = Join-Path $script:DataDir "android_app_password.txt"
+    $jsonOut = Join-Path $script:DataDir "android_sql_info.json"
+    $pw = ""
+    $generated = $false
+    if (Test-Path $pwFile) { try { $pw = (Get-Content $pwFile -Raw).Trim() } catch {} }
+    if (-not $pw) {
+        # رمز از پیش تعیین‌شده در فایل نیست؛ یکی می‌سازیم و فقط در فایل با
+        # دسترسی محدود ذخیره می‌کنیم (هرگز چاپ/لاگ نمی‌شود)
+        try { $pw = New-RandomPassword 24 } catch { $pw = "" }
+        $generated = $true
+    }
+
+    Write-Info "کاربر محدود ($login) روی دیتابیس [$erp] بررسی/ساخته می‌شود ..."
+    $script:AndroidOk = $false
+    try {
+        if ($pw) { $env:VIZ_ANDROID_SQL_PASSWORD = $pw }
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"     # خروجی stderr پایتون نباید نصب را متوقف کند
+        $out = & $script:PyExe "$script:AppHome\api\provision_android_sql.py" --config "$script:ConfigFile" --erp-db $erp --login $login --json-out $jsonOut 2>&1
+        $rc = $LASTEXITCODE
+        $ErrorActionPreference = $prevEap
+        foreach ($l in $out) { Write-Info $l }
+        if ($rc -eq 0) { $script:AndroidOk = $true }
+    } catch {
+        Write-Warn "اجرای آماده‌سازی اتصال مستقیم ناموفق بود: $($_.Exception.Message)"
+    } finally {
+        Remove-Item Env:\VIZ_ANDROID_SQL_PASSWORD -ErrorAction SilentlyContinue
+    }
+    if (-not $script:AndroidOk) {
+        Write-Warn "آماده‌سازی اتصال مستقیم اندروید کامل نشد (جزئیات در پیام‌های بالا)"
+        return $false
+    }
+
+    if ($generated) {
+        Set-Content -Path $pwFile -Value $pw -Encoding ASCII
+        try { & icacls $pwFile /inheritance:r /grant:r "*S-1-5-18:F" "*S-1-5-32-544:F" | Out-Null } catch {}
+        Write-Ok "رمز کاربر دیتابیس ساخته و در فایل زیر ذخیره شد (دسترسی: فقط سیستم/مدیر):"
+        Write-Info "   $pwFile"
+        Write-Info "   همین رمز را یک‌بار در صفحهٔ تنظیمات برنامهٔ اندروید وارد کنید."
+    } else {
+        Write-Ok "رمز کاربر دیتابیس از قبل موجود بود (تغییر داده نشد)."
+        Write-Info "   محل نگه‌داری رمز: $pwFile"
+    }
+
+    if ($script:AndroidFirewall) {
+        Write-Info "قاعدهٔ فایروال پورت 1433 فقط برای شبکهٔ محلی ..."
+        $done = $false
+        try {
+            if (-not (Get-NetFirewallRule -DisplayName "Vizitor SQL 1433" -ErrorAction SilentlyContinue)) {
+                New-NetFirewallRule -DisplayName "Vizitor SQL 1433" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 1433 -RemoteAddress LocalSubnet -Profile Any | Out-Null
+            }
+            $done = $true
+        } catch { $done = $false }
+        if (-not $done) {
+            try {
+                $r = & netsh advfirewall firewall show rule name="Vizitor SQL 1433" 2>&1 | Out-String
+                if ($r -notmatch "Vizitor SQL 1433") {
+                    & netsh advfirewall firewall add rule name="Vizitor SQL 1433" dir=in action=allow protocol=TCP localport=1433 remoteip=localsubnet profile=any | Out-Null
+                }
+                $done = $true
+            } catch { $done = $false }
+        }
+        if ($done) { Write-Ok "پورت 1433 فقط برای شبکهٔ محلی باز شد (Vizitor SQL 1433)" }
+        else { Write-Warn "قاعدهٔ فایروال ساخته نشد؛ دستی:  netsh advfirewall firewall add rule name=`"Vizitor SQL 1433`" dir=in action=allow protocol=TCP localport=1433 remoteip=localsubnet" }
+    }
+    Write-Ok "اتصال مستقیم اندروید آماده است (سرور: $script:Addr ، پورت: 1433 ، دیتابیس: $erp ، کاربر: $login)"
+    Write-Info "جزئیات (بدون رمز): $jsonOut"
+    return $true
+}
+
+if ($AndroidPrepOnly) {
+    Write-Step "آماده‌سازی اتصال مستقیم اندروید به SQL Server"
+    Invoke-AndroidPrep | Out-Null
+    Write-Host ""
+    Write-Info "پایان. (این حالت فقط همین بخش را اجرا می‌کند)"
+    exit 0
 }
 
 # ---------------------------- گام ۷: راه‌اندازی + بازرسی --------------------
@@ -826,7 +1036,9 @@ function Provision-SqlServer {
     return ($LASTEXITCODE -eq 0)
 }
 
-if ($script:DbEngine -eq "sqlserver") {
+if ($SkipDatabase) {
+    Write-Info "بخش «دیتابیس سامانه» تیک نخورده بود؛ ساخت جداول رد شد (سامانه انتظار دارد جداول از قبل موجود باشند)."
+} elseif ($script:DbEngine -eq "sqlserver") {
     if (-not (Provision-SqlServer)) {
         Write-Warn "آماده‌سازی SQL Server ممکن نشد — به‌صورت هوشمند به sqlite تغییر می‌دهم"
         $script:DbEngine = "sqlite"
@@ -848,6 +1060,11 @@ Start-Sleep -Seconds 3
 
 # ---- حلقه چک و تعمیر -------------------------------------------------------
 Write-Step "بازرسی کامل و بازبینی خودکار تنظیمات (تا ۴ دور)"
+if ($SkipSelfCheck) {
+    Write-Info "بخش «بازرسی و تعمیر خودکار» تیک نخورده بود؛ این مرحله رد شد."
+    Write-Info "هر زمان خواستید:  powershell -ExecutionPolicy Bypass -File `"$PSScriptRoot\install.ps1`" -Recheck"
+    $verifyOk = $true
+} else {
 
 $script:CheckFailures = @()
 
@@ -989,6 +1206,42 @@ for ($round = 1; $round -le 4; $round++) {
     Write-Warn "بازرسی دور $round: $nFail مورد ناموفق ($($script:CheckFailures -join ', ')) — تنظیمات بازبینی و تعمیر می‌شوند ..."
     Repair
 }
+}   # پایان گزینهٔ «بازرسی و تعمیر خودکار»
+
+# ---------------------------- فایل اتصال (بدون رمز) -----------------------
+try {
+    $connectFile = Join-Path $script:AppHome "connect.txt"
+    $lines = @()
+    $lines += "[connection]"
+    $lines += "apiurl=$script:ApiUrl"
+    $lines += "configurl=$($script:ApiUrl -replace '/api$', '/api/config')"
+    $lines += "server=$script:Addr"
+    $lines += "port=$script:PublicPort"
+    $lines += "internalport=$script:InternalPort"
+    $lines += "dbengine=$script:DbEngine"
+    if ($script:DbEngine -eq "sqlserver") {
+        $lines += "sqldatabase=$script:DbName"
+        $lines += "sqlserver=$script:DbHost,$script:DbDPort"
+    }
+    if ($script:AndroidOk) {
+        $lines += "androidsqlserver=$script:Addr,1433"
+        $lines += "androidsqldatabase=$script:ErpDb"
+        $lines += "androidsqllogin=$script:AndroidLogin"
+        $lines += "androidsqlpasswordfile=$script:DataDir\android_app_password.txt"
+    }
+    $lines += "datadir=$script:DataDir"
+    $lines += "apphome=$script:AppHome"
+    $lines += "installed=$(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+    # بدون BOM نوشته می‌شود تا NSIS بتواند با ReadINIStr بخواند (مقادیر همه ASCII هستند)
+    $enc = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($connectFile, (($lines -join "`r`n") + "`r`n"), $enc)
+    Write-Info "فایل اتصال (بدون رمز) نوشته شد: $connectFile"
+} catch {
+    Write-Warn "نوشتن فایل اتصال ممکن نشد: $($_.Exception.Message)"
+}
+
+# سخت‌تر کردن دسترسی پوشهٔ تنظیمات (رمز دیتابیس داخل config.json است)
+try { & icacls $script:DataDir /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" | Out-Null } catch {}
 
 # ---------------------------- گزارش نهایی ---------------------------------
 Write-Step "گزارش نهایی"
@@ -1030,6 +1283,12 @@ if ($script:ActCode) {
     Write-Host "     curl -X POST $script:ApiUrl/activate -d '{""code"":""CODE-شما""}'"
 }
 Write-Hr
+if ($script:AndroidOk) {
+    Write-Host "  اتصال مستقیم اندروید به SQL Server:"
+    Write-Host "     $($script:Addr),1433  /  دیتابیس $($script:ErpDb)  /  کاربر $($script:AndroidLogin)" -ForegroundColor Green
+    Write-Host "     رمز: در فایل $script:DataDir\android_app_password.txt (فقط مدیر؛ در گزارش‌ها چاپ نمی‌شود)"
+}
+Write-Host "  فایل اتصال  : $(Join-Path $script:AppHome 'connect.txt')"
 Write-Host "  فایل تنظیمات : $script:ConfigFile"
 Write-Host "  لاگ سرویس   : $script:LogFile"
 Write-Host "  فایل‌های برنامه: $script:AppHome"
