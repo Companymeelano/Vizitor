@@ -181,6 +181,58 @@ def simulate_dynamic_sql(text: str):
     return out
 
 
+RESERVED = {
+    "add", "all", "alter", "and", "any", "as", "asc", "authorization", "backup",
+    "begin", "between", "break", "browse", "bulk", "by", "cascade", "case",
+    "check", "checkpoint", "close", "clustered", "coalesce", "collate", "column",
+    "commit", "compute", "constraint", "contains", "containstable", "continue",
+    "convert", "create", "cross", "current", "current_date", "current_time",
+    "current_timestamp", "current_user", "cursor", "database", "dbcc",
+    "deallocate", "declare", "default", "delete", "deny", "desc", "disk",
+    "distinct", "distributed", "double", "drop", "dump", "else", "end", "errlvl",
+    "escape", "except", "exec", "execute", "exists", "exit", "external", "fetch",
+    "file", "fillfactor", "for", "foreign", "freetext", "freetexttable", "from",
+    "full", "function", "goto", "grant", "group", "having", "holdlock",
+    "identity", "identity_insert", "identitycol", "if", "in", "index", "inner",
+    "insert", "intersect", "into", "is", "join", "key", "kill", "left", "like",
+    "lineno", "load", "merge", "national", "nocheck", "nonclustered", "not",
+    "null", "nullif", "of", "off", "offsets", "on", "open", "opendatasource",
+    "openquery", "openrowset", "openxml", "option", "or", "order", "outer",
+    "over", "percent", "pivot", "plan", "precision", "primary", "print", "proc",
+    "procedure", "public", "raiserror", "read", "readtext", "reconfigure",
+    "references", "replication", "restore", "restrict", "return", "revert",
+    "revoke", "right", "rollback", "rowcount", "rowguidcol", "rule", "save",
+    "schema", "securityaudit", "select", "session_user", "set", "setuser",
+    "shutdown", "some", "statistics", "system_user", "table", "tablesample",
+    "textsize", "then", "to", "top", "tran", "transaction", "trigger",
+    "truncate", "try_convert", "tsequal", "union", "unique", "unpivot",
+    "update", "updatetext", "use", "user", "values", "varying", "view",
+    "waitfor", "when", "where", "while", "with", "writetext",
+}
+
+
+def check_reserved_identifiers(text: str):
+    """Object names that are reserved keywords must be bracketed.
+
+    Real case: 'FROM EMS.user' raised Msg 156 'Incorrect syntax near the
+    keyword user' on the live server. Correct: 'FROM [EMS].[user]'."""
+    problems = []
+    code = strip_comments(text)
+    # ... FROM/JOIN schema.object  (object may be bracketed)
+    for m in re.finditer(r"\b(?:FROM|JOIN|INTO|UPDATE|EXEC(?:UTE)?)\s+((?:\[?\w+\]?\.)*)(\[?\w+\]?)", code, flags=re.I):
+        parts = [p for p in m.group(1).split(".") if p]
+        last = m.group(2)
+        for part in parts + [last]:
+            bare = part.strip("[]")
+            if part.startswith("[") and part.endswith("]"):
+                continue
+            if bare.lower() in RESERVED:
+                problems.append(
+                    f"'{bare}' is a reserved T-SQL keyword and must be bracketed "
+                    f"(write [{bare}]) in: {m.group(0).strip()[:60]}")
+    return sorted(set(problems))
+
+
 def split_statements(batch: str):
     """Split one batch at top-level semicolons (depth 0, BEGIN/END balanced).
 
@@ -354,6 +406,14 @@ def check(path: pathlib.Path) -> bool:
             print(f"  [FAIL] banned construct '{token}': {why}")
     if not any(t in code for t in banned):
         print("  known-bad constructs ........ none")
+
+    reserved = check_reserved_identifiers(text)
+    if reserved:
+        ok = False
+        for pr in reserved:
+            print(f"  [FAIL] {pr}")
+    else:
+        print("  reserved keywords ............ OK (object names are bracketed)")
 
     leftovers = re.findall(r"(?:FROM|JOIN)\s+wanted\b", code, flags=re.I)
     if len(leftovers) > 1:
