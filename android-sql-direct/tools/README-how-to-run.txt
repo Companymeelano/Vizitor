@@ -1,7 +1,8 @@
-﻿چطور این ممیزی‌ها را اجرا کنیم (Vizitor / Meelano)
+چطور این ممیزی‌ها را اجرا کنیم (Vizitor / Meelano)
 ==================================================
 
-این پوشه باید شامل این فایل‌ها باشد:
+این پوشه باید شامل این فایل‌ها باشد (اگر پوشه وجود ندارد، اول بسازش:
+    New-Item -ItemType Directory -Force C:\vizitor_audit):
     run_audit.bat
     02_fill_gaps.sql
     03_dump_proc_bodies.sql
@@ -38,3 +39,22 @@
 
 هیچ‌کدام از این اسکریپت‌ها چیزی در دیتابیس نمی‌نویسند (فقط خواندن).
 فایل‌های .sql را فقط در SSMS اجرا کن.
+
+راه ۴ (کاملاً بدون فایل — وقتی نه پوشه داری و نه فایل sql؛ فقط sqlcmd نصب است)
+    اول ببین sqlcmd هست:      Get-Command sqlcmd
+    بعد این یک خط را کپی کن (کل خط را یکجا؛ پوشه را می‌سازد و برای هر پروسیجر
+    یک فایل جدا می‌نویسد):
+
+    New-Item -ItemType Directory -Force C:\vizitor_audit | Out-Null; foreach ($p in 'add_sail_pish','AddInvoice','new_cust','FixMojodi') { sqlcmd -S localhost -d Meelano -E -h -1 -Q "SET NOCOUNT ON; SELECT m.definition FROM sys.sql_modules m JOIN sys.objects o ON o.object_id = m.object_id WHERE o.name = '$p'" -o "C:\vizitor_audit\body_$p.txt" -y 0 -W }
+
+    نتیجه:
+        C:\vizitor_audit\body_add_sail_pish.txt
+        C:\vizitor_audit\body_AddInvoice.txt
+        C:\vizitor_audit\body_new_cust.txt
+        C:\vizitor_audit\body_FixMojodi.txt
+    کنترل کن که خالی نباشند:
+        Get-ChildItem C:\vizitor_audit | Select-Object Name, Length
+
+    نکته: خطای  Sqlcmd: 'xxx.sql': Invalid filename  یعنی sqlcmd فایل را در
+    «پوشهٔ جاری» می‌گردد (مثلاً C:\Windows\System32). یا اول  cd  کن به پوشهٔ
+    فایل‌ها، یا مسیر کامل بده، یا از همین راه ۴ استفاده کن که فایل لازم ندارد.
