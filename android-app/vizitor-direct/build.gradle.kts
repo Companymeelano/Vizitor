@@ -27,7 +27,9 @@ android {
         val props = Properties().apply { keystoreProps.inputStream().use { load(it) } }
         signingConfigs {
             create("release") {
-                storeFile = file(props.getProperty("storeFile"))
+                // فایل کلید ممکن است کنار ریشهٔ پروژه باشد یا کنار همین ماژول
+                val keyPath = props.getProperty("storeFile")
+                storeFile = rootProject.file(keyPath).takeIf { it.exists() } ?: file(keyPath)
                 storePassword = props.getProperty("storePassword")
                 keyAlias = props.getProperty("keyAlias")
                 keyPassword = props.getProperty("keyPassword")
