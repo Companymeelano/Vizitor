@@ -155,7 +155,7 @@ Var /GLOBAL hUrlHint
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
 !define MUI_WELCOMEPAGE_TITLE "به نصب‌کنندهٔ ${PRODUCT_FA} خوش آمدید"
-!define MUI_WELCOMEPAGE_TEXT  "این برنامه، سرور ویزیتور را روی این کامپیوتر نصب و آمادهٔ استفاده می‌کند:$\r$\n$\r$\n• سرویس API و اتصال برنامهٔ اندروید$\r$\n• دیتابیس سامانه در SQL Server (فقط ساخت چیزهای ناموجود؛ هیچ دادهٔ موجودی تغییر نمی‌کند)$\r$\n• پنل مدیریت، قاعده‌های فایروال و راهنماهای فارسی$\r$\n$\r$\nدر صفحهٔ بعد، بخش‌های موردنیاز را تیک بزنید.$\r$\n$\r$\nطراحی و برنامه‌نویسی: ${AUTHOR_FA} (${AUTHOR_EN})  •  گروه: ${STUDIO}"
+!define MUI_WELCOMEPAGE_TEXT  "این برنامه، سرور ویزیتور را روی این کامپیوتر نصب و آمادهٔ استفاده می‌کند:$\r$\n$\r$\n• سرویس سامانه و پنل مدیریت روی پورت ۹۵۹۵ (فقط شبکهٔ محلی)$\r$\n• اتصال مستقیم برنامهٔ اندروید به SQL Server روی پورت ۱۴۳۳ — بدون IIS و بدون API میانی$\r$\n• دیتابیس سامانه در SQL Server (فقط ساخت چیزهای ناموجود؛ هیچ دادهٔ موجودی تغییر نمی‌کند)$\r$\n• کاربر محدود دیتابیس، قاعده‌های فایروال، کارت اتصال و راهنماهای فارسی$\r$\n$\r$\nدر صفحهٔ بعد، بخش‌های موردنیاز را تیک بزنید.$\r$\n$\r$\nطراحی و برنامه‌نویسی: ${AUTHOR_FA} (${AUTHOR_EN})  •  گروه: ${STUDIO}"
 
 !define MUI_LICENSEPAGE_TEXT_TOP    "لطفاً شرایط استفاده را بخوانید."
 !define MUI_LICENSEPAGE_TEXT_BOTTOM "برای ادامه، شرایط بالا را بپذیرید."
@@ -163,7 +163,7 @@ Var /GLOBAL hUrlHint
 !define MUI_DIRECTORYPAGE_TEXT_TOP  "پوشهٔ نصب سامانه. سرویس سامانه، ابزارها و راهنماها این‌جا قرار می‌گیرند."
 
 !define MUI_FINISHPAGE_TITLE          "نصب ${PRODUCT_FA} کامل شد"
-!define MUI_FINISHPAGE_TEXT           "آدرس API برای برنامهٔ اندروید:$\r$\n$ApiUrlDisplay$\r$\n$\r$\nاتصال مستقیم اندروید به SQL Server (پورت ۱۴۳۳) آماده شد؛ جزئیات و کد QR:$\r$\n$INSTDIR\setup\android-connect.png$\r$\n$\r$\nتنظیمات و لاگ‌ها:  C:\ProgramData\Vizitor$\r$\n$\r$\nاگر بازرسی خودکار به مشکل خورد، از میان‌بر «بازرسی و تعمیر» استفاده کنید.$\r$\n$\r$\nسامانهٔ ویزیتور — طراحی و برنامه‌نویسی: ${AUTHOR_FA} ($\r$\n${AUTHOR_EN})  •  گروه نرم‌افزاری: ${STUDIO}"
+!define MUI_FINISHPAGE_TEXT           "آدرس پنل مدیریت سامانه:$\r$\n$ApiUrlDisplay$\r$\n$\r$\nاتصال مستقیم اندروید به SQL Server (پورت ۱۴۳۳) آماده شد؛ جزئیات و کد QR:$\r$\n$INSTDIR\setup\android-connect.png$\r$\n$\r$\nتنظیمات و لاگ‌ها:  C:\ProgramData\Vizitor$\r$\n$\r$\nاگر بازرسی خودکار به مشکل خورد، از میان‌بر «بازرسی و تعمیر» استفاده کنید.$\r$\n$\r$\nسامانهٔ ویزیتور — طراحی و برنامه‌نویسی: ${AUTHOR_FA} (${AUTHOR_EN})  •  گروه نرم‌افزاری: ${STUDIO}"
 !define MUI_FINISHPAGE_RUN          "$INSTDIR\tools\open-panel.bat"
 !define MUI_FINISHPAGE_RUN_FUNCTION   OpenPanel
 !define MUI_FINISHPAGE_RUN_TEXT       "بازکردن پنل مدیریت در مرورگر"
@@ -1184,7 +1184,7 @@ Section "Uninstall"
   SetRegView 64
   SetShellVarContext all
 
-  DetailPrint "توقف و حذف سرویس API ..."
+  DetailPrint "توقف و حذف سرویس سامانه ..."
   nsExec::ExecToLog 'schtasks /End /TN "${TASK_NAME}"'
   Pop $0
   nsExec::ExecToLog 'schtasks /Delete /TN "${TASK_NAME}" /F'
