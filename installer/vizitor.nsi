@@ -160,7 +160,7 @@ Var /GLOBAL hUrlHint
 !define MUI_LICENSEPAGE_TEXT_TOP    "لطفاً شرایط استفاده را بخوانید."
 !define MUI_LICENSEPAGE_TEXT_BOTTOM "برای ادامه، شرایط بالا را بپذیرید."
 !define MUI_COMPONENTSPAGE_TEXT_TOP "هر بخشی که لازم دارید تیک بزنید؛ توضیح هر بخش پایین همین صفحه نمایش داده می‌شود."
-!define MUI_DIRECTORYPAGE_TEXT_TOP  "پوشهٔ نصب سامانه. سرویس API، ابزارها و راهنماها اینجا قرار می‌گیرند."
+!define MUI_DIRECTORYPAGE_TEXT_TOP  "پوشهٔ نصب سامانه. سرویس سامانه، ابزارها و راهنماها این‌جا قرار می‌گیرند."
 
 !define MUI_FINISHPAGE_TITLE          "نصب ${PRODUCT_FA} کامل شد"
 !define MUI_FINISHPAGE_TEXT           "آدرس API برای برنامهٔ اندروید:$\r$\n$ApiUrlDisplay$\r$\n$\r$\nاتصال مستقیم اندروید به SQL Server (پورت ۱۴۳۳) آماده شد؛ جزئیات و کد QR:$\r$\n$INSTDIR\setup\android-connect.png$\r$\n$\r$\nتنظیمات و لاگ‌ها:  C:\ProgramData\Vizitor$\r$\n$\r$\nاگر بازرسی خودکار به مشکل خورد، از میان‌بر «بازرسی و تعمیر» استفاده کنید.$\r$\n$\r$\nسامانهٔ ویزیتور — طراحی و برنامه‌نویسی: ${AUTHOR_FA} ($\r$\n${AUTHOR_EN})  •  گروه نرم‌افزاری: ${STUDIO}"
@@ -211,8 +211,8 @@ LangString ^CloseBtn   ${LANG_FARSI} "بستن"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\پنل مدیریت.lnk"      "$INSTDIR\tools\open-panel.bat" "" "$INSTDIR\tools\open-panel.bat" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\راهنمای فارسی.lnk"    "$INSTDIR\tools\open-guide.bat" "" "$INSTDIR\tools\open-guide.bat" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\بازرسی و تعمیر.lnk"   "$INSTDIR\tools\recheck.bat" "" "$INSTDIR\tools\recheck.bat" 0
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\شروع سرویس API.lnk"   "$INSTDIR\tools\service-start.bat" "" "$INSTDIR\tools\service-start.bat" 0
-  CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\توقف سرویس API.lnk"   "$INSTDIR\tools\service-stop.bat" "" "$INSTDIR\tools\service-stop.bat" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\شروع سرویس سامانه.lnk" "$INSTDIR\tools\service-start.bat" "" "$INSTDIR\tools\service-start.bat" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\توقف سرویس سامانه.lnk" "$INSTDIR\tools\service-stop.bat" "" "$INSTDIR\tools\service-stop.bat" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\اتصال مستقیم SQL.lnk" "$INSTDIR\tools\android-prep.bat" "" "$INSTDIR\tools\android-prep.bat" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\کارت اتصال اندروید.lnk" "$INSTDIR\setup\android-connect.txt" "" "notepad.exe" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\حذف نصب.lnk"         "$INSTDIR\uninstall.exe"
@@ -368,7 +368,7 @@ SectionEnd
 ;  توضیح بخش‌ها (بعد از تعریف بخش‌ها)
 ; ---------------------------------------------------------------------------
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore}       "سرویس ویندوز (${TASK_NAME})، پنل مدیریت روی پورت ۹۵۹۵، فایل‌های پیکربندی و ابزارها. (اتصال برنامهٔ اندروید مستقل از این بخش و مستقیم به SQL Server است.)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore}       "سرویس سامانه (${TASK_NAME}) و پنل مدیریت روی پورت ۹۵۹۵، فایل‌های پیکربندی و ابزارها — بدون IIS و بدون API میانی. (اتصال برنامهٔ اندروید مستقل از این بخش و مستقیم به SQL Server است.)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPrereq}     "pyodbc و درایور ODBC مایکروسافت — همان چیزهایی که برای گفت‌وگو با SQL Server لازم است؛ فقط در صورت کمبود نصب می‌شوند."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDb}         "ساخت دیتابیس و جداول داخلی خود سامانه (پنل و فعال‌سازی) — کاملاً غیرتلفیقی؛ دیتابیس حسابداری شما دست‌نخورده می‌ماند."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecFirewall}   "باز کردن پورت ۱۴۳۳ برای اتصال مستقیم برنامهٔ اندروید به دیتابیس (شبکهٔ محلی، و در صورت تیک «اتصال از بیرون شبکه» برای هر آدرس) و پورت ۹۵۹۵ فقط برای شبکهٔ محلی."
@@ -1213,6 +1213,8 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\بازرسی و تعمیر.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\شروع سرویس API.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\توقف سرویس API.lnk"
+  Delete "$SMPROGRAMS\${PRODUCT_FA}\شروع سرویس سامانه.lnk"
+  Delete "$SMPROGRAMS\${PRODUCT_FA}\توقف سرویس سامانه.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\اتصال مستقیم SQL.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\کارت اتصال اندروید.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\حذف نصب.lnk"
