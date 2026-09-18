@@ -61,6 +61,11 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        // آزمون‌های JVM به APIهای اندروید دست نمی‌زنند؛ این گزینه فقط جلوی
+        // «Method not mocked» را در صورت لمس تصادفی می‌گیرد.
+        unitTests.isReturnDefaultValues = true
+    }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
@@ -100,4 +105,8 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // ── آزمون‌ها (روی JVM): آزمون اتصال واقعی به SQL Server در CI ───────────
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }

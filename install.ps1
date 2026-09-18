@@ -807,6 +807,95 @@ if ($SkipFirewall) {
 }
 
 # ---------------- آماده‌سازی اتصال مستقیم اندروید به SQL Server -------------
+function Test-SqlTcpListener {
+    <#
+      بررسی می‌کند که SQL Server واقعاً روی TCP (پورت ۱۴۳۳) گوش می‌دهد یا نه.
+      علت: اگر TCP/IP غیرفعال باشد، سرویس ویزیتور روی همان ماشین با named pipes وصل
+      می‌شود و همه‌چیز سالم به نظر می‌رسد، ولی گوشی/برنامهٔ اندروید هرگز وصل نمی‌شود.
+      این بررسی فقط می‌خواند: sys.dm_tcp_listener_states
+    #>
+    if ($script:DbEngine -ne "sqlserver") { return $true }
+    $out = Join-Path $script:DataDir "sql_listener.json"
+    try {
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $raw = & $script:PyExe "$script:AppHome\api\sql_admin_tools.py" listener `
+               --config "$script:ConfigFile" --port 1433 --out "$out" 2>&1
+        $ErrorActionPreference = $prevEap
+    } catch {
+        Write-Warn "بررسی شنوندهٔ TCP ممکن نشد: $($_.Exception.Message)"
+        return $true        # نبود ابزار نباید نصب را متوقف کند
+    }
+    $json = $null
+    if (Test-Path $out) {
+        try { $json = Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $json = $null }
+    }
+    if ($null -eq $json) { return $true }
+
+    switch ($json.verdict) {
+        "tcp_ok_all_ips" {
+            Write-Ok "پروتکل TCP/IP فعال است و SQL Server روی پورت ۱۴۳۳ به همهٔ کارت‌های شبکه گوش می‌دهد ✓"
+            return $true
+        }
+        "tcp_ok_single_ip" {
+            Write-Warn "TCP روی پورت ۱۴۳۳ فعال است، ولی SQL Server فقط روی یک آی‌پی گوش می‌دهد."
+            Write-Info "  شنونده‌های فعال: $(($json.listeners | Where-Object { $_.state -eq 'Online' } | ForEach-Object { "$($_.ip):$($_.port)" }) -join ' ، ')"
+            Write-Info "  اگر گوشی به همان کارت شبکه وصل نیست، در SQL Server Configuration Manager"
+            Write-Info "  → Protocols for <instance> → TCP/IP → تب IP Addresses → IPAll → TCP Port = 1433"
+            Write-Info "  و در همان تب، برای کارت شبکهٔ درست TCP Dynamic Ports را خالی کنید، بعد سرویس را ری‌استارت کنید."
+            return $true
+        }
+        "tcp_on_other_port" {
+            Write-Warn "SQL Server روی TCP فعال است ولی روی پورت دیگری: $($json.detail)"
+            Write-Info "  در نصب‌کننده پورت ۱۴۳۳ وارد شد؛ یا پورت فعال را در برنامهٔ اندروید وارد کنید،"
+            Write-Info "  یا در SQL Server Configuration Manager پورت ۱۴۳۳ را تنظیم و سرویس را ری‌استارت کنید."
+            return $true
+        }
+        "tcp_disabled" {
+            Write-Warn "پروتکل TCP/IP در SQL Server غیرفعال است — برنامهٔ اندروید نمی‌تواند وصل شود."
+            Write-Info "  فعال‌سازی (راه گرافیکی): SQL Server Configuration Manager"
+            Write-Info "     → SQL Server Network Configuration → Protocols for <instance> → TCP/IP"
+            Write-Info "     → Enabled = Yes ، سپس تب IP Addresses → IPAll → TCP Port = 1433"
+            Write-Info "     → بعد SQL Server (سرویس) را Restart کنید."
+            Write-Info "  فعال‌سازی سریع با PowerShell (نیازمند دسترسی مدیر و ری‌استارت سرویس):"
+            Write-Info "     $script:ConfigMgrHint"
+            return $false
+        }
+        default {
+            if ($json.error) { Write-Warn "بررسی شنوندهٔ TCP: $($json.error) $($json.detail)" }
+            return $true
+        }
+    }
+}
+
+function Enable-SqlTcp {
+    <#
+      فعال‌سازی سریع TCP/IP روی پورت ۱۴۳۳ با تغییر کلیدهای رجیستری همان نسخهٔ SQL Server،
+      سپس یک‌بار ری‌استارت سرویس. هیچ تغییری در دیتابیس‌ها داده نمی‌شود.
+    #>
+    if (-not $script:SqlInstanceRegPath) { return $false }
+    try {
+        $nets = "HKLM:\$($script:SqlInstanceRegPath)\SuperSocketNetLib\Tcp"
+        if (-not (Test-Path $nets)) { Write-Warn "کلید رجیستری TCP پیدا نشد: $nets"; return $false }
+        New-ItemProperty -Path $nets -Name "Enabled" -Value 1 -PropertyType DWord -Force | Out-Null
+        New-ItemProperty -Path "$nets\IPAll" -Name "TcpPort" -Value "1433" -PropertyType String -Force | Out-Null
+        Remove-ItemProperty -Path "$nets\IPAll" -Name "TcpDynamicPorts" -ErrorAction SilentlyContinue
+        Write-Ok "TCP/IP فعال شد و پورت ۱۴۳۳ تنظیم شد (کلید: $nets)"
+        $svc = if ($script:SqlServiceName) { $script:SqlServiceName } else { "MSSQLSERVER" }
+        Write-Info "ری‌استارت سرویس $svc ..."
+        try { Restart-Service -Name $svc -Force -ErrorAction Stop; Write-Ok "سرویس $svc ری‌استارت شد." }
+        catch {
+            try { & net stop $svc /y | Out-Null; & net start $svc | Out-Null; Write-Ok "سرویس $svc ری‌استارت شد (net)." }
+            catch { Write-Warn "ری‌استارت خودکار سرویس ممکن نشد؛ دستی: Restart-Service $svc" }
+        }
+        Start-Sleep -Seconds 2
+        return $true
+    } catch {
+        Write-Warn "فعال‌سازی خودکار ناموفق بود: $($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Invoke-AndroidPrep {
     if ($script:DbEngine -ne "sqlserver") {
         Write-Warn "اتصال مستقیم اندروید فقط برای SQL Server معنا دارد (دیتابیس فعلی: $script:DbEngine) — رد شد"
@@ -925,6 +1014,31 @@ function Invoke-AndroidPrep {
 
     Write-Ok "اتصال مستقیم اندروید آماده است (سرور: $script:Addr ، پورت: 1433 ، دیتابیس: $erp ، کاربر: $login)"
     Write-Info "جزئیات (بدون رمز): $jsonOut"
+
+    # ---- بررسی TCP/IP ۱۴۳۳: تنها چیزی که بین «سرور سالم» و «گوشی وصل می‌شود» فاصله است
+    Write-Step "بررسی شنوندهٔ شبکهٔ SQL Server روی پورت ۱۴۳۳"
+    if (-not (Test-SqlTcpListener)) {
+        $answer = "n"
+        if (-not $Unattended) {
+            $answer = Read-Prompt "همین حالا TCP/IP را فعال کنم و سرویس SQL را یک‌بار ری‌استارت کنم؟ (بله/n)" "بله"
+        }
+        if ($answer -match "^(بله|yes|y|ب)$") {
+            if (Enable-SqlTcp) {
+                Start-Sleep -Seconds 3
+                if (Test-SqlTcpListener) {
+                    Write-Ok "حالا SQL Server روی پورت ۱۴۳۳ گوش می‌دهد و اتصال اندروید آماده است ✓"
+                } else {
+                    Write-Warn "پس از فعال‌سازی هم شنوندهٔ ۱۴۳۳ دیده نشد؛ دستی از Configuration Manager بررسی کنید."
+                }
+            }
+        } else {
+            $req = "دستور زیر را به‌عنوان Administrator اجرا کنید (پس از آن سرویس SQL را ری‌استارت کنید):"
+            Write-Warn "بدون فعال‌سازی TCP/IP، برنامهٔ اندروید وصل نخواهد شد."
+            Write-Info $req
+            Write-Info "  $script:RegEnableHint"
+            Write-Info "  Restart-Service $($script:SqlServiceName)   (یا ری‌استارت از services.msc)"
+        }
+    }
     return $true
 }
 
@@ -984,7 +1098,46 @@ if ($SkipDatabase) {
     }
 }
 
-# در حالت keep، Task اگر نباشد بساز
+# ---- اطلاعات لازم برای بررسی/فعال‌سازی TCP/IP روی همین نسخهٔ SQL Server ---------
+
+function Resolve-SqlInstanceInfo {
+    $inst = ""
+    try {
+        $inst = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL" -ErrorAction SilentlyContinue).PSObject.Properties |
+                Where-Object { $_.Name -eq "MSSQLSERVER" -or $_.Name -like "MSSQL*" } |
+                Select-Object -First 1 -ExpandProperty Value
+    } catch { $inst = "" }
+    if (-not $script:SqlServiceName) {
+        $script:SqlServiceName = if ($script:SqlInstance -and $script:SqlInstance -ne "MSSQLSERVER") { "MSSQL`$$script:SqlInstance" } else { "MSSQLSERVER" }
+    }
+    try {
+        $svc = Get-Service -Name $script:SqlServiceName -ErrorAction SilentlyContinue
+        if ($svc) {
+            $id = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$($script:SqlServiceName)" -ErrorAction SilentlyContinue).ImagePath
+            if ($id -match "(MSSQL\d+\.MSSQLSERVER|MSSQL\d+)$") {
+                $script:SqlInstanceRegPath = "$($Matches[1])"
+            }
+        }
+    } catch { }
+    if (-not $script:SqlInstanceRegPath) {
+        # مسیر پیش‌فرض نسخهٔ ۱۲ (SQL Server 2014) و ۱۳/۱۴/۱۵ هم بررسی می‌شوند
+        foreach ($v in @("MSSQL12.MSSQLSERVER", "MSSQL13.MSSQLSERVER", "MSSQL14.MSSQLSERVER", "MSSQL15.MSSQLSERVER")) {
+            if (Test-Path "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$v\MSSQLServer\SuperSocketNetLib\Tcp") {
+                $script:SqlInstanceRegPath = "$v\MSSQLServer"
+                break
+            }
+        }
+    }
+    $script:ConfigMgrHint = "SQL Server Configuration Manager → SQL Server Network Configuration → Protocols → TCP/IP → Enabled = Yes"
+    if ($script:SqlInstanceRegPath) {
+        $key = "HKLM:\$($script:SqlInstanceRegPath)\SuperSocketNetLib\Tcp"
+        $script:RegEnableHint = "Set-ItemProperty '$key' Enabled 1; New-ItemProperty '$key\IPAll' TcpPort '1433' -Force"
+        $script:RegEnableHint = $script:RegEnableHint.Replace("HKLM:\", "HKLM:\")
+    } else {
+        $script:RegEnableHint = "(کلید رجیستری نسخهٔ SQL Server پیدا نشد — از SQL Server Configuration Manager استفاده کنید)"
+    }
+}
+Resolve-SqlInstanceInfo
 if (-not (Get-ScheduledTask -TaskName $script:TaskName -ErrorAction SilentlyContinue)) { Install-VizitorTask }
 
 # درج اولیه داده‌ها (حساب ادمین + کد فعال‌سازی + تنظیمات پایه) — ای‌دی‌ام‌پتنت

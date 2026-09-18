@@ -261,6 +261,74 @@ def cmd_databases(args):
     return emit_db(res, args.out)
 
 
+def cmd_listener(args):
+    """آیا SQL Server واقعاً روی TCP گوش می‌دهد؟ (فقط خواندن — sys.dm_tcp_listener_states)
+
+    این همان چیزی است که اتصال مستقیم برنامهٔ اندروید به آن وابسته است: اگر پروتکل
+    TCP/IP در SQL Server غیرفعال باشد، خودِ سرور (روی همان ماشین) با named pipes وصل
+    می‌شود و همه‌چیز سالم به نظر می‌رسد، ولی گوشی هرگز نمی‌تواند وصل شود.
+    """
+    res = {"ok": False, "at": now()}
+    pyodbc = load_pyodbc(res)
+    if not pyodbc:
+        return emit(res, args.out)
+    driver = pick_driver(pyodbc)
+    if not driver:
+        res["error"] = "no_sql_driver"
+        return emit(res, args.out)
+    host, port, user, password = creds_from(args)
+    want = int(str(args.port or port or "1433"))
+    res["wanted_port"] = want
+    try:
+        cn = connect(pyodbc, driver, host, port, "master", user, password)
+    except Exception as exc:
+        res["error"] = "connect_failed"
+        res["detail"] = str(exc)
+        return emit(res, args.out)
+    try:
+        cur = cn.cursor()
+        rows = cur.execute(
+            "SELECT ip_address, port, type_desc, state_desc, is_ipv4 "
+            "FROM sys.dm_tcp_listener_states ORDER BY port, ip_address").fetchall()
+        listeners = []
+        for ip_address, lport, type_desc, state_desc, is_ipv4 in rows:
+            listeners.append({
+                "ip": str(ip_address), "port": int(lport) if lport is not None else None,
+                "type": str(type_desc), "state": str(state_desc), "ipv4": bool(is_ipv4),
+            })
+        res["listeners"] = listeners
+        online = [l for l in listeners if l["state"].lower() == "online"]
+        res["listening_on_wanted_port"] = any(l["port"] == want for l in online)
+        res["any_tcp"] = bool(online)
+        res["all_ips"] = any(l["ip"] in ("0.0.0.0", "::") for l in online)
+        if res["listening_on_wanted_port"] and res["all_ips"]:
+            res["ok"] = True
+            res["verdict"] = "tcp_ok_all_ips"
+        elif res["listening_on_wanted_port"]:
+            res["ok"] = True
+            res["verdict"] = "tcp_ok_single_ip"
+            res["warn"] = ("TCP روی پورت درست فعال است ولی SQL فقط روی یک آی‌پی گوش می‌دهد؛ "
+                           "اگر گوشی به همان کارت شبکه وصل نیست، اتصال برقرار نمی‌شود.")
+        elif res["any_tcp"]:
+            res["error"] = "wrong_port"
+            res["verdict"] = "tcp_on_other_port"
+            res["detail"] = "پورت فعال: " + ", ".join(str(l["port"]) for l in online)
+        else:
+            res["error"] = "tcp_disabled"
+            res["verdict"] = "tcp_disabled"
+            res["detail"] = ("پروتکل TCP/IP در SQL Server فعال نیست (یا سرویس هنوز ری‌استارت نشده) — "
+                             "برنامهٔ اندروید نمی‌تواند وصل شود.")
+    except Exception as exc:
+        res["error"] = "query_failed"
+        res["detail"] = str(exc)
+    finally:
+        try:
+            cn.close()
+        except Exception:
+            pass
+    return emit(res, args.out)
+
+
 def cmd_probe(args):
     res = {"ok": False, "at": now(), "db": args.db}
     if not args.db:
@@ -391,6 +459,9 @@ def main():
         if need_db:
             p.add_argument("--db", required=True, help="database to look inside")
 
+    lis = sub.add_parser("listener")
+    common(lis)
+    lis.add_argument("--port", default="1433", help="پورتی که انتظار داریم SQL روی آن گوش بدهد")
     dbs = sub.add_parser("databases")
     common(dbs)
     dbs.add_argument("--out-ini", default="",

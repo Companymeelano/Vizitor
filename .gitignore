@@ -6,3 +6,7 @@ data/
 !android-app/**/data/
 !android-app/**/data/**
 /android-app/build.log
+
+# گزارش‌های آزمون CI (توسط خودِ ورک‌فلو ساخته و ثبت می‌شوند)
+/android-app/sql-test.log
+/android-app/sql-connection-report.txt
