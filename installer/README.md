@@ -7,7 +7,9 @@
 | | |
 |---|---|
 | نام فایل | `release/Vizitor-Setup-1.0.0.exe` |
-| حجم | ۸۹۵ کیلوبایت (≈ ۸۷۵ KiB) + فایل `release/Vizitor-Setup-1.0.0.exe.sha256` — بسته‌بندی پوشهٔ پنل (`panel/`) شامل همهٔ فایل‌های پنل و فونت‌ها |
+| حجم | ۹۷۴٬۳۵۲ بایت (≈ ۹۵۲ KiB) + فایل `release/Vizitor-Setup-1.0.0.exe.sha256` — بسته‌بندی پوشهٔ پنل (`panel/`) شامل همهٔ فایل‌های پنل و فونت‌ها |
+| دانلود | [ریلیز vizitor-setup-v1.0.0](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-setup-v1.0.0) |
+| ساخت خودکار | هر تغییر روی `install.ps1` یا `installer/**`، ورک‌فلوی `verify-installer.yml` این فایل را از نو می‌سازد، با 7-Zip بررسی می‌کند `install.ps1` داخلش **دقیقاً** همان فایل مخزن باشد و گزارش را در `installer/exe-build-report.txt` ثبت می‌کند |
 | بررسی سلامت | `certutil -hashfile Vizitor-Setup-1.0.0.exe SHA256` (هش در هر ساخت دوباره تغییر می‌کند) |
 | موتور | NSIS 3.03 (Unicode) — MUI2 |
 | نیازمند | دسترسی Administrator (خود نصب‌کننده درخواست می‌کند) |
@@ -179,6 +181,25 @@ C:\Vizitor\setup\android-connect.json    ← همان اطلاعات برای ب
 > **خواندن فایل `android-connect.json`** یا **چسباندن متن کارت** وارد کرد؛ بعد از آن
 > دیتابیس از فهرست `sys.databases` انتخاب (یا دستی تایپ) می‌شود. جزئیات: `android-app/README.md`.
 > **فایل APK آماده:** [ریلیز vizitor-direct-v1.0.0](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-direct-v1.0.0)
+
+### ۰-۰-۱) دو اشکال واقعی که در بازبینی اتصال پیدا و رفع شد (۲۰۲۶-۰۹-۱۸)
+
+نصب‌کننده حالا در CI با **خودِ PowerShell** تحلیل نحوی می‌شود (`verify-installer.yml`) و همین
+بررسی، دو دسته اشکال را لو داد که هیچ بازرسی متنی نمی‌گرفت:
+
+1. **سه خط با نحو نامعتبر** (`"$ext:$($script:Port)"` و دو خط `"بازرسی دور $round: ..."`):
+   در PowerShell، `:` بلافاصله بعد از یک متغیر داخل رشتهٔ دوکوتیشن‌دار «پیشوند دامنه/درایو»
+   خوانده می‌شود؛ یعنی فایل **پیش از اجرای هر دستوری** رد می‌شد و نصب‌کننده روی ویندوز
+   عملاً هیچ کاری نمی‌کرد. الان همه با `${...}` نوشته شده‌اند و تحلیل نحوی با PowerShell
+   بدون خطا پاس می‌شود (۱۴۲۷ خط، ۴۲ تابع).
+2. **فایل‌های PowerShell بدون BOM**: exe این اسکریپت‌ها را با **Windows PowerShell 5.1** اجرا
+   می‌کند و آن نسخه، فایل UTF-8 بدون BOM را ANSI می‌خواند (متن فارسی به‌هم می‌ریزد). BOM به
+   `install.ps1` و `nsi\preflight.ps1` اضافه شد و `build.sh` هر بار آن را تضمین می‌کند.
+
+همچنین بررسی «قرارداد اتصال» (`api/check_connection_contract.py`) تضمین می‌کند چیزی که اپ
+می‌خواند/اجرا می‌کند همان چیزی است که نصب‌کننده مجاز می‌کند (۱۳ شیء خواندنی با
+`db_datareader`، `EXECUTE` روی `dbo.add_sail_pish`، `INSERT` روی جدول میانی، کارت اتصال با
+کلیدهای `h/p/d/u/H` و پورت ۱۴۳۳).
 > (`VizitorDirect-1.0.0.apk` — ۷٫۶ مگابایت، امضاشده، شامل هر دو درایور SQL و اسکنر QR).
 C:\ProgramData\Vizitor\android_config.json  ← نسخهٔ کامل با رمز (دسترسی: فقط SYSTEM و Administrators)
 ```

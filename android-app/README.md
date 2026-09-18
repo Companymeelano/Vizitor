@@ -23,7 +23,7 @@ https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-direct-v1.0.0
 
 | فایل | حجم | sha256 | امضا |
 |---|---|---|---|
-| `VizitorDirect-1.0.0.apk` | ۷٫۶ مگابایت (۷٬۶۲۳٬۴۱۵ بایت) | `49b8b94fc33a7631f06aee151c018a77902022efaccf24d395751c57488bcf7d` | کلید «Vizitor Direct / Meelano Studio Design» — طرح‌های v2 و v3 |
+| `VizitorDirect-1.0.0.apk` | ۷٫۶ مگابایت (۷٬۶۲۳٬۴۱۵ بایت) | `49b8b94fc33a7631f06aee151c018a77902022efaccf24d395751c57488bcf7d` | کلید «Vizitor Direct / Meelano Studio Design» — طرح امضای v2 |
 | `VizitorDirect-1.0.0-debug.apk` | ۱۰ مگابایت | `3a89d78393f28bcff7d237e23f0a705f15aec15cc941fad9d3f43b27f09fe7ce` | کلید آزمون اندروید (در کنار نسخهٔ اصلی نصب می‌شود) |
 
 نصب روی گوشی: فایل `VizitorDirect-1.0.0.apk` را انتقال دهید → روی گوشی باز کنید →
@@ -46,6 +46,37 @@ https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-direct-v1.0.0
 ورک‌فلوی `.github/workflows/build-android-direct.yml` با هر تغییر در `android-app/`
 اجرا می‌شود: JDK 17 → ساخت کلید → `assembleDebug assembleRelease` → بررسی امضا و محتوای dex →
 ثبت گزارش در `android-app/apk-report.txt` → انتشار ریلیز با APKها.
+
+## ۰-۱) تأیید واقعی اتصال: SQL Server زنده + خودِ کد برنامه
+
+اتصال «روی کاغذ» تأیید نمی‌شود. ورک‌فلوی `.github/workflows/verify-sql-connection.yml`
+یک **SQL Server واقعی** (کانتینر ۲۰۱۹) بالا می‌آورد، اسکیمای آزمون
+(`tools/seed-test-sql.sql`) و **همان کاربر محدودی که نصب‌کننده می‌سازد**
+(`vizitor_android` با `db_datareader` + `EXECUTE dbo.add_sail_pish` + `INSERT` روی جدول میانی)
+را می‌سازد و بعد آزمون‌های `RealSqlConnectionTest` را با **خودِ کدِ لایهٔ دادهٔ برنامه**
+اجرا می‌کند:
+
+| # | آزمون | چه چیزی ثابت می‌شود |
+|---|---|---|
+| ۱ | هر دو درایور (mssql-jdbc و jTDS) | بار می‌شوند و نشانی‌های JDBC پذیرفته می‌شوند |
+| ۲ | اتصال با کاربر محدود به `master` | فهرست `sys.databases` با `db_datareader` گرفته می‌شود |
+| ۳ | دیتابیس انتخاب‌شده | اتصال + نسخهٔ سرور + تعداد مشتری |
+| ۴ | ورود ویزیتور | `sys_users` با رمز `varbinary` و مقایسهٔ `CONVERT`؛ رمز غلط/حساب غیرفعال/قفل رد می‌شوند |
+| ۵ | دادهٔ کاری | مشتریان مجاز، گروه و تیر قیمت، کالا، قیمت، موجودی انبار، هویت ویزیتور |
+| ۶ | سلامت پیش‌فاکتور | وجود پروسیجر/سربرگ/سطر/جدول میانی/تریگر + ۲۵ ستون |
+| ۷ | امنیت | کاربر محدود `DELETE` نمی‌تواند |
+| ۸ | **مسیر نوشتن** | با همان کاربر محدود: `EXEC dbo.add_sail_pish` + `INSERT` در جدول میانی + اجرای تریگر → خواندن سطر واقعی پیش‌فاکتور |
+
+خروجی در [`sql-connection-report.txt`](sql-connection-report.txt) ثبت می‌شود (تاریخ، کامیت،
+نتیجهٔ تک‌تک آزمون‌ها از فایل XML گِریدل و خطوط خود آزمون). آزمون ۸ فقط روی دیتابیس
+یک‌بارمصرفِ کانتینر CI می‌نویسد، نه روی دیتابیس مشتری.
+
+اصطلاح‌نامهٔ دسترسی‌ها و کارت اتصال هم به‌صورت خودکار مقابله می‌شود
+(`api/check_connection_contract.py`) و نتیجه‌اش در
+[`server-setup-report.txt`](server-setup-report.txt) می‌آید.
+
+> ⚠️ **چیزی که CI نمی‌تواند ثابت کند:** اجرای واقعی روی گوشی و روی ویندوز مشتری.
+> این دو آزمون دستی باقی می‌مانند (نصب APK روی یک گوشی و اجرای `Vizitor-Setup-1.0.0.exe`).
 
 ## ۱) ساخت فایل APK روی کامپیوتر خودتان
 
