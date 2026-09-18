@@ -202,22 +202,25 @@ jobs:
             src=$(sha256sum install.ps1 | awk '{print $1}')
             got=$(sha256sum "$found" | awk '{print $1}')
             if [ "$src" = "$got" ]; then
-              echo "[OK] install.ps1 داخل exe دقیقاً همان فایل این کامیت است ($src)"
+              echo "[OK] install.ps1 داخل exe دقیقاً همان فایل این کامیت است ($src)" | tee -a /tmp/exe-verify.log
             else
-              echo "::error::install.ps1 داخل exe با فایل مخزن یکی نیست ($src ≠ $got)"
+              echo "::error::install.ps1 داخل exe با فایل مخزن یکی نیست ($src ≠ $got)" | tee -a /tmp/exe-verify.log
               exit 1
             fi
             foundpf=$(find /tmp/exeout -name preflight.ps1 | head -1)
             if [ -n "$foundpf" ]; then
               srcpf=$(sha256sum installer/nsi/preflight.ps1 | awk '{print $1}')
               gotpf=$(sha256sum "$foundpf" | awk '{print $1}')
-              [ "$srcpf" = "$gotpf" ] && echo "[OK] preflight.ps1 هم یکسان است" \
-                || echo "::warning::preflight.ps1 داخل exe متفاوت است"
+              if [ "$srcpf" = "$gotpf" ]; then
+                echo "[OK] preflight.ps1 هم یکسان است ($srcpf)" | tee -a /tmp/exe-verify.log
+              else
+                echo "::warning::preflight.ps1 داخل exe متفاوت است" | tee -a /tmp/exe-verify.log
+              fi
             else
-              echo "[نکته] preflight.ps1 در ناحیهٔ $PLUGINSDIR است و 7z آن را جدا نشان نمی‌دهد"
+              echo "[نکته] preflight.ps1 در ناحیهٔ $PLUGINSDIR است و 7z آن را جدا نشان نمی‌دهد" | tee -a /tmp/exe-verify.log
             fi
           else
-            echo "::warning::7z نتوانست exe را باز کند؛ فقط اندازه و امضا بررسی شد"
+            echo "::warning::7z نتوانست exe را باز کند؛ فقط اندازه و امضا بررسی شد" | tee -a /tmp/exe-verify.log
             head -5 /tmp/exe-list.txt
           fi
 
@@ -248,6 +251,9 @@ jobs:
             echo ""
             echo "--- sha256 فایل‌های مبدأ داخل exe ---"
             cat /tmp/source-hashes.txt 2>/dev/null
+            echo ""
+            echo "--- نتیجهٔ مقابلهٔ محتوای exe (7-Zip) ---"
+            cat /tmp/exe-verify.log 2>/dev/null
             echo ""
             echo "--- محتوای exe ---"
             grep -E "install\.ps1|preflight\.ps1|panel/|api/" /tmp/exe-list.txt 2>/dev/null | head -15
