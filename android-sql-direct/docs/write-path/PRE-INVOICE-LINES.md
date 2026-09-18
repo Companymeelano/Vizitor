@@ -196,6 +196,29 @@ caller has just read the head's `rdf__` in the same transaction.
 
 ## 9. The two databases, and what the ERP's own numbers look like
 
+### 9.0 The two installs, as they stand after "راه ۱۰" (2026-09-18)
+
+| | `Atiran14050603` | `Meelano` (audit of parts 1-6) |
+|---|---|---|
+| `CUSTOMERS` | **1219** | 7 |
+| `inventory` | **2197** | 50 |
+| `sailfact` (real invoices) | **243** | 3 |
+| `subsailfact` (invoice lines) | 1696 | not counted |
+| `sys_users` | 4 | 2 |
+| `add_sail_pish`, `AddInvoice`, `Edit_sail_pish` | all exist | all exist (part 7 bodies) |
+| `subsailtemp_pish`, `subsailfact_pish`, `trig_sst_pish`, `InvoiceTrigger` | all exist | **not yet verified** |
+| `sailfact_pish` / `subsailtemp_pish` rows | 0 / 0 | 0 / not counted |
+
+So `Atiran14050603` is the database with the live trade (243 invoices, 1696 lines),
+and `Meelano` is the small one the earlier audit walked. **Which one the app must
+connect to is a decision for the operator, not an inference** - and until it is made,
+the app must not hard-code either name (it should read `dbo.sal_mali.nam_db`, see §5).
+
+Note also: **no pre-invoice has ever been written in either database**
+(`sailfact_pish = 0` rows everywhere). The app would be the first writer of that table
+- so the first real save must be done with the ERP operator watching the pre-invoice
+list screen.
+
 ### 9.1 ⚠️ Every answer of "راه ۹" came from `Atiran14050603`, not from `Meelano`
 
 All three result grids carry their own `db` column, and it says `Atiran14050603` - the

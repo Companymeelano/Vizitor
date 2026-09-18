@@ -725,3 +725,29 @@ Full detail: `docs/write-path/PRE-INVOICE-LINES.md` §7-§8 and
   `dbo.cal_gain`, `dbo.dif_date`, `inventory.vahwe`.
 * Open: types/columns of `subsailtemp_pish`, one real example of the ERP's numbers,
   and whether `Meelano` itself has `PerPromotion` on `subsailfact_pish`.
+
+## 18. Which database the app talks to - the open decision (2026-09-18)
+
+`راه ۱۰` was run twice by the operator, but both runs came back with `db =
+Atiran14050603` (the SSMS toolbar was never changed). What that did prove:
+
+* on `Atiran14050603` **every** object the write path needs exists -
+  `subsailtemp_pish`, `subsailfact_pish`, `trig_sst_pish`, `InvoiceTrigger`,
+  `subsailtemp`, `add_sail_pish`, `AddInvoice`, `Edit_sail_pish` (all OBJECT_IDs
+  non-NULL);
+* its trade is live: 1219 customers, 2197 inventory rows, 243 invoices (`sailfact`),
+  1696 invoice lines (`subsailfact`), 4 users, 1 visitor;
+* `sailfact_pish` and `subsailtemp_pish` hold **0 rows** - the ERP has never written a
+  pre-invoice in this database, so the app will be its first writer;
+* `Meelano` remains the database the parts 1-6 audit walked (7 customers, 50 inventory
+  rows, 3 invoices) and where the part 7 procedure bodies came from - its line tables
+  and triggers are still unverified.
+
+The comparison script that settles it without touching the toolbar is
+`sql/09_compare_databases.sql` ("راه ۱۱"): it walks `sys.databases` by itself and prints
+per database the objects found, the row counts of the key tables and each database's own
+`dbo.sal_mali` (`name`, `nam_db`, `Current`).
+
+Until the operator decides, the Android layer keeps the database name in Settings and
+the connection layer warns when `dbo.sal_mali.nam_db` differs from the configured name
+instead of silently reading a stale database.
