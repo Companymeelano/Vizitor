@@ -752,6 +752,8 @@ Function PageSqlLeave
   ${NSD_GetState} $hAuthWin $0
   ${If} $0 == ${BST_CHECKED}
     StrCpy $SqlAuth "windows"
+    StrCpy $SqlUser ""
+    StrCpy $SqlPass ""
     Goto auth_checked
   ${EndIf}
   StrCpy $SqlAuth "sql"
