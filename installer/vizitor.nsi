@@ -262,6 +262,8 @@ Section "هستهٔ سامانه — سرویس و پنل مدیریت (اجبا
   File "assets\vizitor.ico"
   SetOutPath "$INSTDIR\setup\api"
   File /r /x __pycache__ /x *.pyc "..\api\*.*"
+  SetOutPath "$INSTDIR\panel"
+  File /r /x __pycache__ "..\panel\*.*"
   SetOutPath "$INSTDIR\setup\database"
   File /r "..\database\*.*"
   SetOutPath "$INSTDIR\tools"
@@ -389,7 +391,7 @@ SectionEnd
 ;  توضیح بخش‌ها (بعد از تعریف بخش‌ها)
 ; ---------------------------------------------------------------------------
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore}       "سرویس سامانه (${TASK_NAME}) و پنل مدیریت روی پورت ۹۵۹۵، فایل‌های پیکربندی و ابزارها — بدون IIS و بدون API میانی. (اتصال برنامهٔ اندروید مستقل از این بخش و مستقیم به SQL Server است.)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore}       "سرویس سامانه (${TASK_NAME}) و پنل مدیریت روی پورت ۹۵۹۵ (صفحهٔ پنل + فونت وزیرمتن + پیکربندی و ابزارها) — بدون IIS و بدون API میانی. (اتصال برنامهٔ اندروید مستقل از این بخش و مستقیم به SQL Server است.)"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecPrereq}     "pyodbc و درایور ODBC مایکروسافت — همان چیزهایی که برای گفت‌وگو با SQL Server لازم است؛ فقط در صورت کمبود نصب می‌شوند."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDb}         "ساخت دیتابیس و جداول داخلی خود سامانه (پنل و فعال‌سازی) — کاملاً غیرتلفیقی؛ دیتابیس حسابداری شما دست‌نخورده می‌ماند."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecFirewall}   "باز کردن پورت ۱۴۳۳ برای اتصال مستقیم برنامهٔ اندروید به دیتابیس (شبکهٔ محلی، و در صورت تیک «اتصال از بیرون شبکه» برای هر آدرس) و پورت ۹۵۹۵ فقط برای شبکهٔ محلی."

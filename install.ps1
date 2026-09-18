@@ -743,7 +743,7 @@ else {
 # ---------------------------- سرویس (Task) --------------------------------
 function Install-VizitorTask {
     if (Get-ScheduledTask -TaskName $script:TaskName -ErrorAction SilentlyContinue) { return }
-    $batContent = "@echo off`r`n`"$script:PyExe`" `"$script:AppHome\api\server.py`" --config `"$script:ConfigFile`" >> `"$script:LogFile`" 2>&1"
+    $batContent = "@echo off`r`n`"$script:PyExe`" `"$script:AppHome\api\server.py`" --config `"$script:ConfigFile`" --panel `"$script:AppHome\panel`" >> `"$script:LogFile`" 2>&1"
     Set-Content -Path $script:BatFile -Value $batContent -Encoding ASCII
     try {
         $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$script:BatFile`"" -WorkingDirectory $script:AppHome
@@ -762,7 +762,7 @@ function Start-VizitorService {
         Start-ScheduledTask -TaskName $script:TaskName -ErrorAction Stop
         return
     } catch {}
-    $p = Start-Process -FilePath $script:PyExe -ArgumentList "`"$script:AppHome\api\server.py`" --config `"$script:ConfigFile`"" -WorkingDirectory "$script:AppHome\api" -WindowStyle Hidden -PassThru
+    $p = Start-Process -FilePath $script:PyExe -ArgumentList "`"$script:AppHome\api\server.py`" --config `"$script:ConfigFile`" --panel `"$script:AppHome\panel`"" -WorkingDirectory "$script:AppHome\api" -WindowStyle Hidden -PassThru
     if ($p) { $p.Id | Out-File -FilePath $script:PidFile -Encoding ascii }
 }
 
@@ -1032,7 +1032,17 @@ function Run-Checks {
     $r = Invoke-JsonPost "$base/api/login" $body
     if ($null -eq $r -or $r -notmatch '"ok": *true') { $script:CheckFailures += "login" }
 
- از بیرون (فقط هشدار)
+    # ۷) صفحهٔ پنل مدیریت باید سرو شود (HTML)
+    try {
+        $panelHtml = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri "$base/").Content
+        if ($panelHtml -notmatch "سامانهٔ ویزیتور|<title>") { $script:CheckFailures += "panel" }
+    } catch { $script:CheckFailures += "panel" }
+
+    # ۸) تنظیمات اتصال (بدون رمز) باید خوانده شود
+    $r = Invoke-JsonGet "$base/api/db/info"
+    if ($null -eq $r -or $r -notmatch '"ok": *true') { $script:CheckFailures += "dbinfo" }
+
+    # بررسی اتصال از بیرون (فقط هشدار)
     if ($script:PublicIp -and $script:PublicIp -ne $script:LocalIp) {
         $ext = "$($script:Proto)://$($script:Addr)"
         if ($script:Port -ne 80 -and $script:Port -ne 443) { $ext = "$ext:$($script:Port)" }
@@ -1218,7 +1228,8 @@ Write-Hr
 Write-Host "  اتصال برنامهٔ اندروید: مستقیم به SQL Server روی پورت 1433 (بدون IIS و بدون API)"
 Write-Host "     سرور: $script:Addr   |   دیتابیس حسابداری: $script:ErpDb   |   کاربر: $script:AndroidLogin" -ForegroundColor Green
 Write-Host "  پنل مدیریت و وضعیت سامانه (اختیاری):"
-Write-Host "     $($script:ApiUrl -replace '/api$', '/api/health')" -ForegroundColor Cyan
+Write-Host "     پنل مدیریت  : $($script:ApiUrl -replace '/api$', '')" -ForegroundColor Cyan
+Write-Host "     بررسی سلامت : $($script:ApiUrl -replace '/api$', '/api/health')" -ForegroundColor Cyan
 Write-Hr
 if ($script:DbEngine -eq "sqlserver") {
     Write-Host "  دیتابیس      : sqlserver  ($($script:DbName) @ $($script:DbHost):$($script:DbDPort) ، احراز: $($script:DbAuth) ، کاربر: $($script:DbUser))"

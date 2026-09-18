@@ -41,6 +41,12 @@ if not "%RC%"=="0" (
   pause
   exit /b %RC%
 )
+rem --- sha256 of the built file (this file is NOT packaged inside the exe) ---
+for %%F in ("%ROOT%\release\Vizitor-Setup-*.exe") do (
+  certutil -hashfile "%%~fF" SHA256 > "%%~fF.sha256"
+  type "%%~fF.sha256"
+)
+
 dir /b "%ROOT%\release"
 echo [ok] done.
 pause

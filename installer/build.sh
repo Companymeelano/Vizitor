@@ -65,5 +65,13 @@ PY
 
 ( cd "$ROOT" && NSISDIR="$NSISDIR" "$MAKENSIS" "$NSI" )
 
+# --- ثبت sha256 فایل ساخته‌شده (این فایل داخل exe بسته‌بندی نمی‌شود) ---------
+EXE="$ROOT/release/Vizitor-Setup-1.0.0.exe"
+[ -f "$EXE" ] || EXE="$(ls -1 "$ROOT"/release/Vizitor-Setup-*.exe | head -1)"
+if [ -f "$EXE" ]; then
+  ( cd "$(dirname "$EXE")" && sha256sum "$(basename "$EXE")" > "$(basename "$EXE").sha256" \
+      && echo "[ok] sha256: $(cat "$(basename "$EXE").sha256")" )
+fi
+
 ls -la "$ROOT/release"
 echo "[ok] فایل نصب ساخته شد."

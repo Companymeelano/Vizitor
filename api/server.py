@@ -13,6 +13,13 @@ Endpoints (JSON, UTF-8):
   POST /api/visitors  -> create visitor (bearer token, activated)
   GET  /api/visitors/since?after_id=N  -> incremental fetch (bearer token, activated)
   GET  /api/events    -> Server-Sent Events realtime stream (bearer token, activated)
+
+  GET  /               -> the admin panel (panel/index.html)
+  GET  /fonts/<file>   -> panel font assets (local files, no internet needed)
+  GET  /api/db/info       -> current connection settings (password never returned)
+  GET  /api/db/databases  -> read-only list of the databases on the SQL Server
+  POST /api/db/test       -> test a host/port/user/password without saving it
+  POST /api/db/save       -> store host/port/user/password/database in config.json (admin token)
 """
 import argparse
 import hmac
@@ -28,11 +35,30 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from db import DB, default_config_path, hash_password, load_config, verify_password  # noqa: E402
+from db import DB, default_config_path, hash_password, load_config, save_config, verify_password  # noqa: E402
+import sql_admin_tools as sat  # noqa: E402  (read-only SQL helpers, no credentials on the command line)
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 START_TIME = time.time()
-STATE = {"cfg": None, "db": None, "db_error": None}
+STATE = {"cfg": None, "db": None, "db_error": None, "config_path": None, "panel_dir": None}
+
+DEFAULT_PANEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "panel")
+
+STATIC_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".ico": "image/x-icon",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".ttf": "font/ttf",
+}
 
 
 # ---------------------------------------------------------------- realtime
@@ -150,6 +176,87 @@ def health_report(cfg):
     }
 
 
+# ------------------------------------------------------- SQL (read-only) helpers
+def db_settings(cfg):
+    """Connection settings as they are stored in config.json (no password in the answer)."""
+    db = cfg.get("db") or {}
+    android = cfg.get("android") or {}
+    erp = str(android.get("erp_db") or "").strip()
+    if not erp:
+        # fall back to the non-secret file the installer writes next to the app
+        try:
+            txt = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "setup", "connect.txt")
+            if os.path.exists(txt):
+                for line in io_open_text(txt):
+                    if line.lower().startswith("androidsqldatabase="):
+                        erp = line.split("=", 1)[1].strip()
+        except Exception:
+            pass
+    return {
+        "engine": str(db.get("engine") or "sqlite"),
+        "host": str(db.get("host") or ""),
+        "port": str(db.get("port") or "1433"),
+        "user": str(db.get("user") or ""),
+        "database": str(db.get("name") or ""),
+        "erp_database": erp,
+        "password_set": bool(str(db.get("password") or "")),
+    }
+
+
+def io_open_text(path):
+    with open(path, encoding="utf-8", errors="replace") as handle:
+        return handle.read().splitlines()
+
+
+def list_databases(cfg, host, port, user, password, timeout=8):
+    """Read-only: the user databases of the instance (same query as sql_admin_tools)."""
+    result = {"ok": False, "databases": []}
+    pyodbc = sat.load_pyodbc(result)
+    if not pyodbc:
+        return result
+    driver = sat.pick_driver(pyodbc)
+    if not driver:
+        result["error"] = "no_sql_driver"
+        return result
+    result["server"] = host if str(port) in ("", "1433") else "%s,%s" % (host, port)
+    result["login"] = user or "(windows)"
+    try:
+        cn = sat.connect(pyodbc, driver, host, str(port), "master", user, password, timeout=timeout)
+    except Exception as exc:
+        result["error"] = "connect_failed"
+        result["detail"] = str(exc)
+        return result
+    try:
+        rows = cn.cursor().execute(
+            "SELECT d.name, d.state_desc, CONVERT(nvarchar(20), d.create_date, 120), "
+            "ISNULL((SELECT SUM(p.rows) FROM sys.partitions p "
+            "        WHERE p.index_id IN (0,1) AND p.object_id IN "
+            "        (SELECT object_id FROM sys.tables t "
+            "         WHERE t.name IN (N'sys_users', N'CUSTOMERS', N'inventory', "
+            "                          N'sailfact_pish', N'subsailfact_pish'))), 0) "
+            "FROM sys.databases d WHERE d.database_id > 4 ORDER BY d.name"
+        ).fetchall()
+        for name, state, created, rows_count in rows:
+            result["databases"].append({
+                "name": name,
+                "state": state,
+                "created": (created or "").strip(),
+                "has_vizitor_tables": bool(rows_count),
+            })
+        result["ok"] = True
+        result["count"] = len(result["databases"])
+        result["driver"] = driver
+    except Exception as exc:
+        result["error"] = "query_failed"
+        result["detail"] = str(exc)
+    finally:
+        try:
+            cn.close()
+        except Exception:
+            pass
+    return result
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "VizitorAPI/" + VERSION
     protocol_version = "HTTP/1.1"
@@ -167,6 +274,38 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_file(self, rel):
+        """Serve a panel asset; only whitelisted extensions, never outside the panel folder."""
+        panel = STATE.get("panel_dir")
+        if not panel:
+            return False
+        rel = urllib.parse.unquote(rel).lstrip("/")
+        if rel.startswith("panel/"):      # /panel/index.html -> index.html
+            rel = rel[6:]
+        if rel in ("", "index.html"):
+            rel = "index.html"
+        if ".." in rel.replace("\\", "/").split("/") or rel.startswith("/"):
+            return False
+        full = os.path.abspath(os.path.join(panel, rel.replace("/", os.sep)))
+        if not full.startswith(os.path.abspath(panel)):
+            return False
+        ext = os.path.splitext(full)[1].lower()
+        if ext not in STATIC_TYPES or not os.path.isfile(full):
+            return False
+        try:
+            with open(full, "rb") as handle:
+                body = handle.read()
+        except OSError:
+            return False
+        self.send_response(200)
+        self.send_header("Content-Type", STATIC_TYPES[ext])
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+        return True
 
     def _body(self):
         try:
@@ -211,6 +350,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if not path.startswith("/api/"):
+            if not self._send_file(path):
+                self._send(404, {"error": "not_found", "path": self.path,
+                                 "hint": "panel files live in the panel folder (--panel)"})
+            return
         if path != "/":
             path = path.rstrip("/")
         if path == "/api/events":
@@ -235,6 +379,11 @@ class Handler(BaseHTTPRequestHandler):
                             "POST /api/visitors",
                             "GET  /api/visitors/since?after_id=N",
                             "GET  /api/events   (SSE realtime stream)",
+                    "GET  /             (admin panel)",
+                    "GET  /api/db/info      (connection settings, no password)",
+                    "GET  /api/db/databases (read-only database list)",
+                    "POST /api/db/test      {host, port, user, password}",
+                    "POST /api/db/save      {host, port, user, password, database}  (admin token)",
                         ],
                     },
                 )
@@ -249,6 +398,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, {"activated": is_activated(db)})
             elif path == "/api/visitors":
                 self._list_visitors()
+            elif path == "/api/db/info":
+                self._send(200, dict({"ok": True}, **db_settings(STATE["cfg"])))
+            elif path == "/api/db/databases":
+                settings = db_settings(STATE["cfg"])
+                result = list_databases(STATE["cfg"], settings["host"] or "localhost",
+                                        settings["port"] or "1433", settings["user"],
+                                        str((STATE["cfg"].get("db") or {}).get("password") or ""))
+                self._send(200 if result.get("ok") else 502, result)
             elif path == "/api/visitors/since":
                 self._list_visitors_since()
             else:
@@ -267,6 +424,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._activate()
             elif path == "/api/login":
                 self._login()
+            elif path == "/api/db/test":
+                self._db_test()
+            elif path == "/api/db/save":
+                self._db_save()
             elif path == "/api/visitors":
                 self._create_visitor()
             else:
@@ -299,6 +460,53 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"ok": True, "activated": True})
         else:
             self._send(403, {"ok": False, "activated": False, "error": "invalid_code"})
+
+    def _db_test(self):
+        """Test a connection without saving anything."""
+        body = self._body()
+        result = list_databases(
+            STATE["cfg"],
+            str(body.get("host") or "localhost").strip(),
+            str(body.get("port") or "1433").strip(),
+            str(body.get("user") or "").strip(),
+            str(body.get("password") or ""),
+        )
+        self._send(200 if result.get("ok") else 502, result)
+
+    def _db_save(self):
+        """Store connection settings (and the chosen accounting database) in config.json.
+
+        Only the admin (bearer token from /api/login) may write.  The password is written
+        to the config file but is never sent back in any answer.
+        """
+        if not self._authorized_user():
+            self._send(401, {"ok": False, "error": "unauthorized",
+                             "detail": "برای تغییر تنظیمات، اول در کارت «ورود مدیر» وارد شوید."})
+            return
+        body = self._body()
+        cfg = STATE["cfg"]
+        db = cfg.setdefault("db", {})
+        saved = []
+        allowed = ("host", "port", "user", "password", "name", "engine")
+        for key in allowed:
+            if key in body and body[key] is not None and str(body[key]) != "":
+                db[key] = str(body[key]).strip() if key != "port" else int(str(body[key]).strip())
+                saved.append(key)
+        database = str(body.get("database") or "").strip()
+        if database:
+            cfg.setdefault("android", {})["erp_db"] = database
+            saved.append("database")
+        if not saved:
+            self._send(400, {"ok": False, "error": "nothing_to_save"})
+            return
+        try:
+            save_config(cfg, STATE.get("config_path"))
+        except Exception as exc:
+            self._send(500, {"ok": False, "error": "save_failed", "detail": str(exc)})
+            return
+        EVENT_BUS.publish("settings.changed", {"saved": saved})
+        answer = dict({"ok": True, "saved": saved}, **db_settings(cfg))
+        self._send(200, answer)
 
     def _login(self):
         db = get_db()
@@ -494,6 +702,8 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description="Vizitor API server")
     parser.add_argument("--config", default=None, help="path to config.json")
+    parser.add_argument("--panel", default=None,
+                        help="folder holding the admin panel (index.html + fonts)")
     args = parser.parse_args()
 
     cfg_path = args.config or default_config_path()
@@ -503,6 +713,12 @@ def main():
         sys.stderr.write("FATAL: cannot load config %s: %s\n" % (cfg_path, exc))
         sys.exit(1)
     STATE["cfg"] = cfg
+    STATE["config_path"] = cfg_path
+    panel_dir = args.panel or DEFAULT_PANEL_DIR
+    if os.path.isfile(os.path.join(panel_dir, "index.html")):
+        STATE["panel_dir"] = panel_dir
+    else:
+        sys.stderr.write("WARN: panel not found in %s — / will return 404\n" % panel_dir)
 
     api = cfg.get("api") or {}
     host = api.get("bind_ip", "0.0.0.0")
@@ -525,8 +741,8 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
 
     sys.stdout.write(
-        "Vizitor API v%s starting on %s:%s (config: %s, api_url: %s)\n"
-        % (VERSION, host, port, cfg_path, api_url(cfg))
+        "Vizitor API v%s starting on %s:%s (config: %s, api_url: %s, panel: %s)\n"
+        % (VERSION, host, port, cfg_path, api_url(cfg), STATE.get("panel_dir") or "-")
     )
     sys.stdout.flush()
     httpd.serve_forever()
