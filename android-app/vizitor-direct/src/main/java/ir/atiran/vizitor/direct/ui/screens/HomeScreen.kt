@@ -150,7 +150,7 @@ fun HomeScreen(
             Spacer(Modifier.height(12.dp))
             if (tab == 0) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    SoftButton("خواندن مشتریان", onLoadCustomers, Modifier.weight(1f))
+                    SoftButton("خواندن مشتریان", onLoadCustomers, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(10.dp))
                 VizField(
@@ -195,7 +195,7 @@ fun HomeScreen(
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    SoftButton("خواندن کالاها", { onLoadProducts(null) }, Modifier.weight(1f))
+                    SoftButton("خواندن کالاها", { onLoadProducts(null) }, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(10.dp))
                 VizField(

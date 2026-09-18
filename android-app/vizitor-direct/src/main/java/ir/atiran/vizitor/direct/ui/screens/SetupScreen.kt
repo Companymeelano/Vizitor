@@ -116,8 +116,8 @@ fun SetupScreen(
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SoftButton("اسکن کارت اتصال (QR)", onScanQr, Modifier.weight(1f))
-                SoftButton("چسباندن متن کارت", { showPaste = true }, Modifier.weight(1f))
+                SoftButton("اسکن کارت اتصال (QR)", onScanQr, modifier = Modifier.weight(1f))
+                SoftButton("چسباندن متن کارت", { showPaste = true }, modifier = Modifier.weight(1f))
             }
             Spacer(Modifier.height(8.dp))
             SoftButton("خواندن فایل android-connect.json", onPickJson)
@@ -236,8 +236,8 @@ fun SetupScreen(
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SoftButton("بررسی مجدد سلامت", onRefreshHealth, Modifier.weight(1f))
-                SoftButton("پاک کردن تنظیمات گوشی", onForget, Modifier.weight(1f))
+                SoftButton("بررسی مجدد سلامت", onRefreshHealth, modifier = Modifier.weight(1f))
+                SoftButton("پاک کردن تنظیمات گوشی", onForget, modifier = Modifier.weight(1f))
             }
         }
 

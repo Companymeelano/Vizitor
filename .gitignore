@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
 data/
+
+# پوشهٔ کد Kotlin به نام data در پروژهٔ اندروید نباید نادیده گرفته شود
+!android-app/**/data/
+!android-app/**/data/**
+/android-app/build.log
