@@ -246,3 +246,25 @@
           run_audit.bat Atiran14050603
 
       بدون آرگومان، پیش‌فرض Meelano است.
+
+راه ۱۳ (مستقیم در SSMS — «یک پیش‌فاکتور واقعی از خودِ ERP»)
+    چرا: پنج مقدار سربرگ پیش‌فاکتور (ted_rooz, ph_kh, mod_darsad_vis, rdf_sarbarg, gainall)
+    را هیچ‌جا نمی‌شود خواند، چون sailfact_pish در هر دو دیتابیس ۰ سطر است. این‌ها را فقط
+    خودِ ERP وقتی پیش‌فاکتور را ذخیره می‌کند می‌نویسد.
+    کار تو: در ماژول فروش خودِ ERP، برای یک ویزیتور یک پیش‌فاکتور بساز (یک مشتری + یک یا
+    دو کالا) و ذخیره کن — «فاکتور» نکن، فقط پیش‌فاکتور بماند.
+    بعد این فایل را در SSMS باز کن و F5:  sql/10_preinvoice_sample.sql
+    (یا همین چهار کوئری را دستی بزن؛ خط اول خودش می‌گوید روی کدام دیتابیس اجرا شده.)
+
+        SELECT DB_NAME() AS db,
+               (SELECT COUNT(*) FROM dbo.sailfact_pish)    AS head_rows,
+               (SELECT COUNT(*) FROM dbo.subsailfact_pish) AS line_rows;
+
+        SELECT TOP 5 * FROM dbo.sailfact_pish ORDER BY shfacfo DESC;
+
+        SELECT * FROM dbo.subsailfact_pish
+         WHERE shfacfo = (SELECT MAX(shfacfo) FROM dbo.sailfact_pish)
+         ORDER BY rdf__ DESC, RDF;
+
+    اگر head_rows صفر برگشت یعنی پیش‌فاکتور ذخیره نشده (یا روی دیتابیس دیگری ذخیره شده)؛
+    همان عدد را برایم بفرست تا مسیر را دقیق کنم.
