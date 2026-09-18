@@ -212,6 +212,33 @@ WHERE user_name = ? AND CONVERT(varchar(50), user_password) = ? AND active = 1
   سال مالی لازم نیست. `IsAccountingSystemStarted()=0` ⇒ وقتی مسیر نوشتن را وصل
   کردیم باید بررسی شود که پروسیجرها با این وضعیت سند می‌زنند یا نه.
 
+## یافته‌های اجرای واقعی بخش ۲ (`02_fill_gaps`) — ۲۰۲۶-۰۹-۱۸
+* **نقش‌ها:** `Roles` ۶ ردیف دارد: ۱ مدير، ۲ مدير فروش، ۳ مدير حسابداري، ۴ حسابدار،
+  **۵ ويزيتور**، ۶ كاربر ⇒ شناسهٔ نقش ویزیتور در این ERP «۵» است.
+* **محدودیت‌های ویزیتور صفر است:** `TedadFactorMojazMande = 0` و
+  `MablaghMojazMandeJahatFactorha = 0`. معنی صفر (بی‌نهایت یا «هیچ») فقط از منطق
+  نوشتن خود ERP قابل تصمیم است ⇒ یک **سؤال پذیرش** برای فاز پیش‌فاکتور.
+* ⚠️ **تضاد آدرس سرور:** رجیستری خود سرور `IP1 = 192.168.1.110` را نشان می‌دهد،
+  در حالی که در بریف پروژه `192.168.1.150` گفته شده بود. تا وقتی خود سرور جواب
+  قطعی ندهد، هیچ‌کدام «تأییدشده» نیست:
+  `SELECT local_net_address FROM sys.dm_exec_connections WHERE session_id = @@SPID`
+  (این کوئری به چک سریع `run_audit.bat` اضافه شد و در `out_00_quick.txt` می‌آید).
+* **تنظیمات شبکه:** `IPAll.TcpPort = 1433` + `ListenOnAllIPs = 1` ⇒ سرور روی همهٔ
+  آدرس‌ها پورت ۱۴۳۳ گوش می‌دهد (هم‌خوان با `sys.dm_tcp_listener_states`). `1434` همان DAC است.
+* **ویوهای مهم روی سرور** (تعریف واقعی‌شان خوانده شد): `VW_InventoryAnbars` (فرمول
+  رسمی موجودی قابل‌فروش: `mojkavah×mohvah + mojkajoz − Σ(TEDVAH×mohvah + TEDJOZ)` با
+  شرط `Rejected=0 and active='t' and sh_f=0`)، `VW_CustomerInformation` (معوق‌ها،
+  اعتبار باقی‌مانده، `ForoshType = custgroup.price`)، `VisitorInformation` (KPI ویزیتور)،
+  `VW_GoalsVisitors`، `vw_customer`/`VW_ListCustomer`، پنج ویوی پیش‌فاکتور
+  (`pishfactor_body`, `pishfactors`, `SailFactPish_Details`, `subsailFactPish`,
+  `VwListPishfactorhayeTeadNashodeh`)، `VisitInfo`/`Vw_Visit`، `VW_RowDetailsForosh`.
+* **فهرست ۲۴ پروسیجر با اندازه‌شان** رسید؛ تازه‌کشف‌شده‌ها: `Edit_sail_pish` (ویرایش
+  پیش‌فاکتور)، `SelectPriceAndTedvahForushVisitorhaByDate` (قیمت+تعداد به‌ازای ویزیتور
+  و تاریخ)، `ListPishFactor`, `back_sail`, `set_vis_koli`, `GetVisitorPoints`,
+  `UpdateMojodiInventoryAnbars`, `FixInventoryPrice`, `t_newcust`/`newcust`.
+* **بدنهٔ چهار پروسیجر کلیدی هنوز نرسیده** (بخش ۳/۳ب در پوشهٔ اپراتور اجرا نشد)؛
+  `run_audit.bat` حالا حتی بدون فایل `.sql` هم خودش `body_*.txt` را می‌سازد.
+
 ## تاریخچهٔ `sql/06_login_probe.sql` (v3)
 * **v1** → `Msg 156 ... near the keyword 'user'`: `FROM EMS.user` بدون براکت (کل batch مرد).
 * **v2** → هر بخش `GO` جدا + جدول موقت `#o`؛ اما دو بخش با `Msg 8155 No column name was

@@ -495,3 +495,106 @@ still needed; `tools/run_audit.bat` writes them to a file without truncation.
 * Messages-tab output is silently dropped past a few thousand characters on this
   SSMS installation → long dumps must go to a file (`sqlcmd -o`, or
   `tools/run_audit.bat`, or SSMS Ctrl+Shift+F "Results to File").
+
+## 14. Findings from audit part 2 — `02_fill_gaps.sql` (run 2026-09-18)
+
+The operator ran part 2 through `sqlcmd` (13 output pages; the page header lines
+identify the login as `MIGHTY\MeeLano-Pc`, i.e. Windows authentication works).
+
+### 14.1 Network / TCP — registry section A
+
+* `…\SuperSocketNetLib\Tcp\IPAll`: `TcpPort = 1433`, `TcpDynamicPorts` empty,
+  `ListenOnAllIPs = 1` → SQL Server listens on **every** local address at 1433,
+  which matches `sys.dm_tcp_listener_states` (`0.0.0.0:1433`, `[::]:1433`).
+* `…\Tcp\IP1…IP5` are all `Enabled = 0` (so IPAll governs) and carry the machine
+  addresses that were configured the last time TCP/IP properties were edited:
+  `IP1 = 192.168.1.110` (the only IPv4), `IP2 = fe80::6a5d:7287:a5ec:3132%26`,
+  `IP3 = 169.254.151.74` (APIPA), `IP4 = ::1`, `IP5 = 127.0.0.1`.
+* `…\AdminConnection\Tcp\TcpDynamicPorts = 1434` → the DAC listener, as established.
+* ⚠️ **Conflict with the project brief**: the brief says the server's LAN address is
+  `192.168.1.150`, the server's own registry says `192.168.1.110`. One of the two is
+  wrong, and the Android app cannot connect until we know which. The authoritative
+  answer is what the server reports for itself over TCP:
+
+```sql
+SELECT local_net_address, local_tcp_port
+  FROM sys.dm_exec_connections WHERE session_id = @@SPID;
+```
+
+  *Pending:* operator to run this (it is part of the `out_00_quick.txt` quick check
+  of `tools/run_audit.bat`). Until it is answered, the address stays editable in the
+  app's Settings screen and no default is treated as verified.
+
+### 14.2 Roles, authentication helpers, visitor limits — section B
+
+* `dbo.Roles` = 6 rows, all real: `1 مدير`, `2 مدير فروش`, `3 مدير حسابداري`,
+  `4 حسابدار`, **`5 ويزيتور`**, `6 كاربر`. So the visitor role id in this ERP is 5.
+* `sys_users` again: `id=1 Admin`, `id=2 مدير`, both `active=1`, `role_id=1`,
+  `shmo=1`, `pw_bytes=1` (plain text in `varbinary`), `pwdcompare('x')=0`.
+* `visitors` row 1: `active='t'`, `UserID=<null>`, `has_password=no`
+  → confirms the app must resolve the visitor through `sys_vis`
+  (`sys_users.user_id → sys_vis.UserID → shvis → visitors.vis_rdf`); the ERP's own
+  helper `get_vis_rdf` (below) would return -1 for this installation.
+* **Visitor sales limits are 0**: `TedadFactorMojazMande = 0` and
+  `MablaghMojazMandeJahatFactorha = 0`. What 0 means for the app (unlimited vs.
+  nothing allowed) can only be decided from the ERP's own write logic, so this is
+  now an explicit acceptance question for the pre-invoice phase.
+* Function bodies read verbatim (all small): `get_role_id` (`select role_id from
+  sys_users where user_name = @user__`), `get_vis_rdf` (`select top 1 vis_rdf from
+  visitors where UserID = @user__`), `SetUsername`, `SetUserpass`
+  (`convert(varchar(50), user_password)`), `SetSystemName` (`osystems.name_System`),
+  `vis_name` (`visitors.vis_name where vis_rdf = @shmo and active = 't'`),
+  `cust_group_name` → `custgroup.group_name` via
+  `customers.group_rdf`, `which_panevis`, `getEmsUsername`, `EMS.GetUser`,
+  and `IsAccountingSystemStarted` = `select value from dbo.overal_setting where id = 67`.
+
+### 14.3 Views that exist on the live server — section D (definitions verbatim)
+
+These matter because the app must reuse the ERP's own formulas instead of inventing
+its own:
+
+| View | Chars | Why it matters to Vizitor |
+|---|---|---|
+| `VW_InventoryAnbars` | 3055 | **Authoritative sellable stock**: `(inventory_anbars.mojkavah × inventory.mohvah + mojkajoz) − Σ(TEDVAH × mohvah + TEDJOZ)` over `subsailfact_pish ⋈ sailfact_pish` where `Rejected = 0 and active = 't' and sh_f = 0`. Use it for availability. |
+| `VW_CustomerInformation` | 1516 | Per-customer: overdue counts (`Moavagh1/2`), `TedFactorGhabli`, `RemainCredit`, `ForoshType` (= `custgroup.price`, the price tier!), returned cheques. |
+| `VisitorInformation` | 1706 | Visitor KPIs: `ManCustomers`, `MabCheck`, `TedFactorErsali`, `TedFactor`, `MabFactorErsali` → the app's Profile/visitor screen. |
+| `VW_GoalsVisitors` | 1117 | Visit goals (`vis_goals` is empty) with group/route names. |
+| `VW_ListCustomer`, `vw_customer` | 853 / 3246 | Customer lists incl. last invoice (`sailfact_3`), last receipt (`dar_3`), route/city/region names. |
+| `subsailFactPish`, `pishfactor_body`, `pishfactors`, `SailFactPish_Details`, `VwListPishfactorhayeTeadNashodeh` | 364 … 1531 | The pre-invoice tables as the ERP sees them: header (`sailfact_pish`: `shfacfo, USER__, date, sh_f, vis_rdf, [all], ted_rooz, shmo, shfacthand, Rejected, TaedHesabdari, TaedForush, sysid, active`) and lines (`subsailfact_pish`: `shfacfo, SHK, rdf_anbar, TEDVAH, TEDJOZ, VAHPRICE, JOZPRICE, LINESUM, litakhma, PERTAFIF, PERVIS, Tax, Avarez, Ptax, Pavarez, RDF`). |
+| `VisitInfo`, `Vw_Visit` | 1594 / 3121 | Visit tracking (`Hamrah.Visit` ↔ `sailfact_pish.VisitID`), duration and order counts — the app's visit feature. |
+| `VW_RowDetailsForosh` | 308 | Sold lines of final invoices (`active='t'`). |
+
+### 14.4 Procedure inventory — section E (name + size)
+
+`add_sail_pish 3118`, `AddInvoice 5850`, `new_cust 3868`, `FixMojodi 7957`,
+`Edit_sail_pish 3091` (**edit pre-invoice**), `newcust 3927` + `t_newcust 5875`,
+`ListPishFactor 8555`, `back_sail 5046` (invoice reversal), `set_vis_koli 2099`,
+`VisitorSalesCommision 984`, `GetVisitorPoints 5160`,
+`SelectPriceAndTedvahForushVisitorhaByDate 1066` (**price + quantity per visitor per
+date** — likely the ERP's own pricing entry point), `FixInventoryPrice 5473`,
+`UpdateMojodiInventoryAnbars 2718`, `ted_moghayerat_anbar 720`,
+`raf_moghayerat_anbar 1500`, `ProcInsertIntoSysKal 903`, `change_price 762`,
+`close_open_cust 607`, `fill_cust_more_info 896`, `CustomerListToDate 242`,
+`AddFromAtiranDetailsForVisitors 843`, `AddUser 591`.
+
+The four bodies the app's write path needs (`add_sail_pish`, `AddInvoice`,
+`new_cust`, `FixMojodi`) are **still the missing piece** — parts 3/3b did not run
+in the operator's folder; `tools/run_audit.bat` now dumps them by itself even when
+no `.sql` file is present.
+
+### 14.5 Sample data seen (section C)
+
+* `forosh_price`: 5 rows; `forosh1` = 50000000, 100000000, 0, 0, 0 → the higher
+  tiers are zero, so a customer whose group tier is > 1 would get 0.00 prices.
+  Correct tier resolution + a defined fallback is therefore mandatory (as the brief says).
+* `inventory_anbars`: 15 rows for warehouse 1 (`mojkavah = 20`, `mojkajoz = 0`).
+* `kagroup`: 10 groups (سختافزاری قطعات، نرمافزار، آموزش، خدمات، قطعات، شبكه، آتیران، هارد، كیس) with `ParentGroupRdf`/`GroupLevel`.
+* `sailfact`: 3 invoices (1402/02/05، 1405/06/09، 1405/06/15) — note the **1405**
+  dates, i.e. the ERP is in use in the current Jalali year.
+* `cust_act`: 3 opening-balance rows.
+* ⚠️ Reading note: in section C the column list and the row values are both built by
+  string concatenation over `sys.columns`, and SQL Server does **not** guarantee the
+  `ORDER BY` of a concatenation subquery — the values of a row can therefore be
+  printed in a different order than the `COLS|` list. Only explicitly labelled
+  queries (sections A, B, E and the `COLS|` lists themselves) are authoritative for
+  column↔value mapping; the row samples are evidence of *content*, not of order.

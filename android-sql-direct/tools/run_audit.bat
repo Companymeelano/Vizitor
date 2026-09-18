@@ -50,7 +50,7 @@ echo Running Vizitor audits against %DBNAME% on %DBSERVER% ...
 echo.
 
 echo [1/3] quick check (login mode, TCP listener, database)
-"%SQLCMD%" -S %DBSERVER% -d %DBNAME% -E -h -1 -W -y 0 -o out_00_quick.txt -Q "SET NOCOUNT ON; SELECT 'database=' + DB_NAME() + ' | compat=' + CAST(compatibility_level AS varchar(4)) + ' | collation=' + CAST(collation_name AS varchar(60)) FROM sys.databases WHERE name = DB_NAME(); SELECT 'LoginMode_IsIntegratedSecurityOnly=' + CAST(SERVERPROPERTY('IsIntegratedSecurityOnly') AS varchar(2)) + ' (0 = mixed mode: SQL logins work)'; SELECT 'listener=' + ip_address + ':' + CAST(port AS varchar(6)) + ' | ' + state_desc FROM sys.dm_tcp_listener_states WHERE type_desc = 'TSQL'; SELECT 'sal_mali_rows=' + CAST(COUNT(*) AS varchar(6)) + ' | current_db=' + ISNULL(MAX(CASE WHEN [Current] = 1 THEN nam_db END), '<none>') FROM dbo.sal_mali;"
+"%SQLCMD%" -S %DBSERVER% -d %DBNAME% -E -h -1 -W -y 0 -o out_00_quick.txt -Q "SET NOCOUNT ON; SELECT 'server_ip=' + ISNULL(local_net_address, '?') + ':' + ISNULL(CAST(local_tcp_port AS varchar(6)), '?') + ' (the address the Android app must use)' FROM sys.dm_exec_connections WHERE session_id = @@SPID; SELECT 'database=' + DB_NAME() + ' | compat=' + CAST(compatibility_level AS varchar(4)) + ' | collation=' + CAST(collation_name AS varchar(60)) FROM sys.databases WHERE name = DB_NAME(); SELECT 'LoginMode_IsIntegratedSecurityOnly=' + CAST(SERVERPROPERTY('IsIntegratedSecurityOnly') AS varchar(2)) + ' (0 = mixed mode: SQL logins work)'; SELECT 'listener=' + ip_address + ':' + CAST(port AS varchar(6)) + ' | ' + state_desc FROM sys.dm_tcp_listener_states WHERE type_desc = 'TSQL'; SELECT 'sal_mali_rows=' + CAST(COUNT(*) AS varchar(6)) + ' | current_db=' + ISNULL(MAX(CASE WHEN [Current] = 1 THEN nam_db END), '<none>') FROM dbo.sal_mali;"
 echo   -^> out_00_quick.txt
 
 echo.
@@ -93,12 +93,16 @@ echo   -^> out_04_port.txt
 
 echo.
 echo [3/3] procedure bodies
-if defined FOUND goto done
-echo   The .sql scripts are not in this folder, so they are dumped straight from
-echo   the database instead (no script file needed):
+if exist out_03_bodies.txt goto bodiesdone
+echo   The 03 script did not run in this folder, so the four bodies are dumped
+echo   straight from the database instead (no .sql file needed):
 for %%P in (add_sail_pish AddInvoice new_cust FixMojodi) do "%SQLCMD%" -S %DBSERVER% -d %DBNAME% -E -h -1 -W -y 0 -Q "SET NOCOUNT ON; SELECT m.definition FROM sys.sql_modules m JOIN sys.objects o ON o.object_id = m.object_id WHERE o.name = '%%P'" -o "body_%%P.txt"
 if exist body_add_sail_pish.txt if exist body_AddInvoice.txt if exist body_new_cust.txt if exist body_FixMojodi.txt echo   -^> body_add_sail_pish.txt, body_AddInvoice.txt, body_new_cust.txt, body_FixMojodi.txt
 if not exist body_add_sail_pish.txt echo   *** the dump produced no file - check the login (see below)
+goto done
+
+:bodiesdone
+echo   -^> out_03_bodies.txt (already written by the 03 script)
 goto done
 
 :done
