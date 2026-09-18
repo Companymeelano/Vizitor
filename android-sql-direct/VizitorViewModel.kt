@@ -306,6 +306,32 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ── لیست دیتابیس‌های سرور (مرحلهٔ انتخاب دیتابیس حسابداری) ───────────────
+    private val _dbOptions = MutableStateFlow<List<String>>(emptyList())
+    val dbOptions: StateFlow<List<String>> = _dbOptions.asStateFlow()
+
+    private val _dbListLoading = MutableStateFlow(false)
+    val dbListLoading: StateFlow<Boolean> = _dbListLoading.asStateFlow()
+
+    /** لیست دیتابیس‌ها را با همان کاربر/رمزِ واردشده می‌گیرد (فقط خواندن). */
+    fun loadDatabases(settings: DbSettings) = viewModelScope.launch {
+        if (_dbListLoading.value) return@launch
+        _dbListLoading.value = true
+        try {
+            val res = dbManager.listDatabases(settings)
+            res.onSuccess { list ->
+                _dbOptions.value = list
+                _toast.value = if (list.isEmpty()) "دیتابیس کاربری روی این سرور پیدا نشد"
+                else "لیست دیتابیس‌ها گرفته شد (${list.size} مورد) — دیتابیس حسابداری را انتخاب کنید"
+            }.onFailure { e ->
+                _dbOptions.value = emptyList()
+                _toast.value = e.message ?: "گرفتن لیست دیتابیس‌ها ناموفق بود"
+            }
+        } finally {
+            _dbListLoading.value = false
+        }
+    }
+
     /** خواندن دوبارهٔ وضعیت اتصال (برای دکمهٔ «بررسی مجدد»). */
     fun refreshDbState() = viewModelScope.launch { dbManager.refresh() }
 

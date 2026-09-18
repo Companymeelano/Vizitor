@@ -124,6 +124,43 @@ object SqlConnectionManager {
         }
     }
 
+    /**
+     * فهرست دیتابیس‌های همان سرور (برای مرحلهٔ «انتخاب دیتابیس حسابداری» در نصب).
+     *
+     * این تابع با همان کاربر/رمزی که کاربر وارد کرده به دیتابیس master وصل
+     * می‌شود، فقط sys.databases را می‌خواند و هیچ چیزی را تغییر نمی‌دهد.
+     * دیتابیس‌های سیستمی (database_id <= 4) و دیتابیس‌های آفلاین نمایش داده
+     * نمی‌شوند. رمز و هیچ مقدار حساسی log نمی‌شود.
+     */
+    suspend fun listDatabases(s: DbSettings): Result<List<String>> = withContext(Dispatchers.IO) {
+        if (s.host.isBlank() || s.username.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("آدرس سرور یا نام کاربری خالی است."))
+        }
+        var c: Connection? = null
+        try {
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver")
+            val master = s.copy(database = "master")     // master در همهٔ نصب‌ها وجود دارد
+            c = java.sql.DriverManager.getConnection(master.jdbcUrl(), master.username, master.password)
+            val out = mutableListOf<String>()
+            c.createStatement().use { st ->
+                st.queryTimeout = s.queryTimeoutSec
+                st.executeQuery(
+                    "SELECT name FROM sys.databases " +
+                            "WHERE database_id > 4 AND state = 0 ORDER BY name"
+                ).use { rs ->
+                    while (rs.next()) out += rs.getString(1)
+                }
+            }
+            Result.success(out)
+        } catch (e: SQLException) {
+            Result.failure(IllegalStateException(friendlyError(e), e))
+        } catch (e: Exception) {
+            Result.failure(IllegalStateException("گرفتن لیست دیتابیس‌ها ناموفق بود: ${e.javaClass.simpleName}", e))
+        } finally {
+            try { c?.close() } catch (_: Exception) {}
+        }
+    }
+
     /** سنجش سریع سلامت (برای دکمهٔ «تست اتصال» در تنظیمات). */
     suspend fun refresh(): ConnectionState = withContext(Dispatchers.IO) {
         val s = settings ?: return@withContext ConnectionState.Disconnected

@@ -1,0 +1,179 @@
+diff --git a/android-sql-direct/SettingsScreen.kt b/android-sql-direct/SettingsScreen.kt
+index 9bbc52b..fc58a54 100644
+--- a/android-sql-direct/SettingsScreen.kt
++++ b/android-sql-direct/SettingsScreen.kt
+@@ -59,6 +59,7 @@ import androidx.compose.foundation.background
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.OutlinedTextFieldDefaults
++import androidx.compose.material3.Surface
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.SwitchDefaults
+ import androidx.compose.material3.Text
+@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.text.font.FontFamily
+ import androidx.compose.ui.text.input.KeyboardType
+ import androidx.compose.ui.text.input.PasswordVisualTransformation
++import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+ import ir.atiran.vizitor.HealthUiState
+ import ir.atiran.vizitor.VizitorViewModel
+@@ -121,6 +123,8 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
+     val dbState by viewModel.dbState.collectAsState()
+     val dbTesting by viewModel.dbTesting.collectAsState()
+     val savedDb by viewModel.dbConfig.collectAsState()
++    val dbOptions by viewModel.dbOptions.collectAsState()
++    val dbListLoading by viewModel.dbListLoading.collectAsState()
+ 
+     // فرم پیکربندی سرور
+     var ip by remember(config.serverIp) { mutableStateOf(config.serverIp) }
+@@ -211,6 +215,64 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
+                             modifier = Modifier.weight(2f)
+                         )
+                     }
++
++                    // ── انتخاب دیتابیس از لیست خود سرور (مرحلهٔ نصب) ─────────
++                    Row(verticalAlignment = Alignment.CenterVertically) {
++                        NeonPurpleButton(
++                            text = if (dbListLoading) "در حال گرفتن لیست…" else "دریافت لیست دیتابیس‌ها",
++                            icon = Icons.Filled.Storage,
++                            enabled = !dbListLoading && dbHost.isNotBlank() && dbUser.isNotBlank(),
++                            onClick = {
++                                viewModel.loadDatabases(
++                                    DbSettings(
++                                        host = dbHost.trim(),
++                                        port = dbPortText.toIntOrNull() ?: 1433,
++                                        database = dbName.trim().ifBlank { "master" },
++                                        username = dbUser.trim(),
++                                        password = dbPass
++                                    )
++                                )
++                            },
++                            modifier = Modifier.weight(1f)
++                        )
++                    }
++                    if (dbOptions.isNotEmpty()) {
++                        Text(
++                            "دیتابیس حسابداری را انتخاب کنید:",
++                            style = MaterialTheme.typography.bodySmall,
++                            color = palette.textSecondary
++                        )
++                        dbOptions.chunked(3).forEach { rowItems ->
++                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                                rowItems.forEach { name ->
++                                    val selected = name == dbName
++                                    Surface(
++                                        shape = MaterialTheme.shapes.small,
++                                        color = if (selected) NeonPurple.copy(alpha = 0.25f)
++                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
++                                        modifier = Modifier
++                                            .weight(1f)
++                                            .clickable { dbName = name }
++                                    ) {
++                                        Text(
++                                            name,
++                                            style = MaterialTheme.typography.bodySmall,
++                                            maxLines = 1,
++                                            overflow = TextOverflow.Ellipsis,
++                                            color = if (selected) NeonPurple else palette.textSecondary,
++                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
++                                        )
++                                    }
++                                }
++                                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
++                            }
++                        }
++                        Text(
++                            "همین دیتابیس، دیتابیس حسابداریِ برنامه است (مثل Meelano).",
++                            style = MaterialTheme.typography.bodySmall,
++                            color = palette.textSecondary
++                        )
++                    }
+                     OutlinedTextField(
+                         value = dbUser, onValueChange = { dbUser = it },
+                         label = { Text("نام کاربری SQL") },
+diff --git a/android-sql-direct/SqlConnectionManager.kt b/android-sql-direct/SqlConnectionManager.kt
+index 25010eb..b075606 100644
+--- a/android-sql-direct/SqlConnectionManager.kt
++++ b/android-sql-direct/SqlConnectionManager.kt
+@@ -124,6 +124,43 @@ object SqlConnectionManager {
+         }
+     }
+ 
++    /**
++     * فهرست دیتابیس‌های همان سرور (برای مرحلهٔ «انتخاب دیتابیس حسابداری» در نصب).
++     *
++     * این تابع با همان کاربر/رمزی که کاربر وارد کرده به دیتابیس master وصل
++     * می‌شود، فقط sys.databases را می‌خواند و هیچ چیزی را تغییر نمی‌دهد.
++     * دیتابیس‌های سیستمی (database_id <= 4) و دیتابیس‌های آفلاین نمایش داده
++     * نمی‌شوند. رمز و هیچ مقدار حساسی log نمی‌شود.
++     */
++    suspend fun listDatabases(s: DbSettings): Result<List<String>> = withContext(Dispatchers.IO) {
++        if (s.host.isBlank() || s.username.isBlank()) {
++            return@withContext Result.failure(IllegalArgumentException("آدرس سرور یا نام کاربری خالی است."))
++        }
++        var c: Connection? = null
++        try {
++            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver")
++            val master = s.copy(database = "master")     // master در همهٔ نصب‌ها وجود دارد
++            c = java.sql.DriverManager.getConnection(master.jdbcUrl(), master.username, master.password)
++            val out = mutableListOf<String>()
++            c.createStatement().use { st ->
++                st.queryTimeout = s.queryTimeoutSec
++                st.executeQuery(
++                    "SELECT name FROM sys.databases " +
++                            "WHERE database_id > 4 AND state = 0 ORDER BY name"
++                ).use { rs ->
++                    while (rs.next()) out += rs.getString(1)
++                }
++            }
++            Result.success(out)
++        } catch (e: SQLException) {
++            Result.failure(IllegalStateException(friendlyError(e), e))
++        } catch (e: Exception) {
++            Result.failure(IllegalStateException("گرفتن لیست دیتابیس‌ها ناموفق بود: ${e.javaClass.simpleName}", e))
++        } finally {
++            try { c?.close() } catch (_: Exception) {}
++        }
++    }
++
+     /** سنجش سریع سلامت (برای دکمهٔ «تست اتصال» در تنظیمات). */
+     suspend fun refresh(): ConnectionState = withContext(Dispatchers.IO) {
+         val s = settings ?: return@withContext ConnectionState.Disconnected
+diff --git a/android-sql-direct/VizitorViewModel.kt b/android-sql-direct/VizitorViewModel.kt
+index df4047a..37583f8 100644
+--- a/android-sql-direct/VizitorViewModel.kt
++++ b/android-sql-direct/VizitorViewModel.kt
+@@ -306,6 +306,32 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
+         }
+     }
+ 
++    // ── لیست دیتابیس‌های سرور (مرحلهٔ انتخاب دیتابیس حسابداری) ───────────────
++    private val _dbOptions = MutableStateFlow<List<String>>(emptyList())
++    val dbOptions: StateFlow<List<String>> = _dbOptions.asStateFlow()
++
++    private val _dbListLoading = MutableStateFlow(false)
++    val dbListLoading: StateFlow<Boolean> = _dbListLoading.asStateFlow()
++
++    /** لیست دیتابیس‌ها را با همان کاربر/رمزِ واردشده می‌گیرد (فقط خواندن). */
++    fun loadDatabases(settings: DbSettings) = viewModelScope.launch {
++        if (_dbListLoading.value) return@launch
++        _dbListLoading.value = true
++        try {
++            val res = dbManager.listDatabases(settings)
++            res.onSuccess { list ->
++                _dbOptions.value = list
++                _toast.value = if (list.isEmpty()) "دیتابیس کاربری روی این سرور پیدا نشد"
++                else "لیست دیتابیس‌ها گرفته شد (${list.size} مورد) — دیتابیس حسابداری را انتخاب کنید"
++            }.onFailure { e ->
++                _dbOptions.value = emptyList()
++                _toast.value = e.message ?: "گرفتن لیست دیتابیس‌ها ناموفق بود"
++            }
++        } finally {
++            _dbListLoading.value = false
++        }
++    }
++
+     /** خواندن دوبارهٔ وضعیت اتصال (برای دکمهٔ «بررسی مجدد»). */
+     fun refreshDbState() = viewModelScope.launch { dbManager.refresh() }
+ 

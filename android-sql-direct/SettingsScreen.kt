@@ -59,6 +59,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.HealthUiState
 import ir.atiran.vizitor.VizitorViewModel
@@ -121,6 +123,8 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
     val dbState by viewModel.dbState.collectAsState()
     val dbTesting by viewModel.dbTesting.collectAsState()
     val savedDb by viewModel.dbConfig.collectAsState()
+    val dbOptions by viewModel.dbOptions.collectAsState()
+    val dbListLoading by viewModel.dbListLoading.collectAsState()
 
     // فرم پیکربندی سرور
     var ip by remember(config.serverIp) { mutableStateOf(config.serverIp) }
@@ -209,6 +213,64 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
                             label = { Text("نام دیتابیس") },
                             singleLine = true, colors = fieldColors,
                             modifier = Modifier.weight(2f)
+                        )
+                    }
+
+                    // ── انتخاب دیتابیس از لیست خود سرور (مرحلهٔ نصب) ─────────
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        NeonPurpleButton(
+                            text = if (dbListLoading) "در حال گرفتن لیست…" else "دریافت لیست دیتابیس‌ها",
+                            icon = Icons.Filled.Storage,
+                            enabled = !dbListLoading && dbHost.isNotBlank() && dbUser.isNotBlank(),
+                            onClick = {
+                                viewModel.loadDatabases(
+                                    DbSettings(
+                                        host = dbHost.trim(),
+                                        port = dbPortText.toIntOrNull() ?: 1433,
+                                        database = dbName.trim().ifBlank { "master" },
+                                        username = dbUser.trim(),
+                                        password = dbPass
+                                    )
+                                )
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (dbOptions.isNotEmpty()) {
+                        Text(
+                            "دیتابیس حسابداری را انتخاب کنید:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.textSecondary
+                        )
+                        dbOptions.chunked(3).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                rowItems.forEach { name ->
+                                    val selected = name == dbName
+                                    Surface(
+                                        shape = MaterialTheme.shapes.small,
+                                        color = if (selected) NeonPurple.copy(alpha = 0.25f)
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { dbName = name }
+                                    ) {
+                                        Text(
+                                            name,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = if (selected) NeonPurple else palette.textSecondary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                }
+                                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                        Text(
+                            "همین دیتابیس، دیتابیس حسابداریِ برنامه است (مثل Meelano).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.textSecondary
                         )
                     }
                     OutlinedTextField(
