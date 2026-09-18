@@ -57,6 +57,8 @@
                            forosh / user / role / goal / sys_)
      11_SQL_NETWORK_CONFIG TCP port + LoginMode from the server registry
                           (needs VIEW SERVER STATE; skip if it errors)
+     12_DATABASES         every non-system database on this server, so we can
+                          confirm which one is the ERP database
    ═══════════════════════════════════════════════════════════════════════════ */
 
 SET NOCOUNT ON;
@@ -427,6 +429,36 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
     PRINT N'11_SQL_NETWORK_CONFIG skipped: ' + ERROR_MESSAGE();
+END CATCH;
+GO
+
+
+/* ═══ 12) All non-system databases on this instance ══════════════════════
+   Confirms which database is the real ERP database when several exist.
+   A plain catalog read; returns only databases this login may see. */
+BEGIN TRY
+    SELECT '12_DATABASES' AS section,
+           d.name AS database_name,
+           d.state_desc,
+           d.recovery_model_desc,
+           CONVERT(NVARCHAR(30), d.create_date, 120) AS created,
+           CAST(SUM(mf.size) * 8.0 / 1024 AS DECIMAL(12,1)) AS total_mb
+    FROM sys.databases d
+    JOIN sys.master_files mf ON mf.database_id = d.database_id
+    WHERE d.database_id > 4                 -- skip master/model/msdb/tempdb
+    GROUP BY d.name, d.state_desc, d.recovery_model_desc, d.create_date
+    ORDER BY d.name;
+END TRY
+BEGIN CATCH
+    /* sys.master_files may need extra permission on some servers: fall back to
+       the plain database list so this section always returns something. */
+    SELECT '12_DATABASES_PARTIAL' AS section,
+           d.name AS database_name,
+           d.state_desc,
+           N'name/state only (no size: ' + ERROR_MESSAGE() + N')' AS note
+    FROM sys.databases d
+    WHERE d.database_id > 4
+    ORDER BY d.name;
 END CATCH;
 GO
 
