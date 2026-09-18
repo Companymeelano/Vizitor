@@ -108,6 +108,9 @@ data class DbLoginRow(
 class MeelanoDataSource(private val db: SqlConnectionManager) {
 
     // ── ورود: اعتبارسنجی رمز سمت SQL Server (بدون هش‌سازی در اپ) ─────────────
+    //  ⚠️ روی سرور واقعی: DATALENGTH(user_password) = 1 بایت است، یعنی مقدار
+    //  ذخیره‌شده هش SQL Server نیست. تا روشن شدن روش واقعی ورود ERP
+    //  (اسکریپت 06_login_probe.sql) این تابع غیرفعال نمی‌شود ولی مصرف هم نمی‌شود.
     //  user_password از نوع varbinary است، پس مقایسه فقط با PWDCOMPARE ممکن است.
     //  کوئری پارامتری است → هیچ رشته‌ای داخل SQL تزریق نمی‌شود.
     suspend fun login(username: String, password: String): DbLoginRow? =
@@ -172,7 +175,7 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
             }
             c.prepareStatement(sql).use { ps ->
                 ps.queryTimeout = 30
-                ps.setString(1, ACTIVE_FLAG)
+                ps.setString(1, ACTIVE_CHAR)
                 var i = 2
                 if (like != null) { ps.setString(i++, like); ps.setString(i++, like) }
                 ps.setInt(i++, offset)
@@ -201,7 +204,7 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
             ).use { ps ->
                 ps.queryTimeout = 15
                 ps.setLong(1, shka)
-                ps.setString(2, ACTIVE_FLAG)
+                ps.setString(2, ACTIVE_CHAR)
                 ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
             }
         }
@@ -255,6 +258,7 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                   LEFT JOIN dbo.custgroup ON custgroup.group_rdf = CUSTOMERS.group_rdf
                  WHERE sys_cus.UserID = ?
                    AND (? = 0 OR sys_cus.SysID = ?)
+                   AND CUSTOMERS.active = ?
                  ORDER BY CUSTOMERS.MONAME
                  OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
                 """.trimIndent()
@@ -263,8 +267,9 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                 ps.setInt(1, userId)
                 ps.setInt(2, companyId ?: 0)
                 ps.setInt(3, companyId ?: 0)
-                ps.setInt(4, offset)
-                ps.setInt(5, limit)
+                ps.setString(4, ACTIVE_CHAR)
+                ps.setInt(5, offset)
+                ps.setInt(6, limit)
                 ps.executeQuery().use { rs -> rs.mapRows(::readCustomer) }
             }
         }
@@ -276,7 +281,7 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                 """
                 SELECT custgroup.group_rdf, custgroup.group_name, custgroup.price
                   FROM dbo.custgroup
-                 WHERE custgroup.Active = 1
+                 WHERE custgroup.Active = 1        -- bit column (verified)
                  ORDER BY custgroup.group_name
                 """.trimIndent()
             ).use { ps ->
@@ -294,22 +299,30 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
         }
 
     // ── هویت ویزیتور + دامنهٔ دسترسی (sys_vis / sys_cus / sys_kal / sys_anb) ──
-    suspend fun visitorIdentity(userId: Int): DbVisitorIdentity? =
+    suspend fun visitorIdentity(userId: Int, companyId: Int? = null): DbVisitorIdentity? =
         db.withConnection { c ->
+            //  نکتهٔ مهم (تأییدشده با دادهٔ واقعی): visitors.UserID روی این سرور NULL است،
+            //  پس اتصال کاربر به ویزیتور از طریق sys_vis است:
+            //      sys_users.user_id -> sys_vis.UserID -> sys_vis.shvis -> visitors.vis_rdf
             c.prepareStatement(
                 """
-                SELECT visitors.vis_rdf, visitors.vis_name, visitors.UserID,
-                       (SELECT COUNT(*) FROM dbo.sys_cus WHERE sys_cus.UserID = ?) AS allowed_customers,
-                       (SELECT COUNT(*) FROM dbo.sys_vis WHERE sys_vis.UserID = ?) AS allowed_visitors,
-                       (SELECT COUNT(*) FROM dbo.sys_anb WHERE sys_anb.UserID = ?) AS allowed_warehouses
-                  FROM dbo.visitors
-                 WHERE (visitors.UserID = ? OR ? = 0)
+                SELECT TOP (1)
+                       visitors.vis_rdf, visitors.vis_name, visitors.active,
+                       visitors.VIs_region, visitors.vis_city,
+                       (SELECT COUNT(*) FROM dbo.sys_cus WHERE sys_cus.UserID = sys_vis.UserID) AS allowed_customers,
+                       (SELECT COUNT(*) FROM dbo.sys_kal WHERE sys_kal.UserID = sys_vis.UserID) AS allowed_products,
+                       (SELECT COUNT(*) FROM dbo.sys_anb WHERE sys_anb.UserID = sys_vis.UserID) AS allowed_warehouses
+                  FROM dbo.sys_vis
+                  JOIN dbo.visitors ON visitors.vis_rdf = sys_vis.shvis
+                 WHERE sys_vis.UserID = ?
+                   AND (? = 0 OR sys_vis.SysID = ?)
                  ORDER BY visitors.vis_rdf
                 """.trimIndent()
             ).use { ps ->
                 ps.queryTimeout = 20
-                ps.setInt(1, userId); ps.setInt(2, userId); ps.setInt(3, userId)
-                ps.setInt(4, userId); ps.setInt(5, userId)
+                ps.setInt(1, userId)
+                ps.setInt(2, companyId ?: 0)
+                ps.setInt(3, companyId ?: 0)
                 ps.executeQuery().use { rs ->
                     if (!rs.next()) null else DbVisitorIdentity(
                         userId = userId,
@@ -317,7 +330,7 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                         displayName = rs.getString("vis_name") ?: "",
                         visitorRdf = rs.nullableInt("vis_rdf"),
                         allowedCustomers = rs.getInt("allowed_customers"),
-                        allowedProducts = 0,        // sys_kal ستون‌هایش هنوز verify نشده
+                        allowedProducts = rs.getInt("allowed_products"),
                         allowedWarehouses = rs.getInt("allowed_warehouses"),
                     )
                 }
@@ -348,11 +361,14 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
     // ─────────────────────────────────────────────────────────────────────────
     private companion object {
         /**
-         * مقدار «فعال» در ستون‌های char(1) این دیتابیس.
-         * ستون‌ها char(1) هستند؛ مقدار واقعی‌شان با اسکریپت 05 (بخش G3) تأیید
-         * می‌شود و در صورت تفاوت فقط همین یک ثابت عوض می‌شود.
+         * مقادیر «فعال» — با خروجی واقعی سرور تأیید شده‌اند (بخش G3 ممیزی):
+         *   ستون‌های char(1) این ERP مقدار 't' (فعال) و 'f' (غیرفعال) دارند،
+         *   نه '1'. ستون‌های bit با 1/0 مقایسه می‌شوند.
+         * ابزار tools/check_sql_columns.py این دو مقدار را با فایل
+         * docs/schema/meelano-values.tsv تطبیق می‌دهد.
          */
-        const val ACTIVE_FLAG = "1"
+        const val ACTIVE_CHAR = "t"   // value: dbo.inventory.active
+        const val ACTIVE_BIT = 1      // value: dbo.kagroup.Active
     }
 }
 

@@ -24,6 +24,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TSV = ROOT / "docs" / "schema" / "meelano-columns.tsv"
+VALUES_TSV = ROOT / "docs" / "schema" / "meelano-values.tsv"
 
 # identifiers that are not columns: aliases, table names, SQL functions, keywords
 IGNORE_QUALIFIERS = {"sys", "dbo", "Hamrah", "warehousing", "security", "EMS", "kg", "information_schema"}
@@ -39,6 +40,39 @@ def load_schema():
         name, cols = line.split("\t", 1)
         tables[name.strip().lower()] = {c.strip() for c in cols.split(",") if c.strip()}
     return tables
+
+
+def load_values():
+    """Verified constant values (e.g. the char(1) active flag is 't', not '1')."""
+    values = {}
+    if VALUES_TSV.exists():
+        for line in VALUES_TSV.read_text(encoding="utf-8").splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 2:
+                values[parts[0].strip()] = parts[1].strip()
+    return values
+
+
+def check_declared_constants(text: str, path_name: str):
+    """Every Kotlin constant that claims a verified value is checked against the
+    database:   const val NAME = "t"   // value: dbo.inventory.active"""
+    problems = []
+    checked = 0
+    for m in re.finditer(r'const\s+val\s+(\w+)\s*=\s*("([^"]*)"|\d+)\s*//\s*value:\s*([\w.]+)', text):
+        name, literal, key = m.group(1), m.group(3) if m.group(3) is not None else m.group(2), m.group(4)
+        if key not in VALUES:
+            problems.append(f"constant {name} claims an unknown verified value key '{key}'")
+            continue
+        expected = VALUES[key]
+        if str(literal) != expected:
+            problems.append(f"constant {name} = \"{literal}\" but the database value for "
+                            f"{key} is \"{expected}\"")
+        checked += 1
+    if checked:
+        print(f"  {path_name:32s} {checked} declared constant(s) match the database")
+    return problems
 
 
 def kotlin_sql_strings(text: str):
@@ -154,6 +188,11 @@ def check_statement(sql: str, amap: dict):
     return problems
 
 
+def strip_sql_comments(sql: str) -> str:
+    sql = re.sub(r"/\*.*?\*/", " ", sql, flags=re.S)
+    return re.sub(r"--[^\n]*", " ", sql)
+
+
 def check(path: pathlib.Path):
     text = path.read_text(encoding="utf-8", errors="replace")
     if path.suffix == ".kt":
@@ -166,10 +205,14 @@ def check(path: pathlib.Path):
 
     problems = []
     for st in statements:
+        st = strip_sql_comments(st)
         amap = alias_map(st)
         if not amap:
             continue
         problems += check_statement(st, amap)
+
+    if path.suffix == ".kt":
+        problems += check_declared_constants(text, path.name)
 
     problems = sorted(set(problems))
     if problems:
@@ -183,13 +226,14 @@ def check(path: pathlib.Path):
 
 
 SCHEMA = load_schema()
+VALUES = load_values()
 
 if __name__ == "__main__":
     args = sys.argv[1:]
     files = [pathlib.Path(a) for a in args] if args else \
         sorted(list(ROOT.glob("*.kt")) + list(ROOT.glob("*.sql")))
-    print(f"schema: {len(SCHEMA)} tables, {sum(len(v) for v in SCHEMA.values())} columns "
-          f"(from {TSV.name})")
+    print(f"schema: {len(SCHEMA)} tables, {sum(len(v) for v in SCHEMA.values())} columns, "
+          f"{len(VALUES)} verified values (from {TSV.name} + {VALUES_TSV.name})")
     ok = all(check(f) for f in files)
     print("\nRESULT:", "NO UNKNOWN IDENTIFIERS" if ok else "PROBLEMS FOUND")
     sys.exit(0 if ok else 1)

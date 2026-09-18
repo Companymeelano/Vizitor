@@ -123,6 +123,19 @@
 آن `1434` که در رجیستری دیده شد مربوط به **DAC** (`AdminConnection\Tcp`) است، نه اپ.
 پس اتصال اپ: **`192.168.1.150:1433` → دیتابیس `Meelano`**.
 
+## یافته‌های مهم ممیزی بخش ۵ (۲۰۲۶-۰۹-۱۸)
+* **باگ واقعی در کد:** ستون‌های `char(1)` این ERP مقدار **`'t'`** دارند نه `'1'`.
+  فیلتر `active = '1'` بی‌صدا صفر ردیف برمی‌گرداند. اصلاح شد و محافظ
+  `tools/check_sql_columns.py` حالا مقادیر ثابت را هم با
+  `docs/schema/meelano-values.tsv` تطبیق می‌دهد (`ACTIVE_CHAR = "t"`).
+* **اتصال کاربر به ویزیتور از `sys_vis` است، نه `visitors.UserID`** (که NULL است):
+  `sys_users.user_id → sys_vis.UserID → sys_vis.shvis → visitors.vis_rdf`.
+* ستون‌های `sys_kal`/`sys_anb`/`sys_use`/`sys_wor`/`systems` تأیید و به فایل اسکیما اضافه شدند.
+* دادهٔ واقعی: ۹ گروه مشتری (همه با تیر قیمت ۱)، ۷ مشتری، ۱ ویزیتور، ۱ انبار، ۱ مسیر.
+* **ورود هنوز حل نشده:** `DATALENGTH(user_password) = 1` بایت → هش SQL Server نیست و
+  `PWDCOMPARE` منطقی نیست. اسکریپت `sql/06_login_probe.sql` شواهد لازم را جمع می‌کند
+  (طبقه‌بندی آن بایت، جدول‌های کاندید رمز، و بدنهٔ توابع `SetUserpass`/`GetUser`).
+
 ## تغییرات لازم در `viz` (برای re-apply روی ریپازیتوری اصلی)
 `app/build.gradle.kts` → افزودن:
 ```kotlin

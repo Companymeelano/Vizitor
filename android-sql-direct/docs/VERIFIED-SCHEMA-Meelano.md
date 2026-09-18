@@ -264,6 +264,75 @@ Functions: `dbo.GetMainMasirID`, `dbo.Func_GetPathByMasirID`,
 `dbo.SetUserpass`, `dbo.SetSystemName`, `dbo.which_panevis`,
 `dbo.IsAccountingSystemStarted`, `dbo.GetMainMasirID`.
 
+## 10b. Findings from audit part 5 (2026-09-18) — important corrections
+
+### The char(1) boolean columns hold `'t'`, NOT `'1'`
+Section G3 of the live output shows the real values:
+
+```
+G3|inventory.active|t|rows=50        G3|CUSTOMERS.active|t|rows=7
+G3|forosh_price.active|t|rows=50     G3|visitors.active|t|rows=1
+G3|kagroup.Active|0|rows=1           G3|kagroup.Active|1|rows=29
+G3|anbars.Active|1|rows=1            G3|custgroup.Active|1|rows=9
+```
+
+So `char(1)` flags are `'t'`/`'f'` and `bit` flags are `1`/`0`. **A filter written
+as `active = '1'` silently returns 0 rows** — this was a real bug in the first
+version of the data source and is now fixed. The guard tool compares the declared
+Kotlin constants against `docs/schema/meelano-values.tsv`, so it cannot recur.
+
+### The user → visitor link is `sys_vis`, not `visitors.UserID`
+`visitors.UserID` is **NULL** in the live row; the scope table carries the link:
+
+```
+G5|visitor|vis_rdf=1|name=ويزيتور سيستم|UserID=<null>|region=1|city=1
+G5|sys_vis|SysID=1|shvis=1|UserID=1
+G5|sys_cus|SysID=1|Shmo=1..6|UserID=1        (user 1 may serve customers 1..6)
+G5|sys_cus|SysID=1|Shmo=7|UserID=2           (user 2 may serve customer 7)
+```
+
+Chain: `sys_users.user_id → sys_vis.UserID → sys_vis.shvis → visitors.vis_rdf`.
+
+### Columns of the remaining scope/config tables (G1)
+
+```
+sys_kal: rdf, sysid, shka, UserID          sys_anb: rdf, SysID, shanb, UserID
+sys_vis: rdf, SysID, shvis, UserID         sys_cus: rdf, SysID, Shmo, UserID
+sys_use: rdf, SysID, shuse, UserID         sys_wor: rdf, SysID, shwor, UserID
+systems: rdf, name, active                 AnbarDifferent: RowID, Shka, SanadNo, Kind,
+                                           AnbarID, JozPrice, TedVahOld, TedJozOld,
+                                           TedVahCounted, TedJozCounted, Active
+NCustomers: RowID, NShmo, NMan, NDate, BlackList
+```
+
+### Live configuration data (small, first deployment)
+
+* company/OSystem: `rdf=1`, name `مديريت`, warehouse 1, active
+* visitor: `vis_rdf=1` «ويزيتور سيستم», active, region 1, city 1, no supervisor,
+  commission percentages 0
+* customer groups: 9 rows, **all with `price = 1`** → tier 1 for everybody today
+  (`مشتريان`, `تامين کنندگان`, `ويزيتورها`, `مامورين پخش`, `مامورين مطالبات`,
+  `راننده ها`, `پرسنل دفتري`, `كارگران`, `بنکداران`)
+* customers: 7 rows — `ويزيتور سيستم` (group 3), `مشتری آنلاین`, `ایلیا پخش`,
+  `بازرگانی موسوی مقدم`, `پخش درخشان`, `پخش بلدی`, `امین لیاقت`; balances (`man`)
+  0 / 0 / 5.8M / 0 / 80M / 0 / 25M, `black_list = 0` for all
+* route: 1 row (`مسير سيستم`)
+
+### LOGIN IS NOT SOLVED YET — and here is exactly why
+
+```
+G4|sys_users|id=1|name=Admin|hash_bytes=1|active=1|pwdcompare_result=0
+G4|sys_users|id=2|name=مدير |hash_bytes=1|active=1|pwdcompare_result=0
+```
+
+`user_password` is **1 byte long**, so it is not a SQL Server password hash and
+`PWDCOMPARE` cannot be the mechanism. (The 0 result is also expected because the
+probe placeholder was sent instead of a real password.) The app must therefore
+not guess; `sql/06_login_probe.sql` collects the evidence: the classification of
+that byte, the other candidate credential stores (`security.ConfirmUser`,
+`EMS.user`, `dbo.sys_use`), and the real bodies of the ERP helpers
+`SetUserpass` / `SetUsername` / `GetUser` / `getEmsUsername`.
+
 ## 10. Still open (filled by scripts 02 and 03)
 
 * ~~real TCP port~~ → **RESOLVED: 1433** (`sys.dm_tcp_listener_states` shows

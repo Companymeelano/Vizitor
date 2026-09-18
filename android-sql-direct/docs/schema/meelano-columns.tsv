@@ -20,3 +20,10 @@ sailfact_pish	rdf__,shfacfo,USER__,date,shmo,barbari,shfacthand,vis_rdf,sumlinea
 subsailfact_pish	rdf__,shfacfo,SHKA,rdf_anbar,TEDVAH,TEDJOZ,VAHPRICE,JOZPRICE,BASTEBANDI,TEDBASTEBANDI,LINESUM,LINEGAIN,ISRET,PERTAFIF,RDF,jozgain,PERVIS,litakhma,active,amani,Pavarez,Avarez,Ptax,Tax,Mp
 sailfact	rdf__,shfacfo,date,shmo,barbari,description,vis_rdf,sumlineall,all,tafif,SumTafifAghlam,done_date,panevis,ismodify,active,modpar,rdf_tahbarg,nah_par,nah_d_text,man_gh,t_date,tasvieh,driver_name,rdf_driver,mamorp_name,rdf_mamorp,bamandeh,sh_taraz_kh,time_,shpish,ba_tarikh,chap_f,chap_h,tax,moname,nahve_namayesh_daryaft,vazn,sysid,avarez,Status,TaeedDate,TaeedUser,sumlineall_fel,all_fel,SumTafifAghlam_fel,tax_fel,avarez_fel,userid,taffif_fel,MabDaryaftFactor,tdf,ShSanadFerestande,ExternalCosts,HajmiOverall,ChapWithTasvieh,ChapWhitMande,TaeedWarehous,TaeedWarehousUserId,TaeedWarehousDate
 subsailfact	rdf__,shfacfo,SHKA,rdf_anbar,TEDVAH,TEDJOZ,VAHPRICE,JOZPRICE,BASTEBANDI,TEDBASTEBANDI,LINESUM,PERTAFIF,TafifAghlam,RDF,PERVIS,litakhma,active,naka,ptax,tax,avarez,pavarez,tedjoz_fel,tedvah_fel,tedbastebandi_fel,linesum_fel,litakhma_fel,tax_fel,avarez_fel,Gift,TafifLine,PerPromotion,PromotionValue,TafifLineFel,ProductionSeriesID,TEDVAHMain,TEDJOZMain
+dbo.sys_kal	rdf,sysid,shka,UserID
+dbo.sys_anb	rdf,SysID,shanb,UserID
+dbo.sys_use	rdf,SysID,shuse,UserID
+dbo.sys_wor	rdf,SysID,shwor,UserID
+dbo.systems	rdf,name,active
+dbo.AnbarDifferent	RowID,Shka,SanadNo,Kind,AnbarID,JozPrice,TedVahOld,TedJozOld,TedVahCounted,TedJozCounted,Active
+dbo.NCustomers	RowID,NShmo,NMan,NDate,BlackList
