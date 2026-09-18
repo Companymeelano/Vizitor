@@ -1,5 +1,5 @@
 ﻿/* ═══════════════════════════════════════════════════════════════════════════
-   Vizitor — ERP database audit  ·  v3  ·  2026-09-18  ·  READ ONLY
+   Vizitor — ERP database audit  ·  v4  ·  2026-09-18  ·  READ ONLY
    (the live ERP database on the server is named: Meelano)
    ═══════════════════════════════════════════════════════════════════════════
    This script NEVER writes, NEVER drops, NEVER alters anything.
@@ -35,6 +35,11 @@
         (Long view/procedure definitions are ALSO split into 200-character
          rows, so even the default of 256 characters loses nothing.)
      3. F5 (execute) and send back EVERYTHING that is printed.
+        EASIER OPTION — let sqlcmd write the output straight to a file (CMD on
+        the server, then just attach that file):
+            sqlcmd -S localhost -d Meelano -E -i C:\path\00_audit_atiran2.sql ^
+                   -o C:\path\audit_output.txt -y 0 -W
+        (-E = Windows authentication of the account you are logged in with)
         Every result row carries a `section` label ("00_SERVER", "01_TABLES",
         "02_COLUMNS", ...), so partial output is still useful — send what you
         get, including any error messages.
@@ -62,6 +67,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 SET NOCOUNT ON;
+PRINT N'Vizitor ERP audit  -  script version v4 (2026-09-18)  -  read-only, sections 00..12';
 GO
 
 /* ── database context guard ─────────────────────────────────────────────── */
@@ -83,6 +89,7 @@ GO
 
 /* ═══ 00) Server identity ═════════════════════════════════════════════════ */
 SELECT '00_SERVER' AS section,
+       N'v4' AS script_version,
        CAST(SERVERPROPERTY('ServerName')   AS NVARCHAR(128)) AS server_name,
        CAST(SERVERPROPERTY('InstanceName') AS NVARCHAR(128)) AS instance_name,     -- NULL = default instance
        CAST(SERVERPROPERTY('MachineName')  AS NVARCHAR(128)) AS machine_name,
@@ -428,7 +435,10 @@ BEGIN TRY
     ORDER BY registry_key, value_name;
 END TRY
 BEGIN CATCH
-    PRINT N'11_SQL_NETWORK_CONFIG skipped: ' + ERROR_MESSAGE();
+    PRINT N'11_SQL_NETWORK_CONFIG skipped: ' + ERROR_MESSAGE()
+        + N'  -> this view needs the VIEW SERVER STATE permission: run the script'
+        + N' as a sysadmin login (e.g. sa), or read the real port on the server in CMD with:'
+        + N' NETSTAT -ANO | FINDSTR LISTENING | FINDSTR 143';
 END CATCH;
 GO
 
