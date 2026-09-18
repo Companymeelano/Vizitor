@@ -63,12 +63,14 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             grep -E "^e: |error:|FAILURE:|Execution failed|Could not (resolve|find|download)" build.log | head -60 >> "$GITHUB_STEP_SUMMARY" || true
             echo '```' >> "$GITHUB_STEP_SUMMARY"
-            # ثبت لاگ در مخزن تا از بیرون قابل بررسی باشد (این پوش با GITHUB_TOKEN، CI را دوباره اجرا نمی‌کند)
+            # ثبت لاگ در مخزن تا از بیرون قابل بررسی باشد (پوش با GITHUB_TOKEN، CI را دوباره اجرا نمی‌کند)
+            set +e
             git config user.name "vizitor-ci"
             git config user.email "ci@vizitor.local"
-            git add -f android-app/build.log
-            git commit -m "chore(ci): android build log [skip ci]" || true
-            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}" || true
+            git add -f build.log
+            git commit -m "chore(ci): android build log [skip ci]"
+            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+            echo "log committed: $(git log --oneline -1)"
           fi
           exit "$rc"
 
