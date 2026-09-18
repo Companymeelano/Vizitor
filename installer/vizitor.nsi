@@ -55,6 +55,7 @@ VIAddVersionKey /LANG=1033 "LegalCopyright"  "Atiran"
 Var /GLOBAL PageDialog
 Var /GLOBAL RecheckOnly
 Var /GLOBAL PrevExists
+Var /GLOBAL FreshClean
 Var /GLOBAL IpAddr
 Var /GLOBAL ApiPort
 Var /GLOBAL IisProxy
@@ -109,12 +110,12 @@ Var /GLOBAL hUrlHint
 !define MUI_DIRECTORYPAGE_TEXT_TOP  "پوشهٔ نصب سامانه. سرویس API، ابزارها و راهنماها اینجا قرار می‌گیرند."
 
 !define MUI_FINISHPAGE_TITLE          "نصب ${PRODUCT_FA} کامل شد"
-!define MUI_FINISHPAGE_TEXT           "آدرس API برای برنامهٔ اندروید:$\r$\n$ApiUrlDisplay$\r$\n$\r$\nتنظیمات و لاگ‌ها:  C:\ProgramData\Vizitor$\r$\n$\r$\nاگر بازرسی خودکار به مشکل خورد، از میان‌بر «بازرسی و تعمیر» استفاده کنید."
+!define MUI_FINISHPAGE_TEXT           "آدرس API برای برنامهٔ اندروید:$\r$\n$ApiUrlDisplay$\r$\n$\r$\nاتصال مستقیم اندروید به SQL Server (پورت ۱۴۳۳) آماده شد؛ جزئیات و کد QR:$\r$\n$INSTDIR\setup\android-connect.png$\r$\n$\r$\nتنظیمات و لاگ‌ها:  C:\ProgramData\Vizitor$\r$\n$\r$\nاگر بازرسی خودکار به مشکل خورد، از میان‌بر «بازرسی و تعمیر» استفاده کنید."
 !define MUI_FINISHPAGE_RUN          "$INSTDIR\tools\open-panel.bat"
 !define MUI_FINISHPAGE_RUN_FUNCTION   OpenPanel
 !define MUI_FINISHPAGE_RUN_TEXT       "بازکردن پنل مدیریت در مرورگر"
-!define MUI_FINISHPAGE_SHOWREADME     "$INSTDIR\connect.txt"
-!define MUI_FINISHPAGE_SHOWREADME_TEXT "نمایش فایل اتصال (آدرس API و مشخصات سرور)"
+!define MUI_FINISHPAGE_SHOWREADME     "$INSTDIR\setup\android-connect.txt"
+!define MUI_FINISHPAGE_SHOWREADME_TEXT "نمایش کارت اتصال اندروید (سرور، دیتابیس، کاربر، کد راه‌اندازی)"
 !define MUI_FINISHPAGE_LINK           "راهنمای فارسی و بستهٔ مهاجرت (پوشهٔ docs)"
 !define MUI_FINISHPAGE_LINK_LOCATION  "$INSTDIR\docs"
 
@@ -148,6 +149,7 @@ Page custom PageActivationCreate PageActivationLeave
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\شروع سرویس API.lnk"   "$INSTDIR\tools\service-start.bat" "" "$INSTDIR\tools\service-start.bat" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\توقف سرویس API.lnk"   "$INSTDIR\tools\service-stop.bat" "" "$INSTDIR\tools\service-stop.bat" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\اتصال مستقیم SQL.lnk" "$INSTDIR\tools\android-prep.bat" "" "$INSTDIR\tools\android-prep.bat" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\کارت اتصال اندروید.lnk" "$INSTDIR\setup\android-connect.txt" "" "notepad.exe" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_FA}\حذف نصب.lnk"         "$INSTDIR\uninstall.exe"
   CreateShortCut "$DESKTOP\${PRODUCT_FA} — پنل مدیریت.lnk"        "$INSTDIR\tools\open-panel.bat" "" "$INSTDIR\tools\open-panel.bat" 0
 !macroend
@@ -157,6 +159,26 @@ Page custom PageActivationCreate PageActivationLeave
 ; ---------------------------------------------------------------------------
 Section "هستهٔ سامانه — API و سرویس (اجباری)" SecCore
   SectionIn RO
+
+  ; اگر کاربر «پیکربندی دوباره» را انتخاب کرده باشد، فایل‌های برنامهٔ قبلی
+  ; پاک می‌شوند تا نسخهٔ نو تمیز بنشیند. تنظیمات/لاگ/داده‌های
+  ; C:\ProgramData\Vizitor و دیتابیس هیچ‌وقت دست نمی‌خورند.
+  ${If} $FreshClean == "1"
+    DetailPrint "توقف سرویس قبلی برای جایگزینی فایل‌ها ..."
+    nsExec::ExecToLog 'schtasks /End /TN "${TASK_NAME}"'
+    Pop $0
+    Sleep 1200
+    ${If} ${FileExists} "$INSTDIR\setup\*.*"
+      DetailPrint "حذف فایل‌های نسخهٔ قبلی از $INSTDIR ..."
+      RMDir /r "$INSTDIR\setup"
+    ${EndIf}
+    RMDir /r "$INSTDIR\api"
+    RMDir /r "$INSTDIR\iis"
+    RMDir /r "$INSTDIR\docs"
+    RMDir /r "$INSTDIR\tools"
+    Delete "$INSTDIR\run.bat"
+    DetailPrint "فایل‌های برنامهٔ قبلی جایگزین شدند (تنظیمات و داده‌ها دست‌نخورده)"
+  ${EndIf}
   SetShellVarContext all
   SetOutPath "$INSTDIR\setup"
   File "..\install.ps1"
@@ -168,7 +190,7 @@ Section "هستهٔ سامانه — API و سرویس (اجباری)" SecCore
   SetOutPath "$INSTDIR"
   File "assets\vizitor.ico"
   SetOutPath "$INSTDIR\setup\api"
-  File /r "..\api\*.*"
+  File /r /x __pycache__ /x *.pyc "..\api\*.*"
   SetOutPath "$INSTDIR\setup\database"
   File /r "..\database\*.*"
   SetOutPath "$INSTDIR\tools"
@@ -609,6 +631,7 @@ Function .onInit
   StrCpy $InstallRc ""
   StrCpy $Detected "در حال تشخیص وضعیت سیستم ..."
   StrCpy $PrevExists "0"
+  StrCpy $FreshClean "0"
 
   InitPluginsDir
   File /oname=$PLUGINSDIR\preflight.ps1 "nsi\preflight.ps1"
@@ -653,10 +676,14 @@ Function .onInit
   IfSilent skip_prev_check
 
   ${If} $PrevExists == "1"
-    MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "یک نصب قبلی ویزیتور روی این کامپیوتر پیدا شد.$\r$\n$\r$\nبله = فقط بازرسی و تعمیر (سریع)$\r$\nخیر = پیکربندی دوباره$\r$\nانصراف = خروج" IDYES do_recheck IDNO after_choice
+    MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "یک نصب قبلی ویزیتور روی این کامپیوتر پیدا شد.$\r$\n$\r$\nبله = فقط بازرسی و تعمیر (سریع)$\r$\nخیر = پیکربندی دوباره — فایل‌های برنامهٔ قبلی با نسخهٔ نو جایگزین می‌شوند ($\r$\nتنظیمات و داده‌های C:\ProgramData\Vizitor دست‌نخورده می‌مانند)$\r$\nانصراف = خروج" IDYES do_recheck IDNO do_fresh
     Quit
   ${EndIf}
   Goto after_choice
+
+  do_fresh:
+    StrCpy $FreshClean "1"
+    Goto after_choice
 
   do_recheck:
     StrCpy $RecheckOnly "1"
@@ -707,6 +734,7 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\شروع سرویس API.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\توقف سرویس API.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\اتصال مستقیم SQL.lnk"
+  Delete "$SMPROGRAMS\${PRODUCT_FA}\کارت اتصال اندروید.lnk"
   Delete "$SMPROGRAMS\${PRODUCT_FA}\حذف نصب.lnk"
   RMDir "$SMPROGRAMS\${PRODUCT_FA}"
 

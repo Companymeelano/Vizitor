@@ -175,6 +175,19 @@ function New-RandomPassword([int]$Len = 16) {
     return $sb.ToString()
 }
 
+# کد راه‌اندازی اپ اندروید (۸ کاراکتر A-Z و ۰-۹) — روی کارت اتصال/QR می‌آید
+function New-SetupToken([int]$Len = 8) {
+    $chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    $sb = New-Object System.Text.StringBuilder
+    $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+    $buf = New-Object byte[] 1
+    for ($i = 0; $i -lt $Len; $i++) {
+        $rng.GetBytes($buf)
+        [void]$sb.Append($chars[$buf[0] % $chars.Length])
+    }
+    return $sb.ToString()
+}
+
 # پرسش از کاربر با مقدار پیش‌فرض؛ در حالت -Auto یا ورودی بسته، پیش‌فرض برگردانده می‌شود
 function Read-Prompt([string]$Prompt, [string]$Default = "") {
     if ($script:Unattended) {
@@ -891,8 +904,9 @@ if ($SkipFirewall) {
 } else {
     try {
         if (-not (Get-NetFirewallRule -DisplayName "Vizitor API" -ErrorAction SilentlyContinue)) {
-            New-NetFirewallRule -DisplayName "Vizitor API" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:PublicPort -Profile Any | Out-Null
-            Write-Ok "قانون فایروال برای پورت $($script:PublicPort)/TCP ساخته شد (Vizitor API)"
+            # فقط شبکهٔ محلی — سامانه طوری طراحی شده که روی اینترنت باز نشود
+            New-NetFirewallRule -DisplayName "Vizitor API" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $script:PublicPort -RemoteAddress LocalSubnet -Profile Any | Out-Null
+            Write-Ok "قانون فایروال برای پورت $($script:PublicPort)/TCP فقط برای شبکهٔ محلی ساخته شد (Vizitor API)"
         } else {
             Write-Info "قانون فایروال Vizitor API از قبل وجود دارد"
         }
@@ -977,6 +991,27 @@ function Invoke-AndroidPrep {
         if ($done) { Write-Ok "پورت 1433 فقط برای شبکهٔ محلی باز شد (Vizitor SQL 1433)" }
         else { Write-Warn "قاعدهٔ فایروال ساخته نشد؛ دستی:  netsh advfirewall firewall add rule name=`"Vizitor SQL 1433`" dir=in action=allow protocol=TCP localport=1433 remoteip=localsubnet" }
     }
+    # --- کارت اتصال + کد QR برای برنامهٔ اندروید ---------------------------
+    # همهٔ چیزی که اپ لازم دارد در یک تصویر/فایل؛ ویزیتور فقط نام کاربری و
+    # کلمهٔ عبور خودش را وارد می‌کند.
+    $pkgDir = Join-Path $script:AppHome "setup"
+    if (-not (Test-Path $pkgDir)) { New-Item -ItemType Directory -Force -Path $pkgDir | Out-Null }
+    try {
+        $prevEap2 = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $cardOut = & $script:PyExe "$script:AppHome\api\android_connect.py" --config "$script:ConfigFile" --package-dir "$pkgDir" --erp-db $erp --login $login --password-file $pwFile --token auto --update-config 2>&1
+        $ErrorActionPreference = $prevEap2
+        foreach ($l in $cardOut) { Write-Info $l }
+        if (Test-Path (Join-Path $pkgDir "android-connect.png")) {
+            Write-Ok "کارت اتصال اندروید ساخته شد:"
+            Write-Info "   تصویر QR  : $(Join-Path $pkgDir 'android-connect.png')"
+            Write-Info "   کارت متنی  : $(Join-Path $pkgDir 'android-connect.txt')"
+            Write-Info "   فایل JSON  : $(Join-Path $pkgDir 'android-connect.json')"
+        }
+    } catch {
+        Write-Warn "ساخت کارت اتصال اندروید ممکن نشد: $($_.Exception.Message)"
+    }
+
     Write-Ok "اتصال مستقیم اندروید آماده است (سرور: $script:Addr ، پورت: 1433 ، دیتابیس: $erp ، کاربر: $login)"
     Write-Info "جزئیات (بدون رمز): $jsonOut"
     return $true
@@ -1288,6 +1323,8 @@ if ($script:AndroidOk) {
     Write-Host "     $($script:Addr),1433  /  دیتابیس $($script:ErpDb)  /  کاربر $($script:AndroidLogin)" -ForegroundColor Green
     Write-Host "     رمز: در فایل $script:DataDir\android_app_password.txt (فقط مدیر؛ در گزارش‌ها چاپ نمی‌شود)"
 }
+Write-Host "  کارت اتصال  : $(Join-Path $script:AppHome 'setup\android-connect.txt')"
+Write-Host "  تصویر QR    : $(Join-Path $script:AppHome 'setup\android-connect.png')"
 Write-Host "  فایل اتصال  : $(Join-Path $script:AppHome 'connect.txt')"
 Write-Host "  فایل تنظیمات : $script:ConfigFile"
 Write-Host "  لاگ سرویس   : $script:LogFile"

@@ -449,3 +449,93 @@ class VisitorsViewModel(private val repo: VizitorRepository) : ViewModel() {
    curl -N http://سرور/api/events -H "Authorization: Bearer <TOKEN>"
    ```
    `-N` یعنی بدون buffer — رویدادها همان لحظه می‌آیند.
+
+---
+
+## اتصال مستقیم به SQL Server (بدون تنظیم دستی) — از نسخهٔ نصب‌کنندهٔ ۱.۰
+
+نصب‌کنندهٔ ویندوز می‌تواند «اتصال مستقیم اندروید به SQL Server» را آماده کند؛ آن‌وقت
+برنامهٔ اندروید بدون هیچ تایپ کردنی به همان SQL Server وصل می‌شود.
+
+### ۱. دو درخواست اضافه (سمت سرور آماده و تست‌شده است)
+
+```http
+GET http://<server>/api/config
+```
+```json
+{
+  "api_url": "http://<server>/api",
+  "db_engine": "sqlserver",
+  "direct_sql": {
+    "enabled": true,
+    "mode": "direct_sql",
+    "host": "192.168.1.150",
+    "port": 1433,
+    "database": "Meelano",
+    "login": "vizitor_android",
+    "encrypt": "no",
+    "trust_server_certificate": true,
+    "application_intent": "ReadOnly",
+    "password_required": true,
+    "setup_path": "/api/direct-sql/setup",
+    "token_required": true
+  }
+}
+```
+> رمز SQL **در این پاسخ نیست**؛ فقط این‌که اتصال مستقیم آماده است.
+
+```http
+GET http://<server>/api/direct-sql/setup      X-Vizitor-Token: <کد راه‌اندازی>
+```
+```json
+{
+  "ok": true, "host": "192.168.1.150", "port": 1433, "database": "Meelano",
+  "login": "vizitor_android", "password": "…",
+  "connection_string": "jdbc:jtds:sqlserver://192.168.1.150,1433/Meelano;user=vizitor_android;password=…?useUnicode=true&characterEncoding=UTF-8"
+}
+```
+* کد غلط/نبود → `403 {"error":"bad_setup_code"}` (۱۰ تلاش غلط = یک دقیقه قفل). کد هرگز در لاگ سرور نمی‌آید.
+* کد راه‌اندازی روی **کارت اتصال** و **کد QR** نصب‌کننده است
+  (`C:\Vizitor\setup\android-connect.txt` و `.png`).
+
+### ۲. کد QR کارت اتصال
+
+```
+vizitor://c?h=<host>&p=<port>&d=<database>&u=<login>&t=<token>&a=<api base (url-encoded)>
+```
+
+### ۳. کوتاه‌ترین مسیر در برنامهٔ اندروید (حدود ۲۰ خط به کد موجود اضافه می‌شود)
+
+۱) کاربر یک‌بار QR را اسکن می‌کند (یا فقط نشانی سرور را می‌زند):
+`C:\Vizitor` → `setup\android-connect.txt` یا همان QR در صفحهٔ پایان نصب.
+
+۲) اپ `GET /api/config` را می‌زند (همان تابع `discover()` که در همین سند آمده). اگر پاسخ
+`direct_sql.enabled = true` داشت:
+
+```kotlin
+val ds = json.optJSONObject("direct_sql")
+if (ds != null && ds.optBoolean("enabled")) {
+    // ۳) گرفتن رمز با کد راه‌اندازی (فقط یک‌بار، در شبکهٔ محلی)
+    val setup = httpGetJson(
+        apiBase + "/direct-sql/setup",
+        mapOf("X-Vizitor-Token" to prefs.setupToken)      // کد از QR
+    )
+    // ۴) ذخیره در همان Settings موجود (هیچ صفحهٔ جدیدی لازم نیست)
+    prefs.saveDirectSql(
+        host     = setup.getString("host"),
+        port     = setup.getInt("port"),
+        database = setup.getString("database"),
+        user     = setup.getString("login"),
+        password = setup.getString("password"),
+        options  = "encrypt=false;trustServerCertificate=true;applicationIntent=ReadOnly"
+    )
+}
+```
+
+۳) از این لحظه، فقط صفحهٔ ورود می‌ماند: **نام کاربری و کلمهٔ عبور ویزیتور** (همان
+`dbo.sys_users` سامانهٔ اصلی). اگر اینترنت/SQL قطع شد، پیام واضح + تلاش مجدد (خواستهٔ
+پروژه) و هیچ دادهٔ کهنه‌ای بدون نمایش وضعیت نشان داده نمی‌شود.
+
+> نکتهٔ امنیتی: `vizitor_android` فقط `db_datareader` و روی چند شیء مشخص `EXECUTE/INSERT`
+> دارد؛ رمز آن در `C:\ProgramData\Vizitor\android_app_password.txt` (فقط SYSTEM و admin) است و
+> فقط با کد راه‌اندازی از طریق شبکهٔ محلی قابل گرفتن است.

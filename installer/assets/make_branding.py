@@ -1,141 +1,179 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Vizitor setup branding generator  (installer/assets)
+Vizitor branding generator  —  builds the icon and the NSIS wizard bitmaps
+from the master icon (installer/assets/icon-v2-cutout.png).
 
-Builds every bitmap the NSIS wizard needs, from one place, so the look stays
-consistent and can be re-generated at any time:
+Outputs (all inside installer/assets):
+    vizitor.ico            16/24/32/48/64/128/256 px  (installer + app + shortcuts)
+    vizitor.png            1024 px master (docs / Android / README)
+    wizard-welcome.bmp     164x314  (MUI_WELCOMEFINISHPAGE_BITMAP)
+    wizard-unwelcome.bmp   164x314  (MUI_UNWELCOMEFINISHPAGE_BITMAP)
+    wizard-header.bmp      150x57   (MUI_HEADERIMAGE_BITMAP)
 
-    wizard-welcome.bmp   164 x 314   MUI welcome / finish (side panel)
-    wizard-header.bmp    150 x  57   MUI inner-page header
-    wizard-unwelcome.bmp 164 x 314   uninstaller side panel
-
-Run:
-    python make_branding.py
-
-Requires: pillow  (pip install pillow)
+Run:  python3 installer/assets/make_branding.py
 """
-from PIL import Image, ImageDraw, ImageFont
 import os
 
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
 HERE = os.path.dirname(os.path.abspath(__file__))
+MASTER = os.path.join(HERE, "icon-v2-cutout.png")
 
-NAVY_TOP = (10, 23, 48)
-NAVY_BOT = (27, 42, 99)
-GOLD_1 = (247, 205, 96)
-GOLD_2 = (222, 165, 42)
-TEAL = (34, 205, 194)
-INK = (233, 238, 250)
-PAPER = (247, 249, 252)
-
+NAVY_TOP = (9, 14, 45)
+NAVY_MID = (26, 42, 99)
+NAVY_BOT = (8, 12, 38)
+GOLD = (232, 199, 102)
+GOLD_DEEP = (196, 154, 55)
+INK = (233, 238, 255)
 FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 
-def vgradient(w, h, top, bottom):
-    img = Image.new("RGB", (w, h))
+def gradient(size, top, mid, bottom):
+    w, h = size
+    img = Image.new("RGB", size)
     d = ImageDraw.Draw(img)
     for y in range(h):
-        t = y / max(h - 1, 1)
-        d.line([(0, y), (w, y)], fill=(
-            int(top[0] + (bottom[0] - top[0]) * t),
-            int(top[1] + (bottom[1] - top[1]) * t),
-            int(top[2] + (bottom[2] - top[2]) * t)))
+        t = y / float(max(1, h - 1))
+        if t < 0.5:
+            k = t / 0.5
+            c = tuple(int(top[i] + (mid[i] - top[i]) * k) for i in range(3))
+        else:
+            k = (t - 0.5) / 0.5
+            c = tuple(int(mid[i] + (bottom[i] - mid[i]) * k) for i in range(3))
+        d.line([(0, y), (w, y)], fill=c)
     return img
 
 
-def draw_v(img, cx, cy, size, color_hi=GOLD_1, color_lo=GOLD_2, pin=True):
-    """Draw the Vizitor 'V' mark: two thick strokes + a small pin dot."""
-    d = ImageDraw.Draw(img)
-    s = size
-    stroke = max(2, int(s * 0.20))
-    left_top = (cx - s / 2, cy - s / 2)
-    right_top = (cx + s / 2, cy - s / 2)
-    bottom = (cx, cy + s / 2)
-    # left stroke
-    d.line([left_top, bottom], fill=color_hi, width=stroke)
-    # right stroke (slightly darker, gives depth)
-    d.line([right_top, bottom], fill=color_lo, width=stroke)
-    # flat tops
-    for p in (left_top, right_top):
-        d.line([(p[0] - stroke / 2, p[1]), (p[0] + stroke / 2, p[1])],
-               fill=color_hi, width=max(1, stroke // 3))
-    if pin:
-        r = max(2, int(s * 0.075))
-        px, py = right_top[0], right_top[1] - int(s * 0.13)
-        d.ellipse([px - r, py - r, px + r, py + r], fill=TEAL)
+def stripes(img, step=22, alpha=12, angle=32):
+    w, h = img.size
+    layer = Image.new("RGBA", (w * 2, h * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    big = max(w, h) * 2
+    for x in range(-big, 2 * big, step):
+        d.line([(x, 0), (x + big, big)], fill=(255, 255, 255, alpha), width=6)
+    layer = layer.rotate(angle, resample=Image.BICUBIC, expand=False)
+    layer = layer.crop(((layer.size[0] - w) // 2, (layer.size[1] - h) // 2,
+                        (layer.size[0] - w) // 2 + w, (layer.size[1] - h) // 2 + h))
+    img.alpha_composite(layer)
     return img
 
 
-def vtext(text, font, fill, spacing=0):
-    """Render rotated (90 deg CCW) text; returns an RGBA image."""
-    probe = Image.new("RGBA", (10, 10))
-    pd = ImageDraw.Draw(probe)
-    widths, total = [], 0
-    for ch in text:
-        w = pd.textlength(ch, font=font)
-        widths.append(w)
-        total += w
-    total += spacing * (len(text) - 1)
-    asc, desc = font.getmetrics()
-    strip = Image.new("RGBA", (int(total) + 8, asc + desc + 8), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(strip)
-    x = 4
-    for ch, w in zip(text, widths):
-        sd.text((x, 4), ch, font=font, fill=fill)
-        x += w + spacing
-    return strip.rotate(90, expand=True)
+def glow(img, center, radius, color=(120, 160, 255), alpha=60):
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    cx, cy = center
+    d.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=color + (alpha,))
+    layer = layer.filter(ImageFilter.GaussianBlur(radius * 0.55))
+    img.alpha_composite(layer)
+    return img
 
 
-def welcome(path):
-    W, H = 164, 314
-    img = vgradient(W, H, NAVY_TOP, NAVY_BOT)
-    d = ImageDraw.Draw(img, "RGBA")
-    # soft diagonal light streaks
-    for i in range(4):
-        off = -40 + i * 46
-        d.polygon([(off, H), (off + 26, H), (off + 26 + 90, 0), (off + 90, 0)],
-                  fill=(255, 255, 255, 9))
-    # top gold hairline
-    d.rectangle([0, 0, W, 3], fill=GOLD_2)
-    # V mark
-    draw_v(img, W / 2, 104, 74)
-    # rising bars under the mark (growth)
-    bx, by, bw = W / 2 - 40, 168, 13
-    for i, bh in enumerate((14, 22, 32)):
-        d.rectangle([bx + i * (bw + 7), by + (32 - bh), bx + i * (bw + 7) + bw, by + 32],
-                    fill=GOLD_1 if i < 2 else GOLD_2)
-    # wordmark (rotated, latin - keeps the bitmap font-safe)
-    t = vtext("VIZITOR", ImageFont.truetype(FONT_REG, 17), INK + (235,), spacing=6)
-    img.paste(t, (int(W - t.width - 16), int((H - t.height) / 2) - 30), t)
-    # footer band + build stamp
-    d.rectangle([0, H - 34, W, H - 31], fill=GOLD_2)
-    f = ImageFont.truetype(FONT_REG, 10)
-    d.text((12, H - 24), "vizitor  |  atiran", font=f, fill=(196, 205, 228))
-    img.convert("RGB").save(path)
+def paste_icon(base, icon, box_w, y, shadow=True):
+    w, h = base.size
+    ic = icon.copy()
+    ic.thumbnail((box_w, box_w), Image.LANCZOS)
+    x = (w - ic.size[0]) // 2
+    if shadow:
+        sh = Image.new("RGBA", base.size, (0, 0, 0, 0))
+        s = Image.new("RGBA", ic.size, (0, 0, 0, 130))
+        s.putalpha(ic.split()[3].point(lambda v: int(v * 0.5)))
+        sh.paste(s, (x, y + 6), s)
+        base.alpha_composite(sh.filter(ImageFilter.GaussianBlur(6)))
+    base.alpha_composite(ic, (x, y))
+    return base
 
 
-def header(path):
-    W, H = 150, 57
-    img = Image.new("RGB", (W, H), PAPER)
+def text_center(draw, cx, y, s, font, fill, spacing=0):
+    if spacing:
+        widths = [draw.textlength(ch, font=font) for ch in s]
+        total = sum(widths) + spacing * (len(s) - 1)
+        x = cx - total / 2.0
+        for ch, cw in zip(s, widths):
+            draw.text((x, y), ch, font=font, fill=fill)
+            x += cw + spacing
+        return total
+    w = draw.textlength(s, font=font)
+    draw.text((cx - w / 2.0, y), s, font=font, fill=fill)
+    return w
+
+
+def make_welcome(size=(164, 314), icon=None):
+    img = gradient(size, NAVY_TOP, NAVY_MID, NAVY_BOT).convert("RGBA")
+    img = stripes(img)
+    img = glow(img, (size[0] // 2, 118), 74, (108, 150, 255), 70)
+
+    img = paste_icon(img, icon, 108, 58)
+
     d = ImageDraw.Draw(img)
-    for y in range(H):
-        t = y / (H - 1)
-        d.line([(0, y), (W, y)], fill=(int(247 - 6 * t), int(249 - 4 * t), int(252 - 2 * t)))
-    d.rectangle([0, H - 3, W, H], fill=(NAVY_BOT[0], NAVY_BOT[1], NAVY_BOT[2]))
-    draw_v(img, 34, 27, 34, pin=True)
-    d.line([(62, 16), (134, 16)], fill=(214, 221, 236), width=1)
-    d.line([(62, 24), (118, 24)], fill=(224, 230, 242), width=1)
-    img.save(path)
+    f1 = ImageFont.truetype(FONT_BOLD, 15)
+    f2 = ImageFont.truetype(FONT_REG, 9)
+    text_center(d, size[0] // 2, 196, "VIZITOR", f1, GOLD + (255,), spacing=2)
+
+    d.line([(size[0] // 2 - 32, 224), (size[0] // 2 + 32, 224)], fill=GOLD_DEEP + (230,), width=1)
+    text_center(d, size[0] // 2, 236, "vizitor  |  atiran", f2, INK + (215,), spacing=0)
+
+    # bottom / top accents
+    d.rectangle([0, 0, size[0] - 1, 2], fill=GOLD + (255,))
+    d.rectangle([0, size[1] - 3, size[0] - 1, size[1] - 1], fill=GOLD + (255,))
+    d.rectangle([0, size[1] - 14, size[0] - 1, size[1] - 12], fill=(255, 255, 255, 26))
+    # soft corner sheen
+    sheen = Image.new("RGBA", size, (0, 0, 0, 0))
+    ImageDraw.Draw(sheen).polygon([(0, 0), (size[0], 0), (0, int(size[1] * 0.42))],
+                                 fill=(255, 255, 255, 12))
+    img.alpha_composite(sheen)
+    return img.convert("RGB")
+
+
+def make_header(size=(150, 57), icon=None):
+    img = gradient(size, (12, 20, 58), (30, 48, 108), (10, 16, 46)).convert("RGBA")
+    img = stripes(img, step=16, alpha=10, angle=32)
+    img = glow(img, (size[0] // 2, size[1] // 2), 40, (110, 150, 255), 55)
+    ic = icon.copy()
+    ic.thumbnail((40, 40), Image.LANCZOS)
+    img.alpha_composite(ic, ((size[0] - ic.size[0]) // 2, (size[1] - ic.size[1]) // 2))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, size[1] - 2, size[0] - 1, size[1] - 1], fill=GOLD + (255,))
+    return img.convert("RGB")
 
 
 def main():
-    welcome(os.path.join(HERE, "wizard-welcome.bmp"))
-    welcome(os.path.join(HERE, "wizard-unwelcome.bmp"))
-    header(os.path.join(HERE, "wizard-header.bmp"))
-    for f in ("wizard-welcome.bmp", "wizard-unwelcome.bmp", "wizard-header.bmp"):
+    icon = Image.open(MASTER).convert("RGBA")
+    icon = icon.resize((1024, 1024), Image.LANCZOS)
+
+    # --- master png ---------------------------------------------------------
+    icon.save(os.path.join(HERE, "vizitor.png"))
+    icon.resize((512, 512), Image.LANCZOS).save(os.path.join(HERE, "vizitor-icon.png"))
+
+    # --- multi-size ico -----------------------------------------------------
+    sizes = [256, 128, 64, 48, 32, 24, 16]
+    frames = []
+    for s in sizes:
+        im = icon.resize((s, s), Image.LANCZOS)
+        if s <= 48:                       # crisper small sizes: a touch of contrast
+            r, g, b, a = im.split()
+            a = a.point(lambda v: int(min(255, v * 1.08)))
+            im = Image.merge("RGBA", (r, g, b, a))
+        frames.append(im)
+    frames[0].save(os.path.join(HERE, "vizitor.ico"), format="ICO",
+                   sizes=[(s, s) for s in sizes], append_images=frames[1:])
+
+    # --- wizard bitmaps -----------------------------------------------------
+    w = make_welcome(icon=icon)
+    w.save(os.path.join(HERE, "wizard-welcome.bmp"), format="BMP")
+    w.save(os.path.join(HERE, "wizard-unwelcome.bmp"), format="BMP")
+    make_header(icon=icon).save(os.path.join(HERE, "wizard-header.bmp"), format="BMP")
+
+    # --- previews (2x, for eyeballing) --------------------------------------
+    w.resize((328, 628), Image.NEAREST).save("/tmp/wizard-welcome.png")
+    make_header(icon=icon).resize((300, 114), Image.NEAREST).save("/tmp/wizard-header.png")
+
+    for f in ("vizitor.ico", "vizitor.png", "vizitor-icon.png",
+              "wizard-welcome.bmp", "wizard-unwelcome.bmp", "wizard-header.bmp"):
         p = os.path.join(HERE, f)
-        print("%-24s %8d B" % (f, os.path.getsize(p)))
+        print("%-24s %8d bytes" % (f, os.path.getsize(p)))
+    print("icon sizes in ico:", sizes)
 
 
 if __name__ == "__main__":
