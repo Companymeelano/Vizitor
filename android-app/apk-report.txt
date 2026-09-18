@@ -1,0 +1,121 @@
+گزارش بازرسی APK — ویزیتور مستقیم (اتصال مستقیم به SQL Server، پورت ۱۴۳۳)
+تاریخ ساخت: 2026-09-18 14:35:04 UTC   کامیت: 2782a86eb475ac28d77f78692cfffffc2da1fd87
+================================================================================
+
+### dist/VizitorDirect-1.0.0-debug.apk
+حجم: 10714438 بایت
+3a89d78393f28bcff7d237e23f0a705f15aec15cc941fad9d3f43b27f09fe7ce  dist/VizitorDirect-1.0.0-debug.apk
+
+--- تأیید امضا (apksigner) ---
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+Signer #1 certificate SHA-256 digest: a4e06ca56a624b6cdc71e004ab68afd5426c9b650e8c640465448366a4536858
+Signer #1 certificate SHA-1 digest: 89723479488b71cb0d42ba259d501d6ba6db3fdf
+Signer #1 certificate MD5 digest: baed207c2acef36eabe46ff1098be0fa
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+Signer #1 public key SHA-256 digest: 999417b1a031738731f31af4cd5fa506196d07b52a811ba1c9f2451bbc397f7a
+Signer #1 public key SHA-1 digest: 8863ac9ec13cab8e9b4e6942e8cebf7ca3345fcd
+Signer #1 public key MD5 digest: a5b272ecafc4c7840e706fef1514575e
+
+--- فهرست داخل APK (نمونه) ---
+Archive:  dist/VizitorDirect-1.0.0-debug.apk
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+       56  1981-01-01 01:01   META-INF/com/android/build/gradle/app-metadata.properties
+ 17301528  1981-01-01 01:01   classes.dex
+  7313020  1981-01-01 01:01   classes10.dex
+    42292  1981-01-01 01:01   classes2.dex
+     8744  1981-01-01 01:01   classes3.dex
+   110848  1981-01-01 01:01   classes4.dex
+    11460  1981-01-01 01:01   classes5.dex
+     9356  1981-01-01 01:01   classes6.dex
+   125268  1981-01-01 01:01   classes7.dex
+   140000  1981-01-01 01:01   classes8.dex
+    50940  1981-01-01 01:01   classes9.dex
+     4391  1981-01-01 01:01   assets/licenses/Vazirmatn-OFL.txt
+     1738  1981-01-01 01:01   DebugProbesKt.bin
+        6  1981-01-01 01:01   META-INF/androidx.activity_activity-compose.version
+        6  1981-01-01 01:01   META-INF/androidx.activity_activity-ktx.version
+        6  1981-01-01 01:01   META-INF/androidx.activity_activity.version
+        6  1981-01-01 01:01   META-INF/androidx.annotation_annotation-experimental.version
+       67  1981-01-01 01:01   META-INF/androidx.arch.core_core-runtime.version
+        6  1981-01-01 01:01   META-INF/androidx.autofill_autofill.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.animation_animation-core.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.animation_animation.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.foundation_foundation-layout.version
+
+--- تعداد فایل‌های dex ---
+10
+--- حضور اجزای کلیدی (جست‌وجو در dex) ---
+  com/microsoft/sqlserver/jdbc/SQLServerDriver : 12
+  net/sourceforge/jtds/jdbc/Driver : 2
+  ir/atiran/vizitor/direct/MainActivity : 37
+  ir/atiran/vizitor/data/sql/MeelanoDataSource : 44
+  com/journeyapps/barcodescanner : 85
+
+### dist/VizitorDirect-1.0.0.apk
+حجم: 7623415 بایت
+49b8b94fc33a7631f06aee151c018a77902022efaccf24d395751c57488bcf7d  dist/VizitorDirect-1.0.0.apk
+
+--- تأیید امضا (apksigner) ---
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Vizitor Direct, OU=Meelano Studio Design, O=Meelano, L=Tehran, C=IR
+Signer #1 certificate SHA-256 digest: 288ad97e65e6ea40c977189cefa529f3fff450151db94040d4f67759f41e67d3
+Signer #1 certificate SHA-1 digest: fc8ebf7aacab15c236c615d4e5ac4a12ae8910f5
+Signer #1 certificate MD5 digest: 271a0499b58911b25eda3375144b9908
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+Signer #1 public key SHA-256 digest: a70472c27335315f9f07417d933f9e9d16f329f56bfda269620ec837d07a53f7
+Signer #1 public key SHA-1 digest: 277325788874373b4ae17534455501f572754e33
+Signer #1 public key MD5 digest: 3d233bfcd075f40fe5fefcf0ffec04e0
+
+--- فهرست داخل APK (نمونه) ---
+Archive:  dist/VizitorDirect-1.0.0.apk
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+       56  1981-01-01 01:01   META-INF/com/android/build/gradle/app-metadata.properties
+       46  1981-01-01 01:01   META-INF/version-control-info.textproto
+     6775  1981-01-01 01:01   assets/dexopt/baseline.prof
+      323  1981-01-01 01:01   assets/dexopt/baseline.profm
+ 13044768  1981-01-01 01:01   classes.dex
+  5923372  1981-01-01 01:01   classes2.dex
+     4391  1981-01-01 01:01   assets/licenses/Vazirmatn-OFL.txt
+     1738  1981-01-01 01:01   DebugProbesKt.bin
+        6  1981-01-01 01:01   META-INF/androidx.activity_activity-compose.version
+        6  1981-01-01 01:01   META-INF/androidx.activity_activity-ktx.version
+        6  1981-01-01 01:01   META-INF/androidx.activity_activity.version
+        6  1981-01-01 01:01   META-INF/androidx.annotation_annotation-experimental.version
+       67  1981-01-01 01:01   META-INF/androidx.arch.core_core-runtime.version
+        6  1981-01-01 01:01   META-INF/androidx.autofill_autofill.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.animation_animation-core.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.animation_animation.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.foundation_foundation-layout.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.foundation_foundation.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.material3_material3.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.material_material-icons-core.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.material_material-ripple.version
+        6  1981-01-01 01:01   META-INF/androidx.compose.runtime_runtime-saveable.version
+
+--- تعداد فایل‌های dex ---
+2
+--- حضور اجزای کلیدی (جست‌وجو در dex) ---
+  com/microsoft/sqlserver/jdbc/SQLServerDriver : 11
+  net/sourceforge/jtds/jdbc/Driver : 1
+  ir/atiran/vizitor/direct/MainActivity : 36
+  ir/atiran/vizitor/data/sql/MeelanoDataSource : 42
+  com/journeyapps/barcodescanner : 80
