@@ -31,9 +31,11 @@ SetCompressorDictSize 32
 !define STUDIO      "Meelano Studio Design"
 
 ; --- رنگ‌های رابط (قالب 0xRRGGBB — به‌ترتیب بایت‌های قرمز، سبز، آبی) ---
+!define COL_PAGE      0x0B2138
+!define COL_BAND      0x102A45
 !define COL_NAVY1     0x0B2138
-!define COL_NAVY2     0x123A5E
-!define COL_NAVY3     0x1B5586
+!define COL_NAVY2     0x102A45
+!define COL_NAVY3     0x143254
 !define COL_NAVY      0x0E2B4A
 !define COL_ACCENT    0xD9A23C
 !define COL_CARD      0xF4F8FC
@@ -143,6 +145,7 @@ Var /GLOBAL FontHead
 Var /GLOBAL FontBody
 Var /GLOBAL FontSmall
 Var /GLOBAL FontBtn
+Var /GLOBAL FontLoaded
 
 ; ---------------------------------------------------------------------------
 ;  ظاهر
@@ -286,6 +289,7 @@ SectionEnd
 Section "راهنماها و اسکریپت‌های SQL (بستهٔ فارسی)" SecDocs
   SetShellVarContext all
   SetOutPath "$INSTDIR\docs"
+  File /oname=Vazirmatn-OFL.txt "assets\fonts\OFL.txt"
   File "..\README.md"
   File "..\INSTALL.md"
   File "..\ANDROID_INTEGRATION.md"
@@ -504,24 +508,26 @@ FunctionEnd
 !macroend
 
 ; نوار بالای صفحه: گرادیان سه‌رنگ + خط طلایی + شمارهٔ گام
+!macro PageBg
+  !insertmacro Rect 0 0 300 140 ${COL_PAGE}
+!macroend
+
 !macro PageBand step
-  !insertmacro Rect 0 0 34% 7 ${COL_NAVY1}
-  !insertmacro Rect 34% 0 33% 7 ${COL_NAVY2}
-  !insertmacro Rect 67% 0 33% 7 ${COL_NAVY3}
-  !insertmacro Rect 0 7 100% 1 ${COL_ACCENT}
-  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_RIGHT}|${SS_NOTIFY}" 0 2% 1u 96% 6u "گام ${step} از ۴  •  سامانهٔ ویزیتور"
+  !insertmacro Rect 0 0 100% 8 ${COL_BAND}
+  !insertmacro Rect 0 8 100% 1 ${COL_ACCENT}
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_RIGHT}|${SS_NOTIFY}" 0 2% 2u 96% 6u "گام ${step} از ۴   •   سامانهٔ ویزیتور"
   Pop $0
-  SetCtlColors $0 ${COL_BAND_TEXT} ${COL_NAVY2}
+  SetCtlColors $0 ${COL_BAND_TEXT} ${COL_BAND}
   SendMessage $0 ${WM_SETFONT} $FontSmall 1
 !macroend
 
 ; نوار پایین: امضای سازنده و گروه نرم‌افزاری
 !macro PageCreditBar
-  !insertmacro Rect 0 130 100% 10 ${COL_NAVY1}
+  !insertmacro Rect 0 130 100% 10 ${COL_BAND}
   !insertmacro Rect 0 129 100% 1 ${COL_ACCENT}
-  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_CENTER}|${SS_NOTIFY}" 0 0 129u 100% 10u "طراحی و برنامه‌نویسی: ${AUTHOR_FA} (${AUTHOR_EN})   •   گروه نرم‌افزاری: ${STUDIO}"
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_CENTER}|${SS_NOTIFY}" 0 0 130u 100% 10u "طراحی و برنامه‌نویسی: ${AUTHOR_FA} (${AUTHOR_EN})   •   گروه نرم‌افزاری: ${STUDIO}"
   Pop $0
-  SetCtlColors $0 ${COL_BAND_TEXT} ${COL_NAVY1}
+  SetCtlColors $0 ${COL_BAND_TEXT} ${COL_BAND}
   SendMessage $0 ${WM_SETFONT} $FontSmall 1
 !macroend
 
@@ -537,7 +543,9 @@ Function PageServerCreate
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
+  SetCtlColors $PageDialog "" ${COL_PAGE}
 
+  !insertmacro PageBg
   !insertmacro PageBand ۱
 
   !insertmacro CardBox 0 9 100 61
@@ -624,7 +632,9 @@ Function PageSqlCreate
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
+  SetCtlColors $PageDialog "" ${COL_PAGE}
 
+  !insertmacro PageBg
   !insertmacro PageBand ۲
 
   !insertmacro CardBox 0 9 100 55
@@ -824,7 +834,9 @@ Function PageDbCreate
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
+  SetCtlColors $PageDialog "" ${COL_PAGE}
 
+  !insertmacro PageBg
   !insertmacro PageBand ۳
 
   !insertmacro CardBox 0 9 100 78
@@ -995,7 +1007,9 @@ Function PageActivationCreate
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
+  SetCtlColors $PageDialog "" ${COL_PAGE}
 
+  !insertmacro PageBg
   !insertmacro PageBand ۴
 
   !insertmacro CardBox 0 9 100 65
@@ -1099,14 +1113,21 @@ Function .onInit
   StrCpy $DbListOk "0"
   StrCpy $DbListCount "0"
 
-  ; فونت‌های رابط (یک‌بار برای همهٔ صفحه‌ها)
-  CreateFont $FontTitle "Tahoma" "12" "700"
-  CreateFont $FontHead  "Tahoma" "10" "700"
-  CreateFont $FontBody  "Tahoma" "9"  "400"
-  CreateFont $FontSmall "Tahoma" "8"  "400"
-  CreateFont $FontBtn   "Tahoma" "10" "700"
-
   InitPluginsDir
+
+  ; فونت وزیرمتن فقط برای همین نصب‌کننده بارگذاری می‌شود (روی سیستم نصب نمی‌شود)
+  File /oname=$PLUGINSDIR\Vazirmatn-Regular.ttf "assets\fonts\Vazirmatn-Regular.ttf"
+  File /oname=$PLUGINSDIR\Vazirmatn-Bold.ttf    "assets\fonts\Vazirmatn-Bold.ttf"
+  System::Call 'gdi32::AddFontResource(t "$PLUGINSDIR\Vazirmatn-Regular.ttf") i .r0'
+  System::Call 'gdi32::AddFontResource(t "$PLUGINSDIR\Vazirmatn-Bold.ttf") i .r1'
+  StrCpy $FontLoaded "$r0"
+
+  ; فونت‌های رابط (یک‌بار برای همهٔ صفحه‌ها) — وزیرمتن با سه اندازه
+  CreateFont $FontTitle "Vazirmatn" "13" "700"
+  CreateFont $FontHead  "Vazirmatn" "11" "700"
+  CreateFont $FontBody  "Vazirmatn" "10" "400"
+  CreateFont $FontSmall "Vazirmatn" "9"  "400"
+  CreateFont $FontBtn   "Vazirmatn" "11" "700"
   File /oname=$PLUGINSDIR\preflight.ps1 "nsi\preflight.ps1"
   File /oname=$PLUGINSDIR\sql_admin_tools.py "..\api\sql_admin_tools.py"
   nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\preflight.ps1" -Out "$PLUGINSDIR\pre.ini"'
@@ -1217,6 +1238,14 @@ Function StyleWizardButtons
   SendMessage $0 ${WM_SETFONT} $FontBtn 1
   GetDlgItem $0 $HWNDPARENT 3
   SendMessage $0 ${WM_SETFONT} $FontBtn 1
+FunctionEnd
+
+Function .onGUIEnd
+  ; فونت‌هایی که فقط برای این نصب‌کننده بارگذاری شده بودند آزاد می‌شوند
+  ${If} $FontLoaded != "0"
+    System::Call 'gdi32::RemoveFontResource(t "$PLUGINSDIR\Vazirmatn-Regular.ttf") i .r0'
+    System::Call 'gdi32::RemoveFontResource(t "$PLUGINSDIR\Vazirmatn-Bold.ttf") i .r0'
+  ${EndIf}
 FunctionEnd
 
 Function un.onInit
