@@ -135,7 +135,7 @@ $script:StepN = 0
 function Write-Step([string]$Msg) {
     $script:StepN = $script:StepN + 1
     Write-Host ""
-    Write-Host "==>  گام $script:StepN: $Msg" -ForegroundColor Cyan
+    Write-Host "==>  گام ${script:StepN}: $Msg" -ForegroundColor Cyan
 }
 function Write-Banner {
     Write-Host "============================================================" -ForegroundColor White
@@ -541,14 +541,14 @@ $script:InternalPort = $script:Port
 $script:PublicPort   = $script:Port
 
 
-if ($script:PublicPort -ne 80 -and $script:PublicPort -ne 443) { $script:ApiUrl = "$script:ApiUrl:$($script:PublicPort)" }
+if ($script:PublicPort -ne 80 -and $script:PublicPort -ne 443) { $script:ApiUrl = "${script:ApiUrl}:$($script:PublicPort)" }
 $script:ApiUrl = "$script:ApiUrl/api"
 
 Write-Host ""
 Write-Host "خلاصه انتخاب‌ها:"
 Write-Info "آدرس API (اندروید): $script:ApiUrl"
 Write-Info "دیتابیس: $script:DbEngine"
-if ($script:DbEngine -eq "sqlserver") { Write-Info "  $script:DbName @ $script:DbHost:$script:DbDPort (احراز: $script:DbAuth، کاربر: $script:DbUser)" }
+if ($script:DbEngine -eq "sqlserver") { Write-Info "  $script:DbName @ ${script:DbHost}:$script:DbDPort (احراز: $script:DbAuth، کاربر: $script:DbUser)" }
 Write-Info "ادمین: $script:AdminUser"
 if ($script:ActCode) { Write-Info "کد فعال‌سازی: وارد شده ✓" } else { Write-Info "کد فعال‌سازی: خالی (فعال‌سازی بعدی)" }
 
@@ -620,7 +620,7 @@ if ($script:DbEngine -eq "sqlserver") {
             $fallbackReason = "پیش‌نیازهای SQL Server (pyodbc/درایور ODBC) کامل در دسترس نیستند"
         } elseif (-not (Test-SqlServerReachable)) {
             $needFallback = $true
-            $fallbackReason = "اتصال TCP به SQL Server در $script:DbHost:$script:DbDPort برقرار نشد"
+            $fallbackReason = "اتصال TCP به SQL Server در ${script:DbHost}:$script:DbDPort برقرار نشد"
         }
     }
     if ($needFallback) {
@@ -643,7 +643,7 @@ if ($script:DbEngine -eq "sqlserver") {
             exit 1
         }
     } else {
-        if ($script:Mode -ne "keep") { Write-Ok "اتصال به SQL Server برقرار است ($script:DbHost:$script:DbDPort)" }
+        if ($script:Mode -ne "keep") { Write-Ok "اتصال به SQL Server برقرار است (${script:DbHost}:$script:DbDPort)" }
     }
 }
 
@@ -1198,7 +1198,7 @@ function Run-Checks {
     # بررسی اتصال از بیرون (فقط هشدار)
     if ($script:PublicIp -and $script:PublicIp -ne $script:LocalIp) {
         $ext = "$($script:Proto)://$($script:Addr)"
-        if ($script:Port -ne 80 -and $script:Port -ne 443) { $ext = "$ext:$($script:Port)" }
+        if ($script:Port -ne 80 -and $script:Port -ne 443) { $ext = "${ext}:$($script:Port)" }
         if (-not (Invoke-JsonGet "$ext/api/ping")) {
             Write-Warn "آدرس خارجی $ext/api در این لحظه پاسخ نداد (ممکن است فایروال ابر، پورت‌فوروردینگ یا DNS مشکل داشته باشد — اتصال داخلی درست است)"
         } else {
@@ -1265,10 +1265,10 @@ for ($round = 1; $round -le 4; $round++) {
     $nFail = $script:CheckFailures.Count
     if ($nFail -eq 0) {
         $verifyOk = $true
-        Write-Ok "بازرسی دور $round: همه موارد، موفق ✓"
+        Write-Ok "بازرسی دور ${round}: همه موارد، موفق ✓"
         break
     }
-    Write-Warn "بازرسی دور $round: $nFail مورد ناموفق ($($script:CheckFailures -join ', ')) — تنظیمات بازبینی و تعمیر می‌شوند ..."
+    Write-Warn "بازرسی دور ${round}: $nFail مورد ناموفق ($($script:CheckFailures -join ', ')) — تنظیمات بازبینی و تعمیر می‌شوند ..."
     Repair
 }
 }   # پایان گزینهٔ «بازرسی و تعمیر خودکار»
