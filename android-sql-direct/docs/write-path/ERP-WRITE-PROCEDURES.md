@@ -201,3 +201,122 @@ ERP do exactly what its own screens do.
    price + available-quantity lookup for a visitor (the fallback rule for price tiers).
 4. The column names of `dbo.VW_InventoryAnbars` (the computed sellable-stock column),
    because its definition arrived truncated.
+
+## 5. `dbo.Edit_sail_pish` — what "editing" a pre-invoice really does (versioning!)
+
+26 parameters: the same head fields as `add_sail_pish` plus `@Shfacfo` and `@Promotion`.
+
+1. `if @mod = 1` → `begin transaction forosh`
+2. `@VisIDOld = (select VisitID from sailfact_pish where shfacfo = @Shfacfo and active = 't')`
+3. `update sailfact_pish set active = 'f', ismodify = 't' where shfacfo = @Shfacfo`
+4. `update subsailfact_pish set active = 'f' where shfacfo = @Shfacfo` — **every old line is retired**
+5. `@RDF__ = (select MAX(rdf__) from sailfact_pish where shfacfo = @Shfacfo) + 1`
+6. insert a NEW head row with the same `shfacfo` and the new `rdf__`, `active = 't'`,
+   `ismodify = 0`, `sh_f = 0`, `user_f = '--'`, `date_f = '--'`, and `VisitID = @VisIDOld`,
+   `Promotion`
+7. commit, then the same `overal_setting` 77 / 78 auto-confirm blocks (with `and active = 't'`)
+
+Three consequences the app cannot ignore:
+
+* `sailfact_pish.rdf__` is a **version counter**, not a row id. Every edit inserts
+  `(shfacfo, rdf__ + 1)` and retires the previous rows; the live pre-invoice is the row
+  with `active = 't'`.
+* A `subsailfact_pish` line belongs to a head row **by `(shfacfo, rdf__)`** — the ERP's
+  own view joins exactly that pair. New lines must carry the `rdf__` of the *current*
+  head version, and after an edit they must be written again with the new version.
+* Like `add_sail_pish`, this procedure **does not insert lines** — it only retires the
+  old ones. The insert itself is still the piece we are hunting.
+
+## 6. `dbo.FixManCustomer (@shmo)` — the customer balance
+
+```
+set xact_abort on; begin transaction a
+@Man = ISNULL(SUM(act_bed),0) - ISNULL(SUM(act_bes),0)
+       from cust_act where shmo = @Shmo and (isActive <> 0 or isActive is null)
+update CUSTOMERS set man = @man where SHMO = @shmo
+if overal_setting.id = 117 → exec FixTasvie @shmo
+exec Fix_Sys_Mandeh_Customer @shmo
+commit transaction a
+```
+
+Owns transaction `a` and re-enables `xact_abort` → never call it inside another
+transaction. `cust_act.isActive` decides which ledger rows count.
+
+## 7. Stock is recomputed from the `ka_act` ledger — never adjusted by hand
+
+`ka_act` is the goods ledger (`shka`, `tedvah`, `tedjoz`, `tedbastebandi`, `act_id`,
+`active`, `RdfAnbar`, `ProductionSeriesID`). All three procedures rebuild a quantity
+from scratch:
+
+```
+@kol = SUM((tedvah * mohvah + tedjoz) * CASE WHEN act_id IN
+        (20,22,5,19,18,48,26,85,133) THEN -1 ELSE 1 END)
+       FROM ka_act WHERE shka = @Shka AND active = 't' [AND RdfAnbar = @anbar] [AND ProductionSeriesID = @Ps]
+```
+
+then `overal_setting.id = 8` (1 = one-unit mode) also rebuilds `tedbastebandi` the same
+way, and the value is split into boxes/pieces:
+
+```
+mohvah = 1        → mojkavah = @kol,                 mojkajoz = 0
+@kol / mohvah >= 0 → mojkavah = floor(@kol/mohvah),   mojkajoz = @kol % mohvah
+otherwise          → mojkavah = -floor(abs(@kol/mohvah)), mojkajoz = @kol % mohvah
+```
+
+* `dbo.UpdateMojodiInventory @shka` → the whole-product row in `inventory`
+* `dbo.UpdateMojodiInventoryAnbars @shka` → cursor over every `inventory_anbars.rdf_anbars`
+  of that product, filtered by `ka_act.RdfAnbar`
+* `dbo.UpdateMojodiInventoryAnbarsPS @shka, @anbarID, @PsID` → only when
+  `inventory.WithProductionSerial = 1`, writes `Inventory_Anbars_PS` (`rdfAnbar`, `PsId`)
+
+`FixMojodi(@Shfac, @state = 1)` calls the first two for every line of a sales invoice
+(and the PS variant when `ProductionSeriesID` is not null).
+
+## 8. `dbo.VW_InventoryAnbars` — the availability the ERP itself shows
+
+Columns: `shka, rdf_anbars, name, tedbastebandi, mojkavah, mojkajoz, MojodiPish_vah,
+MojodiPish_joz`, over `inventory_anbars ⋈ inventory` where `inventory.active = 't'`.
+
+`MojodiPish_*` = what is left after **open pre-invoices** are taken out:
+
+```
+(mojkavah * mohvah + mojkajoz)
+  - ISNULL(SUM(TEDVAH) * mohvah + SUM(TEDJOZ), 0)
+```
+
+where the sum comes from `subsailfact_pish ⋈ sailfact_pish` on
+`shfacfo` **and** `rdf__`, filtered by `Rejected = 0 AND active = 't' AND sh_f = 0`
+and matched on `(shka, rdf_anbar)`. The value is then split into boxes/pieces exactly
+like §7 (`floor` / `%`, with the negative branch). So this is the number to show a
+visitor: on-hand stock minus what other open pre-invoices already hold.
+
+## 9. The two remaining helpers that came back
+
+* `dbo.AddFromAtiranDetailsForVisitors` (955) — writes an Atiran "details" row through
+  `AddToFromAtiranDetails`, then, when the visitor has a supervisor
+  (`visitors.supervisor_rdf <> 0`), multiplies `@bed` / `@bes` by
+  `visitors.supervisor_per`, resolves the supervisor's own customer ledger
+  (`CUSTOMERS.TafsilID where Ecode_Vis = @super and kind <> 8`) and calls itself again
+  for that supervisor. This is the *ledger* split between visitor and supervisor — not
+  a pre-invoice line writer.
+* `dbo.SelectPriceAndTedvahForushVisitorhaByDate` (1066) — the ERP's own "sales by
+  visitor between two dates" report over `VWForushKhales ⋈ inventory ⋈ kagroup ⋈
+  visitors ⋈ masir ⋈ CUSTOMERS ⋈ custgroup`, filtered by `CUSTOMERS.RDF_masir`,
+  `CUSTOMERS.group_rdf` and `kagroup.group_rdf` (including child groups through
+  `kagroup.ParentGroupRdf`), grouping per visitor + path. It returns
+  `price = SUM(kol_price_tafif)` and `tedvah = SUM(tedvah_fel * mohvah + tedjoz_fel)`.
+  It is a *report*, so it is not the price fallback rule either.
+
+## 10. Still missing
+
+1. **Who writes `subsailfact_pish` lines at all.** Neither `add_sail_pish` nor
+   `Edit_sail_pish` inserts them, so it is either a procedure we have not found yet or
+   the ERP client writes the table directly. One direct query settles it (search every
+   module for the table name).
+2. `dbo.AddToFromAtiranDetails`, `dbo.FixTasvie`, `dbo.Fix_Sys_Mandeh_Customer`,
+   `dbo.Addmaliyat`, `dbo.what_date`, `dbo.AssignTafsilCodeToEntity`,
+   `dbo.IsAccountingSystemStarted` — referenced by the bodies we now have.
+3. `dbo.VWForushKhales` (used by the price report) and the column list of `dbo.ka_act`.
+4. Where the `Atiran14050603` database lives: the last-write query returned **only
+   `Meelano`** as a non-system database on this instance, so that older column-list
+   paste came from another instance or another server.

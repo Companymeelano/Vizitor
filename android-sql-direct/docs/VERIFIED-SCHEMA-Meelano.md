@@ -653,3 +653,44 @@ Still needed (requested): `Edit_sail_pish` (the place where the ERP writes the
   settle.
 * `visitors` row 1: `supervisor = 'f'`, `per_p_d_naghd = 0.000`, `per_p_d_check = 0.000`;
   its sales limits are both 0.
+
+## 16. The remaining objects read (audit part 7, 2026-09-18)
+
+Bodies received verbatim (raw paste: `docs/audit-runs/out_11_helper_bodies.txt`,
+walk-through in `docs/write-path/ERP-WRITE-PROCEDURES.md` §5–§10):
+
+| object | chars | what it proves |
+|---|---|---|
+| `Edit_sail_pish` | 3134 | **`sailfact_pish.rdf__` is a version counter.** The "edit" retires the old head (`active='f'`, `ismodify='t'`), retires **all** its lines (`update subsailfact_pish set active='f'`), takes `MAX(rdf__)+1` and inserts a new head with that version, `active='t'`, `sh_f=0`, `VisitID` carried over, plus `Promotion`. It inserts **no lines** — the line-writing statement is still unfound. |
+| `FixManCustomer` | 599 | `CUSTOMERS.man = SUM(cust_act.act_bed) - SUM(cust_act.act_bes)` where `isActive <> 0 or isActive is null`; then `FixTasvie` when `overal_setting.id = 117`; then `Fix_Sys_Mandeh_Customer`. Owns `transaction a` + `xact_abort on`. |
+| `UpdateMojodiInventory` | 1320 | Stock is rebuilt from the goods ledger: `SUM((tedvah*mohvah + tedjoz) * CASE WHEN act_id IN (20,22,5,19,18,48,26,85,133) THEN -1 ELSE 1 END) FROM ka_act WHERE active='t'`, `tedbastebandi` rebuilt when `overal_setting.id = 8 = 1`, then split into boxes/pieces with `floor` / `%` incl. the negative branch. |
+| `UpdateMojodiInventoryAnbars` | 1792 | The same, per warehouse: cursor over `inventory_anbars.rdf_anbars` of that product, `ka_act.RdfAnbar` filter. |
+| `UpdateMojodiInventoryAnbarsPS` | 1773 | The same for production series, only when `inventory.WithProductionSerial = 1`, writing `Inventory_Anbars_PS` on `(shka, rdfAnbar, PSId)`. |
+| `VW_InventoryAnbars` | 3055 | Columns `shka, rdf_anbars, name, tedbastebandi, mojkavah, mojkajoz, MojodiPish_vah, MojodiPish_joz`; base `inventory_anbars ⋈ inventory where inventory.active='t'`. `MojodiPish_*` = `(mojkavah*mohvah + mojkajoz) − ISNULL(SUM(TEDVAH)*mohvah + SUM(TEDJOZ),0)` taken from `subsailfact_pish ⋈ sailfact_pish` on **`shfacfo` and `rdf__`**, `Rejected=0 and active='t' and sh_f=0`, matched on `(shka, rdf_anbar)`, then split with the same `floor`/`%` rule. |
+| `AddFromAtiranDetailsForVisitors` | 955 | Ledger split: calls `AddToFromAtiranDetails`, then when `visitors.supervisor_rdf <> 0` scales `@bed/@bes` by `visitors.supervisor_per`, resolves the supervisor's ledger via `CUSTOMERS.TafsilID where Ecode_Vis = @super and kind <> 8`, and recurses. Not a line writer. |
+| `SelectPriceAndTedvahForushVisitorhaByDate` | 1066 | The ERP's own per-visitor sales report over `VWForushKhales ⋈ inventory ⋈ kagroup ⋈ visitors ⋈ masir ⋈ CUSTOMERS ⋈ custgroup` (child groups via `kagroup.ParentGroupRdf`), filtered by `CUSTOMERS.RDF_masir/group_rdf`, grouped per visitor + path. A report, not the price fallback. |
+
+New objects/columns this exposed: table **`ka_act`** (`shka, act_id, tedvah, tedjoz,
+tedbastebandi, active, RdfAnbar, ProductionSeriesID`) and table
+**`Inventory_Anbars_PS`**, view **`VWForushKhales`**, and the columns
+`visitors.supervisor_rdf`, `visitors.supervisor_per`, `kagroup.ParentGroupRdf`,
+`masir.rdf_masir`, `cust_act.isActive`, `sailfact_pish.Promotion` (now in
+`docs/schema/meelano-columns.tsv`, together with `dbo.VW_InventoryAnbars`).
+
+### 16.1 Which database? (answered for this instance)
+
+`SELECT … MAX(last_user_update) FROM sys.dm_db_index_usage_stats` grouped by database
+returned **one row: `Meelano`, last_write = NULL** — i.e. on the instance the operator
+is connected to, `Meelano` is the **only** non-system database, and nothing has been
+written since the last SQL Server restart (the stats reset on restart, hence NULL;
+the ERP screens have not saved anything in this session). The `Atiran14050603` lists
+of part 6 therefore came from **another instance or another server** — still to be
+identified, but not a database of the server the app will talk to.
+
+### 16.2 Consequence for the app
+
+`stock()` now reads `dbo.VW_InventoryAnbars` instead of the raw `inventory_anbars`, so
+the app shows what the ERP shows — and it gets both numbers: on-hand
+(`mojkavah`/`mojkajoz`) and sellable after open pre-invoices
+(`MojodiPish_vah`/`MojodiPish_joz`). The ERP's own view also drops inactive products
+(`inventory.active = 't'`), which the raw query did not.

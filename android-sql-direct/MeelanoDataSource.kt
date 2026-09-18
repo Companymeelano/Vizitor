@@ -70,13 +70,17 @@ data class DbCustomerGroup(
     val priceTier: Int?,
 )
 
-/** موجودی یک کالا در یک انبار. */
+/** موجودی یک کالا در یک انبار — از ویو خودِ ERP (VW_InventoryAnbars).
+ *  quantity = موجودی روی کاغذ؛ available* = قابل فروش، یعنی موجودی منهای
+ *  مقداری که پیش‌فاکتورهای بازِ دیگر روی همان کالا/انبار گرفته‌اند. */
 data class DbStockRow(
     val shka: Long,
     val warehouseRdf: Int,
     val warehouseName: String,
     val quantity: Double,
     val quantityPiece: Int,
+    val availableQuantity: Double = 0.0,
+    val availablePiece: Int = 0,
 )
 
 /** هویت ویزیتور: از visitors (کلید کسب‌وکار) و sys_users (کلید ورود). */
@@ -228,18 +232,21 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
         }
     }
 
-    // ── موجودی انبارها ──────────────────────────────────────────────────────
+    // ── موجودی انبارها (از ویو خودِ ERP: موجودی منهای پیش‌فاکتورهای باز) ─────
+    //  عدد mojkavah/mojkajoz روی کاغذ است؛ MojodiPish_vah/MojodiPish_joz همان
+    //  چیزی است که ERP به عنوان موجودی قابل فروش نشان می‌دهد (سطرهای
+    //  subsailfact_pish با sh_f = 0 و active = 't' و Rejected = 0 کم شده‌اند).
     suspend fun stock(shka: Long? = null): List<DbStockRow> =
         db.withConnection { c ->
             val sql = buildString {
                 append(
                     """
-                    SELECT inventory_anbars.shka, inventory_anbars.rdf_anbars,
-                           inventory_anbars.name, inventory_anbars.mojkavah,
-                           inventory_anbars.mojkajoz
-                      FROM dbo.inventory_anbars
-                     WHERE (? = 0 OR inventory_anbars.shka = ?)
-                     ORDER BY inventory_anbars.name
+                    SELECT vz.shka, vz.rdf_anbars, vz.name,
+                           vz.mojkavah, vz.mojkajoz,
+                           vz.MojodiPish_vah, vz.MojodiPish_joz
+                      FROM dbo.VW_InventoryAnbars vz
+                     WHERE (? = 0 OR vz.shka = ?)
+                     ORDER BY vz.name
                     """.trimIndent()
                 )
             }
@@ -255,6 +262,8 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                             warehouseName = it.getString("name") ?: "",
                             quantity = it.getDouble("mojkavah"),
                             quantityPiece = it.getInt("mojkajoz"),
+                            availableQuantity = it.getDouble("MojodiPish_vah"),
+                            availablePiece = it.getInt("MojodiPish_joz"),
                         )
                     }
                 }

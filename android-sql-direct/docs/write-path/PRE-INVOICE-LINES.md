@@ -25,6 +25,13 @@ filled by `add_sail_pish` itself when the settings say so.
 Keys, from the live audit of `Meelano`: `rdf__` int PK, `shfacfo` bigint PK,
 `RDF` int PK → a line is identified by (pre-invoice number, line number).
 
+**Correction after reading `Edit_sail_pish` (2026-09-18):** `subsailfact_pish.rdf__` is
+not a free line number, it is the **version** of the head row it belongs to: the ERP's
+own view joins `sailfact_pish` and `subsailfact_pish` on `shfacfo` **and** `rdf__`, and
+an edit retires the old head (`active='f'`) together with all its lines and inserts a
+new head with `rdf__ + 1`. A line is therefore identified by `(shfacfo, rdf__, RDF)`
+and must always be written with the `rdf__` of the *current* head row.
+
 | group | columns |
 |---|---|
 | keys | `rdf__, shfacfo, RDF` |
