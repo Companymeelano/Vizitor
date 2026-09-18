@@ -27,3 +27,6 @@ dbo.sys_wor	rdf,SysID,shwor,UserID
 dbo.systems	rdf,name,active
 dbo.AnbarDifferent	RowID,Shka,SanadNo,Kind,AnbarID,JozPrice,TedVahOld,TedJozOld,TedVahCounted,TedJozCounted,Active
 dbo.NCustomers	RowID,NShmo,NMan,NDate,BlackList
+security.ConfirmUser	RowID,RealUserID,RealUserName,FakeUserID,FakeUserName,P,SumMab,SumPos,SumCheck,Shmo,Moname,RealPlusFake,Ghno
+security.LoginDetails	RowID,UserID,DateClient,DateServer,ComputerIP,ComputerName
+EMS.user	UserID,AtiranUserID,Username,Tell,Cellphone,Address,NationalCode,Email,PersonalID

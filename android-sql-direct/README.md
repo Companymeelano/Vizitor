@@ -212,6 +212,33 @@ WHERE user_name = ? AND CONVERT(varchar(50), user_password) = ? AND active = 1
   سال مالی لازم نیست. `IsAccountingSystemStarted()=0` ⇒ وقتی مسیر نوشتن را وصل
   کردیم باید بررسی شود که پروسیجرها با این وضعیت سند می‌زنند یا نه.
 
+## مسیر نوشتن ERP — بدنهٔ پروسیجرها رسید ✅ (۲۰۲۶-۰۹-۱۸)
+هر چهار بدنه کامل رسید (`add_sail_pish` 3118، `AddInvoice` 5850، `new_cust` 3868،
+`FixMojodi` 7957) و مرحله‌به‌مرحله در **`docs/write-path/ERP-WRITE-PROCEDURES.md`**
+نوشته شده‌اند (لیست پارامترها، لیست ستون‌های `insert` و مقادیر، عیناً از خود بدنه‌ها).
+نکات قطعی برای اپ:
+* `add_sail_pish`: فقط با `@mod = 1` کار می‌کند، شماره را `max(shfacfo)+1` می‌گیرد،
+  `rdf__=1`, `active='t'`, `sh_f=0`, `rejected=0`, `man_gh = customers.man`، و شمارهٔ
+  جدید را در `@id_en` (OUTPUT) برمی‌گرداند. **سطرهای `subsailfact_pish` را نمی‌نویسد.**
+* `AddInvoice`: سطر `sailfact` را می‌سازد، سپس
+  `update sailfact_pish set sh_f,user_f,date_f` (یعنی «شده/نشده» بودن فاکتور دقیقاً با
+  `sh_f` مشخص می‌شود)، سپس `Addmaliyat` (اگر مالیات/عوارض ≠ ۰)، سپس `cust_act` با
+  `act_id = 20`، و در پایان `FixManCustomer @shmo`.
+* `new_cust`: خودش `transaction t1` دارد (`xact_abort on`)، نام تکراری را با
+  `raiserror('نام تكراري است',16,1)` رد می‌کند، `cus_image` + `cust_act` + `sys_cus(1,@a,1)`
+  می‌نویسد و SHMO جدید را در `@id_en` می‌دهد ⇒ **هرگز داخل تراکنش دیگری صدا زده نشود**.
+* `FixMojodi @Shfac,@state`: برای اصلاح موجودی؛ state=1 فاکتور فروش واقعی، state=5/6
+  فروش فروشگاهی. فرمول خودش (`mojkavah/mojkajoz` با `mohvah`، `floor` و `%`) همان چیزی
+  است که اپ باید به‌جای هر محاسبهٔ دستی به کار ببرد.
+* فلگ‌های `overal_setting` که در کد دیدیم: 67 شروع حسابداری، 77/78 تأیید خودکار
+  پیش‌فاکتور بعد از درج، 97 روز جابه‌جایی تاریخ فاکتورِ آمده از پیش‌فاکتور، 135 `'Ex'`،
+  168 درج نام مشتری در شرح حساب.
+* `security.ConfirmUser.P` **bit** است (نه رمز) → در آن جدول چیز محرمانه‌ای نیست.
+
+**باقی‌ماندهٔ کوچک:** بدنهٔ `Edit_sail_pish` (جایی که ERP سطرهای `subsailfact_pish` را
+می‌نویسد)، `AddFromAtiranDetailsForVisitors`، `SelectPriceAndTedvahForushVisitorhaByDate`
+(قاعدهٔ fallback قیمت) و نام ستون محاسبه‌شدهٔ `VW_InventoryAnbars`.
+
 ## یافته‌های اجرای واقعی بخش ۲ (`02_fill_gaps`) — ۲۰۲۶-۰۹-۱۸
 * **نقش‌ها:** `Roles` ۶ ردیف دارد: ۱ مدير، ۲ مدير فروش، ۳ مدير حسابداري، ۴ حسابدار،
   **۵ ويزيتور**، ۶ كاربر ⇒ شناسهٔ نقش ویزیتور در این ERP «۵» است.

@@ -32,6 +32,9 @@ VALUES_TSV = ROOT / "docs" / "schema" / "meelano-values.tsv"
 
 # identifiers that are not columns: aliases, table names, SQL functions, keywords
 IGNORE_QUALIFIERS = {"sys", "dbo", "Hamrah", "warehousing", "security", "EMS", "kg", "information_schema"}
+# catalogues that appear in FROM/JOIN but are not part of the ERP schema:
+# a statement that mixes one ERP table with sys.columns is NOT a single-table query
+SYSTEM_SCHEMAS = {"sys", "information_schema", "tempdb"}
 
 
 def load_schema():
@@ -103,6 +106,11 @@ def alias_map(sql: str):
         raw, alias = m.group(1), m.group(2)
         table = raw.replace("[", "").replace("]", "")
         key = table.lower()
+        if key.split(".")[0] in SYSTEM_SCHEMAS:
+            amap[table.lower()] = key          # counted, but never column-validated
+            if alias and alias.upper() not in ("ON", "WHERE", "ORDER", "GROUP", "HAVING", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "JOIN", "WITH", "AS"):
+                amap[alias.lower()] = key
+            continue
         if key not in SCHEMA and f"dbo.{key}" in SCHEMA:
             key = f"dbo.{key}"
         if key not in SCHEMA:
@@ -176,6 +184,8 @@ def check_statement(sql: str, amap: dict):
     problems = []
     known_tables = set(amap.values())
     single = next(iter(known_tables)) if len(known_tables) == 1 else None
+    if single is not None and single not in SCHEMA:
+        single = None                     # the statement only touches a catalogue
 
     # output aliases ("AS name") are not columns
     output_aliases = {m.group(1).lower() for m in re.finditer(r"\bAS\s+(\w+)", sql, flags=re.I)}
@@ -190,11 +200,13 @@ def check_statement(sql: str, amap: dict):
         table = amap.get(qualifier)
         if table is None:
             continue
+        if SCHEMA.get(table) is None:
+            continue                      # system catalogue: nothing to validate
         if column.startswith("$") or column in interpolation:
             continue                      # built by Kotlin: validated at the call site
         if column.startswith("$"):
             continue
-        if column not in _ci(SCHEMA[table]):
+        if column not in _ci(SCHEMA.get(table, [])):
             problems.append(f"unknown column {qualifier}.{column}  (table {table})")
 
     # unqualified names, only when exactly one table is involved

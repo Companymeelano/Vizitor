@@ -598,3 +598,58 @@ no `.sql` file is present.
   printed in a different order than the `COLS|` list. Only explicitly labelled
   queries (sections A, B, E and the `COLS|` lists themselves) are authoritative for
   column↔value mapping; the row samples are evidence of *content*, not of order.
+
+## 15. The write path — bodies received (audit part 3, 2026-09-18)
+
+`add_sail_pish` (3118), `AddInvoice` (5850), `new_cust` (3868) and `FixMojodi` (7957)
+came back complete, together with the small helpers. They are written out, step by
+step, in **`docs/write-path/ERP-WRITE-PROCEDURES.md`** — the parameter lists, INSERT
+column lists and value lists are verbatim.
+
+The conclusions the app must live by:
+
+* `add_sail_pish` inserts exactly one `sailfact_pish` row, numbers it as
+  `max(shfacfo)+1`, sets `rdf__=1`, `active='t'`, `sh_f=0`, `rejected=0`,
+  `man_gh = customers.man`, and returns the number in `@id_en`. It only runs when
+  `@mod = 1`. It never touches `subsailfact_pish`.
+* `AddInvoice` creates the `sailfact` row (`rdf__=1`, `active='t'`, `ismodify='f'`,
+  `tasvieh='f'`, `t_date = what_date(@date,@modpar)`, all `*_fel` columns =
+  `round(x,0,1)`), then `update sailfact_pish set sh_f, user_f, date_f` (the
+  pre-invoice is "invoiced" exactly by `sh_f <> 0`), then optionally `Addmaliyat`,
+  then `cust_act` with `act_id = 20`, then `FixManCustomer @shmo`. It never touches
+  `subsailfact`.
+* `new_cust` owns `transaction t1` (`xact_abort on`), rejects duplicate names with
+  `raiserror('نام تكراري است',16,1)`, writes `cus_image`, a `cust_act` opening row,
+  `sys_cus (1, @a, 1)`, optionally `AssignTafsilCodeToEntity`, then `FixManCustomer`,
+  and returns the new SHMO in `@id_en`. **Never call it inside another transaction.**
+* `FixMojodi @Shfac, @state` must be used for stock: state 1 for a real sales invoice
+  (cursor over `subsailfact` → `UpdateMojodiInventory*`), state 5/6 for store sales.
+  Its inline formula (`mojkavah/mojkajoz` with `mohvah`, `floor` + `%`) is the ERP's
+  own; the app must not invent a different one.
+* `overal_setting` ids seen in the code: 67 accounting-started, 77/78 auto-confirm the
+  pre-invoice after insert, 97 days to shift an invoice date forward when it comes
+  from a pre-invoice, 135 `'Ex'`, 168 include the customer name in the ledger text.
+
+Still needed (requested): `Edit_sail_pish` (the place where the ERP writes the
+`subsailfact_pish` lines), `AddFromAtiranDetailsForVisitors`,
+`SelectPriceAndTedvahForushVisitorhaByDate`, and the column names of
+`VW_InventoryAnbars` (its definition arrived truncated).
+
+### 15.1 Other facts fixed by parts 5 and 6
+
+* `security.ConfirmUser.P` is **bit** (audit part 6, L3) — not a password, so nothing
+  secret lives in that table. `EMS.user` exists with 9 columns and 1 row.
+* Column **types** for `AnbarDifferent`, `NCustomers`, `systems`, `sys_vis`,
+  `sys_cus`, `sys_kal`, `sys_anb`, `sys_use`, `sys_wor`, `security.ConfirmUser`,
+  `security.LoginDetails` and `EMS.user` are now recorded in
+  `docs/schema/meelano-types.tsv`, and the tables themselves were added to
+  `docs/schema/meelano-columns.tsv` (30 tables / 504 columns).
+* `kagroup.Active`: 29 rows with 1, 1 row with 0 (bit) — the guard already knew this.
+* **All nine `custgroup` rows have `price` (tier) = 1**, and customers 2…7 sit in
+  group 1 while customer 1 sits in group 3 → in today's data every customer gets
+  `forosh_price.forosh1`. The app still resolves the tier dynamically (the brief
+  forbids hard-coded prices) and needs the ERP's fallback rule for a tier whose
+  `forosh<n>` is 0 — that is what `SelectPriceAndTedvahForushVisitorhaByDate` should
+  settle.
+* `visitors` row 1: `supervisor = 'f'`, `per_p_d_naghd = 0.000`, `per_p_d_check = 0.000`;
+  its sales limits are both 0.
