@@ -2,6 +2,8 @@
 //  ویزیتور — نسخهٔ اندروید با اتصال مستقیم به SQL Server (پورت ۱۴۳۳)
 //  خروجی APK: vizitor-direct-debug.apk  /  vizitor-direct-release.apk
 // ===========================================================================
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,7 +24,7 @@ android {
     // امضای نسخهٔ نهایی: فایل keystore.properties کنار همین ماژول (در گیت نیست)
     val keystoreProps = rootProject.file("keystore.properties")
     if (keystoreProps.exists()) {
-        val props = java.util.Properties().apply { keystoreProps.inputStream().use { load(it) } }
+        val props = Properties().apply { keystoreProps.inputStream().use { load(it) } }
         signingConfigs {
             create("release") {
                 storeFile = file(props.getProperty("storeFile"))
