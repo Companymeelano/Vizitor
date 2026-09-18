@@ -193,3 +193,63 @@ caller has just read the head's `rdf__` in the same transaction.
    `all`, `gainall`, `jamtakhgh`, `modpar`, `nah_par`, `ted_rooz`, `ph_kh`,
    `mod_darsad_vis`, `rdf_sarbarg`, `rdf_tahbarg`) - no module calls it, so this must
    come from a real head row.
+
+## 9. The two databases, and what the ERP's own numbers look like
+
+### 9.1 ⚠️ Every answer of "راه ۹" came from `Atiran14050603`, not from `Meelano`
+
+All three result grids carry their own `db` column, and it says `Atiran14050603` - the
+SSMS toolbar was on that database. Consequences, until the same three queries are run
+with `Meelano` selected:
+
+* the line-table column lists below (`subsailfact_pish` 26 columns incl. `PerPromotion`,
+  `subsailtemp_pish` 34 columns) are **Atiran14050603's**, and the schema file row for
+  `dbo.subsailtemp_pish` now says so;
+* `trig_sst_pish` / `InvoiceTrigger` existence on `Meelano` is **not yet proven**;
+* the two databases are demonstrably different ERP versions: `dbo.AddInvoice` is 6408
+  characters on `Atiran14050603` and 5850 on `Meelano` (part 7's dump), and the Meelano
+  audit printed 25 columns for `subsailfact_pish` where Atiran's own listing prints 26.
+
+Raw paste: `docs/audit-runs/out_14_columns_and_samples.txt` (first block repeats the
+warning, so the file can never be read without it).
+
+### 9.2 `dbo.subsailtemp_pish` - the staging table, as Atiran has it (34 columns)
+
+```
+shfacfo, shka, rdf_anbar, tedvah, tedjoz, vahprice, jozprice, bastebandi, tedbastebandi,
+linesum, isret, pertafif, rdf, pervis, litakhma, mohvah, modpar, mod, rdf__, active,
+date, done_date, sahm_mod_par, naka, ted_kol, vah_nam, amani, invepgh, time_,
+Pavarez, Avarez, Ptax, Tax, PerPromotion
+```
+
+Types (authoritative, from `INFORMATION_SCHEMA.COLUMNS`): `shfacfo bigint NOT NULL`,
+`shka bigint`, `rdf int NOT NULL`, `rdf__ int NOT NULL`, `tedvah decimal(18,3)`,
+`tedjoz int`, `vahprice/jozprice/linesum/litakhma/Avarez/Tax/invepgh money`,
+`pertafif/pervis/Pavarez/Ptax/PerPromotion decimal(18,2)`, `bastebandi varchar(25)`,
+`isret char(1)`, `active char(1)`, `mod/modpar/mohvah/amani/tedbastebandi/time_ int`,
+`date/done_date char(10)`, `naka nvarchar(500)`, `vah_nam varchar(30)`,
+`sahm_mod_par/ted_kol decimal(18,0)`, `amani` has default `(0)`.
+
+Note `modpar` sits in the staging table and lands in `subsailfact_pish.Mp`, and the
+trigger reads `mod` from the same row - so a staging INSERT must carry at least
+`shfacfo`, `rdf`, `mod` and `modpar`.
+
+### 9.3 What the ERP's own three invoices prove (real rows, not inference)
+
+From `sailfact` 215 / 214 / 213 + their `subsailfact` lines (`Atiran14050603`, 1405/06/03):
+
+* `LINESUM = TEDVAH x VAHPRICE + TEDJOZ x JOZPRICE` - in every sampled line
+  `TEDJOZ = 0` and `VAHPRICE = JOZPRICE`, e.g. `24 x 530000 = 12,720,000`;
+* `RDF` is the line serial **starting at 0** inside the factor;
+* `TEDVAHMain = TEDVAH`, `TEDJOZMain = 0`, every `*_fel` column equals its twin,
+  `TafifLine/PerPromotion/PromotionValue/Gift = 0`, `ProductionSeriesID = NULL`,
+  `VarietyID = SHKA`, `BASTEBANDI = '--'`, `rdf_anbar = 1`, `active = 't'`;
+* head: `rdf__ = 1`, `barbari = 0`, `tafif = SumTafifAghlam = 0`, `tax = avarez = 0`,
+  `modpar = 0`, `nah_par = 1`, `rdf_tahbarg = 2`, `sysid = 1`, `tasvieh = 't'`,
+  `Status = 1`, `shpish` empty (these three did **not** come from a pre-invoice),
+  `sumlineall = all`, `man_gh = 0` (customer balance at that moment),
+  `TaeedUser = Admin`, `userid = 2`, `TEDROOZ`/`ted_rooz` not shown in the sample.
+
+So the numeric convention the app must reproduce is confirmed by data: quantity split
+into `tedvah` (packages) + `tedjoz` (pieces) with `mohvah` the pack size, price split the
+same way, `linesum` the product of the two.

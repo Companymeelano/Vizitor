@@ -33,8 +33,13 @@ EMS.user	UserID,AtiranUserID,Username,Tell,Cellphone,Address,NationalCode,Email,
 dbo.sal_mali	sal_maliID,rdf,name,nam_db,StartDate,EndDate,Current
 
 dbo.VW_InventoryAnbars	shka,rdf_anbars,name,tedbastebandi,mojkavah,mojkajoz,MojodiPish_vah,MojodiPish_joz
-dbo.subsailtemp_pish	mod,rdf__,shfacfo,shka,rdf_anbar,tedvah,tedjoz,vahprice,jozprice,bastebandi,tedbastebandi,linesum,isret,pertafif,rdf,pervis,litakhma,active,amani,Pavarez,Avarez,Ptax,Tax,PerPromotion,modpar
+dbo.subsailtemp_pish	shfacfo,shka,rdf_anbar,tedvah,tedjoz,vahprice,jozprice,bastebandi,tedbastebandi,linesum,isret,pertafif,rdf,pervis,litakhma,mohvah,modpar,mod,rdf__,active,date,done_date,sahm_mod_par,naka,ted_kol,vah_nam,amani,invepgh,time_,Pavarez,Avarez,Ptax,Tax,PerPromotion
 # PROVENANCE: dbo.subsailtemp_pish above is not from a column dump - it is the exact set of
 # columns that the enabled trigger dbo.trig_sst_pish reads from `inserted` and the set its
 # INSERT into dbo.subsailfact_pish names (docs/audit-runs/out_13_trigger_bodies.txt, 2026-09-18).
 # Types and defaults still to be confirmed by script 'rah 9'.
+# PROVENANCE WARNING: the rows for dbo.subsailtemp_pish (34 columns), dbo.subsailfact_pish,
+# sailfact, sailfact_pish and subsailfact came from the operator's paste of 2026-09-18 while
+# SSMS was connected to DATABASE Atiran14050603 (its own db column says so). They are ERP
+# truth for that database - and MUST be re-checked against Meelano before the app relies on
+# them, because AddInvoice on the two databases is not even the same length (6408 vs 5850).

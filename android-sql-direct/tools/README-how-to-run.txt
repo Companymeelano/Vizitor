@@ -185,3 +185,46 @@
         WHERE m.definition LIKE '%shpish%'
            OR (m.definition LIKE '%insert into sailfact%' AND m.definition NOT LIKE '%sailfact_pish%')
         ORDER BY o.name;
+
+راه ۱۰ (مستقیم در SSMS — همین چهار کوئری، دو بار: یک‌بار با Meelano، یک‌بار با Atiran14050603)
+    چرا: جواب‌های راه ۹ خودشان ستون db را Atiran14050603 چاپ کردند؛ پس روشن نیست کدام
+    دیتابیس دیتابیسِ اپ است. این چهار کوئری همان ابهام را می‌بندد.
+    روش: در نوار ابزار SSMS (کادر بالا-چپ) دیتابیس را انتخاب کن، همین چهار کوئری را F5 کن،
+    بعد دیتابیس را عوض کن و دوباره F5 کن. هر جواب خودش نام دیتابیس را چاپ می‌کند.
+
+    ۱) فهرست دیتابیس‌های همین سرور:
+
+        SELECT name, state_desc, create_date, compatibility_level
+        FROM sys.databases WHERE database_id > 4 ORDER BY name;
+
+    ۲) آیا اشیای کلیدی در «همین دیتابیسِ انتخاب‌شده» وجود دارند؟
+
+        SELECT DB_NAME() AS db,
+               OBJECT_ID('dbo.subsailtemp_pish') AS staging_pish,
+               OBJECT_ID('dbo.subsailfact_pish') AS lines_pish,
+               OBJECT_ID('dbo.trig_sst_pish')    AS trg_pish,
+               OBJECT_ID('dbo.subsailtemp')      AS staging_invoice,
+               OBJECT_ID('dbo.InvoiceTrigger')   AS trg_invoice,
+               OBJECT_ID('dbo.add_sail_pish')    AS add_sail_pish,
+               OBJECT_ID('dbo.AddInvoice')       AS add_invoice,
+               OBJECT_ID('dbo.Edit_sail_pish')   AS edit_sail_pish;
+
+    ۳) اندازهٔ واقعی داده در همین دیتابیس (کدام یکی دادهٔ زنده دارد؟ اگر جدولی نباشد،
+       به‌جای خطا فقط در لیست نمی‌آید):
+
+        SELECT DB_NAME() AS db, t.name, SUM(p.rows) AS rows_count
+        FROM sys.tables AS t
+        JOIN sys.partitions AS p ON p.object_id = t.object_id AND p.index_id IN (0,1)
+        WHERE t.name IN ('sailfact','sailfact_pish','subsailfact','subsailfact_pish',
+                         'subsailtemp','subsailtemp_pish','CUSTOMERS','inventory',
+                         'sys_users','sal_mali','visitors')
+        GROUP BY t.name ORDER BY t.name;
+
+    ۴) ستون‌های دو جدول اقلام (همان کوئری راه ۹ بخش ۱) - برای مقایسهٔ دو دیتابیس:
+
+        SELECT DB_NAME() AS db, TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE,
+               CHARACTER_MAXIMUM_LENGTH AS len, NUMERIC_PRECISION AS pr, NUMERIC_SCALE AS sc,
+               IS_NULLABLE, COLUMN_DEFAULT
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME IN ('subsailtemp_pish','subsailfact_pish')
+        ORDER BY TABLE_NAME, ORDINAL_POSITION;
