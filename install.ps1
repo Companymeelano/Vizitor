@@ -549,10 +549,13 @@ $script:InternalPort = $script:Port
 $script:PublicPort = $script:Port
 
 if (-not $SkipIis -and $script:Mode -ne "keep" -and (Test-IisInstalled)) {
-    $iisAnswer = "آ"
-    if ($script:AnswerIis -eq "0" -or $script:AnswerIis -eq "خ" -or $script:AnswerIis -eq "n") { $iisAnswer = "خ" }
-    elseif (-not $Auto) {
-        $iisAnswer = Read-Prompt "IIS روی سرور نصب است. آیا API از طریق IIS (پروکسی معکوس بدون تغییر پیکربندی‌های موجود IIS) قابل‌دسترسی باشد؟ [آ/خ]" "آ"
+    # از نسخهٔ ۱.۱: اتصال اندروید مستقیم است، پس IIS اختیاری است و پیش‌فرض «خیر»
+    $iisAnswer = "خ"
+    if ($script:AnswerIis -eq "1" -or $script:AnswerIis -eq "آ" -or $script:AnswerIis -eq "y") { $iisAnswer = "آ" }
+    elseif ($script:AnswerIis -eq "") {
+        if (-not $Auto -and -not $script:Unattended) {
+            $iisAnswer = Read-Prompt "IIS روی سرور نصب است. اجرای پنل وب از طریق IIS لازم دارید؟ (برای اتصال مستقیم اندروید لازم نیست) [آ/خ]" "خ"
+        }
     }
     if ($iisAnswer -eq "آ" -or $iisAnswer -eq "y" -or $iisAnswer -eq "yes" -or [string]::IsNullOrEmpty($iisAnswer)) {
         $script:IisProxyMode = $true

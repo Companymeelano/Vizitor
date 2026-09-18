@@ -69,6 +69,7 @@ Var /GLOBAL HealthWanted
 Var /GLOBAL IpAddr
 Var /GLOBAL ApiPort
 Var /GLOBAL IisProxy
+Var /GLOBAL IisDetected
 Var /GLOBAL SqlHost
 Var /GLOBAL SqlPort
 Var /GLOBAL SqlAuth
@@ -415,15 +416,15 @@ Function PageServerCreate
   Pop $0
   ${NSD_CreateText} 38% 31u 20% 12u "$ApiPort"
   Pop $hPort
-  ${NSD_CreateCheckBox} 2% 44u 96% 10u "اجرای سامانه روی IIS (پورت پیش‌فرض ۹۵۹۵)"
+  ${NSD_CreateCheckBox} 2% 44u 96% 10u "اجرای پنل وب از طریق IIS (اختیاری — برای اتصال مستقیم اندروید لازم نیست)"
   Pop $hIis
   ${If} $IisProxy == "1"
     ${NSD_SetState} $hIis ${BST_CHECKED}
   ${EndIf}
-  ${NSD_CreateCheckBox} 2% 55u 96% 10u "پاک‌سازی کامل تنظیمات موجود IIS و ساخت دوبارهٔ سایت ویزیتور"
+  ${NSD_CreateCheckBox} 2% 55u 96% 10u "پاک‌سازی کامل تنظیمات موجود IIS و ساخت دوبارهٔ سایت ویزیتور (فقط اگر IIS را تیک بزنید)"
   Pop $hIisReset
   ${NSD_SetState} $hIisReset ${BST_CHECKED}
-  ${NSD_CreateLabel} 2% 68u 96% 9u "پیشنهاد: سایت و اپلیکیشن جدید ساخته می‌شود و تنظیمات قبلی IIS (با پشتیبان) پاک می‌گردد."
+  ${NSD_CreateLabel} 2% 68u 96% 9u "اتصال برنامهٔ اندروید روی پورت ۱۴۳۳ مستقیم به SQL Server است و به IIS کاری ندارد."
   Pop $0
   ${NSD_CreateLabel} 2% 78u 96% 9u "آدرس نهایی سامانه:  $ApiUrlDisplay"
   Pop $hUrlHint
@@ -741,6 +742,7 @@ Function .onInit
   StrCpy $IpAddr ""
   StrCpy $ApiPort "9595"
   StrCpy $IisProxy "0"
+  StrCpy $IisDetected "0"
   StrCpy $SqlHost "localhost"
   StrCpy $SqlPort "1433"
   StrCpy $SqlAuth "sql"
@@ -776,10 +778,8 @@ Function .onInit
       StrCpy $IpAddr $0
     ${EndIf}
     ReadINIStr $PrevExists "$PLUGINSDIR\pre.ini" "pre" "existing"
-    ReadINIStr $0 "$PLUGINSDIR\pre.ini" "pre" "iis"
-    ${If} $0 == "1"
-      StrCpy $IisProxy "1"
-    ${EndIf}
+    ReadINIStr $0 "$PLUGINSDIR\pre.ini" "pre" "iis"      ; فقط اطلاع: IIS نصب است یا نه
+    StrCpy $IisDetected "$0"
     ReadINIStr $0 "$PLUGINSDIR\pre.ini" "pre" "python"
     ReadINIStr $1 "$PLUGINSDIR\pre.ini" "pre" "ps"
     ReadINIStr $2 "$PLUGINSDIR\pre.ini" "pre" "sql"
@@ -802,6 +802,12 @@ Function .onInit
     ${If} $3 == ""
       StrCpy $Detected "$Detected  •  درایور ODBC: باید نصب شود"
     ${EndIf}
+    ${If} $IisDetected == "1"
+      StrCpy $Detected "$Detected  •  IIS: نصب است (برای اتصال مستقیم اندروید لازم نیست)"
+    ${Else}
+      StrCpy $Detected "$Detected  •  IIS: نصب نیست (لازم هم نیست)"
+    ${EndIf}
+    StrCpy $Detected "$Detected$\r$\nاتصال اندروید: مستقیم به SQL Server روی پورت 1433 — بدون نیاز به IIS یا API"
   preflight_done:
 
   IfSilent skip_prev_check
