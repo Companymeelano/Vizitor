@@ -50,13 +50,25 @@ jobs:
 
       - name: ساخت APK (debug و release)
         working-directory: android-app
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x gradlew
           set +e
           ./gradlew --no-daemon --stacktrace assembleDebug assembleRelease 2>&1 | tee build.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            echo "::error::ساخت APK شکست خورد — لاگ بالا"
+            echo "::error::ساخت APK شکست خورد — لاگ کامل در فایل android-app/build.log داخل مخزن ثبت می‌شود"
+            echo "### خطاهای ساخت APK" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            grep -E "^e: |error:|FAILURE:|Execution failed|Could not (resolve|find|download)" build.log | head -60 >> "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            # ثبت لاگ در مخزن تا از بیرون قابل بررسی باشد (این پوش با GITHUB_TOKEN، CI را دوباره اجرا نمی‌کند)
+            git config user.name "vizitor-ci"
+            git config user.email "ci@vizitor.local"
+            git add -f android-app/build.log
+            git commit -m "chore(ci): android build log [skip ci]" || true
+            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}" || true
           fi
           exit "$rc"
 
