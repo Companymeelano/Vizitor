@@ -320,3 +320,22 @@ visitor: on-hand stock minus what other open pre-invoices already hold.
 4. Where the `Atiran14050603` database lives: the last-write query returned **only
    `Meelano`** as a non-system database on this instance, so that older column-list
    paste came from another instance or another server.
+
+## 11. The line writer: candidates located (module search, 2026-09-18)
+
+The "rah 7" search (verbatim paste in `docs/audit-runs/out_12_module_search.txt`) came
+back with 12 modules that mention the line tables:
+
+| module | type | why it matters |
+|---|---|---|
+| `trig_sst_pish` | trigger | "sst" reads like sub-sail-temp: most likely the bridge **`subsailtemp` -> `subsailfact_pish`**. A trigger needs no caller, which is exactly why none of the procedures we read wrote the lines. |
+| `InvoiceTrigger` | trigger | fires around invoicing (`sailfact` / `sailfact_pish`) |
+| `pishfactor_body` | view | the ERP's own "pre-invoice with lines" reader - the reference shape for a correct write |
+| `subsailFactPish` | view | same family, the lines of a pre-invoice |
+| `CalcDetailsPishfactor` | scalar function | computes the detail numbers of a pre-invoice |
+| `ListPishFactor` | procedure | the ERP's list screen; shows which columns it expects |
+| `VW_Taraz_pish`, `VWDeatailspishFactorForush` | views | balance / detail views over pre-invoices |
+| `CloseTheFiscalYear`, `RestoreToDefault` | procedures | maintenance; never called by the app |
+
+Next: the two triggers (with their parent tables) and these views/functions. Until the
+trigger body is read, the app still does not insert lines.

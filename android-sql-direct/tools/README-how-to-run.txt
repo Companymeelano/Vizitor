@@ -131,3 +131,25 @@
 
     و اگر نام‌های دیگر هم پیدا شد، متنشان را با «راه ۶» بگیر (فقط اسم‌ها را در
     همان WHERE بگذار).
+
+راه ۸ (مستقیم در SSMS — بستنِ آخرین حلقهٔ نوشتن)
+    نتیجهٔ راه ۷ دوازده ماژول داد؛ دو تا از آن‌ها «تریگر» هستند و تریگر خودبه‌خود
+    اجرا می‌شود — یعنی کسی لازم نیست صدایش بزند. به احتمال زیاد همان‌جا سطرهای
+    subsailfact_pish درج می‌شوند.
+
+    اول این (کوچک؛ می‌گوید هر تریگر روی کدام جدول است):
+
+        SELECT t.name, OBJECT_NAME(t.parent_id) AS on_table, t.is_disabled, t.is_instead_of_trigger
+        FROM sys.triggers AS t
+        WHERE t.name IN ('trig_sst_pish','InvoiceTrigger');
+
+    بعد متن این هشت ماژول (بقیه مثل CloseTheFiscalYear/RestoreToDefault لازم نیست):
+
+        SELECT o.name, m.definition
+        FROM sys.sql_modules AS m
+        JOIN sys.objects AS o ON o.object_id = m.object_id
+        WHERE o.name IN ('trig_sst_pish','InvoiceTrigger','pishfactor_body','subsailFactPish',
+                         'CalcDetailsPishfactor','ListPishFactor','VW_Taraz_pish','VWDeatailspishFactorForush')
+        ORDER BY o.name;
+
+    (برای کپی متن‌های بزرگ: روی خانه کلیک → Ctrl+A → Ctrl+C، یا Results to File.)
