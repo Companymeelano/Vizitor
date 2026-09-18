@@ -23,27 +23,31 @@ SetCompressorDictSize 32
 !define PUBLISHER   "${STUDIO}"
 !define TASK_NAME   "VizitorAPI"
 !define APP_HOME    "C:\Vizitor"
+!define DATA_HOME   "C:\ProgramData\Vizitor"
 
 ; --- سازنده و گروه نرم‌افزاری (در همهٔ صفحه‌ها، مشخصات فایل و رجیستری دیده می‌شود) ---
 !define AUTHOR_FA   "میلاد یقوبی"
 !define AUTHOR_EN   "Milad Yaghoobi"
 !define STUDIO      "Meelano Studio Design"
 
-; --- رنگ‌های رابط (قالب 0xRRGGBB) ---
-!define COL_BAND      0x123A6B
-!define COL_BAND_SUB  0xBCD3EE
-!define COL_CARD      0xF3F7FC
-!define COL_CARD2     0xE8EFF8
+; --- رنگ‌های رابط (قالب 0xRRGGBB — به‌ترتیب بایت‌های قرمز، سبز، آبی) ---
+!define COL_NAVY1     0x0B2138
+!define COL_NAVY2     0x123A5E
+!define COL_NAVY3     0x1B5586
+!define COL_NAVY      0x0E2B4A
+!define COL_ACCENT    0xD9A23C
+!define COL_CARD      0xF4F8FC
+!define COL_EDGE      0xBFD0E0
 !define COL_WHITE     0xFFFFFF
-!define COL_TEXT      0x22303F
-!define COL_MUTED     0x5B6B7C
+!define COL_TEXT      0x1D2A38
+!define COL_MUTED     0x5C6C7C
 !define COL_BRAND     0x1B5FA8
+!define COL_BTN_TOP   0x7FB4E0
+!define COL_BTN_DARK  0x123F6B
+!define COL_BAND_TEXT 0xEAF3FB
 !define COL_OK        0x1E7B45
-!define COL_OKBG      0xE6F5EC
-!define COL_WARN      0x8A6100
-!define COL_WARNBG    0xFDF3DF
+!define COL_WARN      0x9A6A00
 !define COL_ERR       0xA93125
-!define COL_ERRBG     0xFCE9E7
 
 RequestExecutionLevel admin
 
@@ -88,18 +92,11 @@ Var /GLOBAL RecheckOnly
 Var /GLOBAL PrevExists
 Var /GLOBAL FreshClean
 Var /GLOBAL PyExe
-Var /GLOBAL hHealth
-Var /GLOBAL hPublicIp
-Var /GLOBAL hExternal
-Var /GLOBAL PublicIpField
-Var /GLOBAL ExternalOk
-Var /GLOBAL hDbList
-Var /GLOBAL hListStatus
-Var /GLOBAL DbCount
-Var /GLOBAL DbIdx
-Var /GLOBAL HealthWanted
+Var /GLOBAL Detected
+Var /GLOBAL InstallRc
 Var /GLOBAL IpAddr
 Var /GLOBAL ApiPort
+Var /GLOBAL ApiUrlDisplay
 Var /GLOBAL SqlHost
 Var /GLOBAL SqlPort
 Var /GLOBAL SqlAuth
@@ -107,38 +104,45 @@ Var /GLOBAL SqlUser
 Var /GLOBAL SqlPass
 Var /GLOBAL DbName
 Var /GLOBAL ErpDb
+Var /GLOBAL PublicIpField
+Var /GLOBAL ExternalOk
+Var /GLOBAL HealthWanted
 Var /GLOBAL AdminUser
 Var /GLOBAL ActCode
 Var /GLOBAL ActLater
-Var /GLOBAL ApiUrlDisplay
-Var /GLOBAL InstallRc
-Var /GLOBAL Detected
-Var /GLOBAL hIp
-Var /GLOBAL hPort
-Var /GLOBAL hSqlHost
-Var /GLOBAL hSqlPort
-Var /GLOBAL hAuthWin
-Var /GLOBAL hAuthSql
-Var /GLOBAL hSqlStatus
-Var /GLOBAL hSqlTest
-Var /GLOBAL hErpDbEdit
-Var /GLOBAL hDbConfirm
-Var /GLOBAL hListBtn
-Var /GLOBAL hConfirmBtn
+Var /GLOBAL DbCount
+Var /GLOBAL DbIdx
 Var /GLOBAL DbListOk
 Var /GLOBAL DbListCount
+Var /GLOBAL hIp
+Var /GLOBAL hPort
+Var /GLOBAL hUrlHint
+Var /GLOBAL hStatus
+Var /GLOBAL hDbName
+Var /GLOBAL hHealth
+Var /GLOBAL hSqlHost
+Var /GLOBAL hSqlPort
+Var /GLOBAL hAuthSql
+Var /GLOBAL hAuthWin
+Var /GLOBAL hSqlUser
+Var /GLOBAL hSqlPass
+Var /GLOBAL hPublicIp
+Var /GLOBAL hExternal
+Var /GLOBAL hSqlTest
+Var /GLOBAL hSqlStatus
+Var /GLOBAL hDbList
+Var /GLOBAL hListBtn
+Var /GLOBAL hListStatus
+Var /GLOBAL hErpDbEdit
+Var /GLOBAL hConfirmBtn
+Var /GLOBAL hDbConfirm
+Var /GLOBAL hAct
+Var /GLOBAL hActLater
 Var /GLOBAL FontTitle
 Var /GLOBAL FontHead
 Var /GLOBAL FontBody
 Var /GLOBAL FontSmall
 Var /GLOBAL FontBtn
-Var /GLOBAL hSqlUser
-Var /GLOBAL hSqlPass
-Var /GLOBAL hDbName
-Var /GLOBAL hStatus
-Var /GLOBAL hAct
-Var /GLOBAL hActLater
-Var /GLOBAL hUrlHint
 
 ; ---------------------------------------------------------------------------
 ;  ظاهر
@@ -340,6 +344,19 @@ Section "-Run"
   Delete "$PLUGINSDIR\answers.ini"
   Delete "$INSTDIR\setup\answers.ini"
 
+  ; ذخیرهٔ پاسخ‌های ویزارد برای نصب/تعمیر بعدی — رمز SQL هرگز نوشته نمی‌شود
+  CreateDirectory "${DATA_HOME}"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "ip"        "$IpAddr"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "port"      "$ApiPort"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "sqlhost"   "$SqlHost"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "sqlport"   "$SqlPort"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "sqlauth"   "$SqlAuth"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "sqluser"   "$SqlUser"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "erpdb"     "$ErpDb"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "dbname"    "$DbName"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "publicip"  "$PublicIpField"
+  WriteINIStr "${DATA_HOME}\wizard_last.ini" "wizard" "external"  "$ExternalOk"
+
   WriteUninstaller "$INSTDIR\uninstall.exe"
   WriteRegStr HKLM "Software\Vizitor" "InstallDir" "$INSTDIR"
   WriteRegStr HKLM "Software\Vizitor" "ApiUrl"     "$ApiUrlDisplay"
@@ -434,113 +451,136 @@ FunctionEnd
 ; ---------------------------------------------------------------------------
 ;  صفحهٔ تنظیمات سرور و دیتابیس
 ; ---------------------------------------------------------------------------
-;  قالب ظاهری صفحه‌ها: نوار عنوان، کارت‌های رنگی، دکمه‌های تخت، امضای سازنده
+;  قالب ظاهری: نوار گرادیانی، کارت‌های سه‌بعدی با لبه و سایه، دکمه‌های برجسته
+;  قاعدهٔ اندازه‌ها: x و عرض به‌صورت رشتهٔ آماده (۲٪ یا ۹۶٪ یا 100%) و y و ارتفاع
+;  به‌صورت عدد ساده پاس داده می‌شوند؛ داخل ماکرو به «u» تبدیل می‌شوند.
+;  همهٔ کنترل‌ها داخل کادر استاندارد صفحه‌های ویزارد (۳۰۰×۱۴۰ واحد) جا می‌شوند.
 ; ---------------------------------------------------------------------------
-!macro CardPanel x y w h col
-  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}" 0 ${x} ${y} ${w} ${h} ""
+!macro Rect x y w h col
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}" 0 ${x} ${y}u ${w} ${h}u ""
   Pop $0
   SetCtlColors $0 "" ${col}
 !macroend
 
-!macro SolidLabel x y w h txt colFg colBg align
-  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${align}|${SS_NOTIFY}" 0 ${x} ${y} ${w} ${h} "${txt}"
+; کارت سه‌بعدی: بدنهٔ روشن + لبهٔ سفید بالا + سایهٔ ۲ واحدی پایین
+!macro CardBox x y w h
+  !define /math _cb1 ${y} + ${h}
+  !define /math _cb ${_cb1} - 1
+  !insertmacro Rect ${x} ${y} ${w} ${h} ${COL_CARD}
+  !insertmacro Rect ${x} ${_cb} ${w} 1u ${COL_EDGE}
+  !insertmacro Rect ${x} ${y} ${w} 1u ${COL_WHITE}
+  !undef _cb
+  !undef _cb1
+!macroend
+
+!macro CardTitle x y w text
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}|${SS_NOTIFY}" 0 ${x} ${y}u ${w} 11u "${text}"
+  Pop $0
+  SetCtlColors $0 ${COL_NAVY} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontHead 1
+  !insertmacro Rect ${x} ${y} ${w} 1u ${COL_ACCENT}
+!macroend
+
+!macro Txt x y w h text colFg colBg
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}|${SS_NOTIFY}" 0 ${x} ${y}u ${w} ${h}u "${text}"
   Pop $0
   SetCtlColors $0 ${colFg} ${colBg}
 !macroend
 
-!macro FlatButton x y w h txt hVar colFg colBg
-  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_NOTIFY}|${SS_CENTER}|${SS_CENTERIMAGE}|${WS_TABSTOP}" 0 ${x} ${y} ${w} ${h} "${txt}"
-  Pop ${hVar}
-  SetCtlColors ${hVar} ${colFg} ${colBg}
-  SendMessage ${hVar} ${WM_SETFONT} $FontBtn 1
+; دکمهٔ برجسته: دکمهٔ واقعی ویندوز + پایهٔ تیرهٔ دو واحدی + درخشش یک‌واحدی بالا
+!macro Btn x y w h text hOut
+  !define /math _bh ${h} - 2
+  !define /math _bb1 ${y} + ${h}
+  !define /math _bb ${_bb1} - 2
+  ${NSD_CreateButton} ${x} ${y}u ${w} ${_bh}u "${text}"
+  Pop ${hOut}
+  SetCtlColors ${hOut} ${COL_WHITE} ${COL_BRAND}
+  SendMessage ${hOut} ${WM_SETFONT} $FontBtn 1
+  !insertmacro Rect ${x} ${_bb} ${w} 2u ${COL_BTN_DARK}
+  !insertmacro Rect ${x} ${y} ${w} 1u ${COL_BTN_TOP}
+  !undef _bb
+  !undef _bb1
+  !undef _bh
 !macroend
 
-!macro PageBand title sub
-  !insertmacro CardPanel 0 0 100% 26u ${COL_BAND}
-  !insertmacro SolidLabel 2% 4u 96% 11u "${title}" ${COL_WHITE} ${COL_BAND} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontTitle 1
-  !insertmacro SolidLabel 2% 16u 96% 8u "${sub}" ${COL_BAND_SUB} ${COL_BAND} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-!macroend
-
-!macro PageCredit y
-  !insertmacro SolidLabel 0 ${y}u 100% 10u "طراحی و برنامه‌نویسی: ${AUTHOR_FA} (${AUTHOR_EN})   •   گروه نرم‌افزاری: ${STUDIO}" ${COL_MUTED} ${COL_WHITE} ${SS_CENTER}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-!macroend
-
-!macro PageSep y
-  ${NSD_CreateHLine} 0 ${y}u 100% 1u ""
+; نوار بالای صفحه: گرادیان سه‌رنگ + خط طلایی + شمارهٔ گام
+!macro PageBand step
+  !insertmacro Rect 0 0 34% 7 ${COL_NAVY1}
+  !insertmacro Rect 34% 0 33% 7 ${COL_NAVY2}
+  !insertmacro Rect 67% 0 33% 7 ${COL_NAVY3}
+  !insertmacro Rect 0 7 100% 1 ${COL_ACCENT}
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_RIGHT}|${SS_NOTIFY}" 0 2% 1u 96% 6u "گام ${step} از ۴  •  سامانهٔ ویزیتور"
   Pop $0
+  SetCtlColors $0 ${COL_BAND_TEXT} ${COL_NAVY2}
+  SendMessage $0 ${WM_SETFONT} $FontSmall 1
+!macroend
+
+; نوار پایین: امضای سازنده و گروه نرم‌افزاری
+!macro PageCreditBar
+  !insertmacro Rect 0 130 100% 10 ${COL_NAVY1}
+  !insertmacro Rect 0 129 100% 1 ${COL_ACCENT}
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_CENTER}|${SS_NOTIFY}" 0 0 129u 100% 10u "طراحی و برنامه‌نویسی: ${AUTHOR_FA} (${AUTHOR_EN})   •   گروه نرم‌افزاری: ${STUDIO}"
+  Pop $0
+  SetCtlColors $0 ${COL_BAND_TEXT} ${COL_NAVY1}
+  SendMessage $0 ${WM_SETFONT} $FontSmall 1
 !macroend
 
 ; ---------------------------------------------------------------------------
-;  صفحهٔ ۱ — سرور سامانه (پنل مدیریت)
+;  صفحهٔ ۱ — سرور سامانه
 ; ---------------------------------------------------------------------------
 Function PageServerCreate
-  ${If} $RecheckOnly == 1
-    Abort
-  ${EndIf}
+  !insertmacro MUI_HEADER_TEXT "سرور سامانه" "آدرس و پورت پنل مدیریت — اتصال برنامهٔ اندروید مستقل و مستقیم به SQL Server است"
 
-  !insertmacro MUI_HEADER_TEXT "سرور سامانه" "آدرس و پورت پنل مدیریت — اتصال اندروید مستقل و مستقیم به دیتابیس است"
-
-  nsDialogs::Create 1044
+  nsDialogs::Create 1018
   Pop $PageDialog
   ${If} $PageDialog == error
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
-  SetCtlColors $PageDialog "" ${COL_WHITE}
 
-  !insertmacro PageBand "سرور سامانهٔ ویزیتور" "آدرس و پورت پنل مدیریت — اتصال برنامهٔ اندروید مستقل و مستقیم به SQL Server است (بدون IIS و بدون API)"
+  !insertmacro PageBand ۱
 
-  !insertmacro CardPanel 0 32u 100% 54u ${COL_CARD}
-  !insertmacro SolidLabel 2% 36u 46% 10u "آدرس سرور (IP یا دامنه در شبکهٔ داخلی):" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  ${NSD_CreateText} 2% 47u 58% 13u "$IpAddr"
+  !insertmacro CardBox 0 9 100 61
+  !insertmacro CardTitle 2% 14 96% "آدرس سرور و پورت پنل مدیریت"
+  !insertmacro Txt 2% 26 44% 9 "آدرس سرور (IP یا دامنهٔ داخلی):" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateText} 48% 24u 50% 13u "$IpAddr"
   Pop $hIp
   SendMessage $hIp ${WM_SETFONT} $FontBody 1
-  !insertmacro SolidLabel 64% 36u 34% 10u "پورت پنل مدیریت:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  ${NSD_CreateText} 64% 47u 24% 13u "$ApiPort"
+  !insertmacro Txt 2% 41 44% 9 "پورت پنل مدیریت:" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateText} 48% 39u 22% 13u "$ApiPort"
   Pop $hPort
   SendMessage $hPort ${WM_SETFONT} $FontBody 1
-  !insertmacro SolidLabel 2% 64u 96% 9u "• این پورت فقط برای شبکهٔ محلی باز می‌شود و به اینترنت باز نیست." ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
+  !insertmacro Txt 72% 41 26% 9 "(پیش‌فرض ۹۵۹۵)" ${COL_MUTED} ${COL_CARD}
   SendMessage $0 ${WM_SETFONT} $FontSmall 1
-  !insertmacro SolidLabel 2% 73u 96% 10u "• آدرس نهایی پنل و سرویس:  $ApiUrlDisplay" ${COL_BRAND} ${COL_CARD} ${SS_LEFT}
-  StrCpy $hUrlHint $0
-  SendMessage $hUrlHint ${WM_SETFONT} $FontHead 1
+  !insertmacro Txt 2% 54 96% 8 "• این پورت فقط برای شبکهٔ محلی باز می‌شود؛ IIS و API میانی وجود ندارد." ${COL_MUTED} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontSmall 1
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}|${SS_NOTIFY}" 0 2% 63u 96% 8u "آدرس نهایی پنل:  $ApiUrlDisplay"
+  Pop $hUrlHint
+  SetCtlColors $hUrlHint ${COL_BRAND} ${COL_CARD}
+  SendMessage $hUrlHint ${WM_SETFONT} $FontSmall 1
 
-  !insertmacro CardPanel 0 90u 100% 52u ${COL_CARD}
-  !insertmacro SolidLabel 2% 94u 96% 10u "وضعیت شناسایی‌شدهٔ همین سیستم:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  !insertmacro SolidLabel 2% 105u 96% 34u "$Detected" ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
-  StrCpy $hStatus $0
+  !insertmacro CardBox 0 73 100 53
+  !insertmacro CardTitle 2% 78 96% "دیتابیس خود سامانهٔ ویزیتور و وضعیت همین سیستم"
+  !insertmacro Txt 2% 90 34% 9 "دیتابیس خود ویزیتور:" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateText} 38% 88u 30% 13u "$DbName"
+  Pop $hDbName
+  SendMessage $hDbName ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateCheckBox} 70% 88u 28% 14u "بررسی سلامت در پایان نصب"
+  Pop $hHealth
+  SetCtlColors $hHealth ${COL_TEXT} ${COL_CARD}
+  SendMessage $hHealth ${WM_SETFONT} $FontSmall 1
+  ${NSD_SetState} $hHealth ${BST_CHECKED}
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}|${SS_NOTIFY}" 0 2% 104u 96% 19u "$Detected"
+  Pop $hStatus
+  SetCtlColors $hStatus ${COL_MUTED} ${COL_CARD}
   SendMessage $hStatus ${WM_SETFONT} $FontSmall 1
 
-  !insertmacro PageSep 150u
-  !insertmacro CardPanel 0 154u 100% 24u ${COL_CARD2}
-  !insertmacro SolidLabel 2% 158u 96% 18u "در قدم‌های بعد: مشخصات SQL Server، انتخاب دیتابیس برنامه از فهرست همین سرور (هیچ دیتابیسی اجباری نیست) و کد فعال‌سازی." ${COL_TEXT} ${COL_CARD2} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-
-  !insertmacro PageCredit 182
-
+  !insertmacro PageCreditBar
   Call RefreshUrlHint
-  Call muiPageLoadFullWindow
   nsDialogs::Show
-  Call muiPageUnloadFullWindow
-FunctionEnd
-
-Function PageServerLeave
-  ${NSD_GetText} $hIp $IpAddr
-  ${NSD_GetText} $hPort $ApiPort
-  ${If} $IpAddr == ""
-    MessageBox MB_ICONEXCLAMATION "آدرس سرور (IP یا دامنه) را وارد کنید."
-    Abort
-  ${EndIf}
-  ${If} $ApiPort == ""
-    StrCpy $ApiPort "9595"
-  ${EndIf}
-  Call RefreshUrlHint
 FunctionEnd
 
 Function RefreshUrlHint
@@ -556,48 +596,56 @@ Function RefreshUrlHint
   ${If} $1 == "80"
     StrCpy $ApiUrlDisplay "http://$0/api"
   ${EndIf}
-  ${NSD_SetText} $hUrlHint "• آدرس نهایی پنل و سرویس:  $ApiUrlDisplay"
+  ${NSD_SetText} $hUrlHint "آدرس نهایی پنل:  $ApiUrlDisplay"
+FunctionEnd
+
+Function PageServerLeave
+  ${NSD_GetText} $hIp $IpAddr
+  ${NSD_GetText} $hPort $ApiPort
+  ${If} $IpAddr == ""
+    MessageBox MB_ICONEXCLAMATION "آدرس سرور (IP یا دامنه) را وارد کنید."
+    Abort
+  ${EndIf}
+  ${If} $ApiPort == ""
+    StrCpy $ApiPort "9595"
+  ${EndIf}
+  Call RefreshUrlHint
 FunctionEnd
 
 ; ---------------------------------------------------------------------------
-;  صفحهٔ ۲ — اتصال به SQL Server (کاربر/رمز، اتصال از بیرون شبکه، تست اتصال)
+;  صفحهٔ ۲ — اتصال به SQL Server
 ; ---------------------------------------------------------------------------
 Function PageSqlCreate
-  ${If} $RecheckOnly == 1
-    Abort
-  ${EndIf}
-
   !insertmacro MUI_HEADER_TEXT "اتصال به SQL Server" "پورت پیش‌فرض ۱۴۳۳ — رمز فقط برای همین نصب استفاده می‌شود"
 
-  nsDialogs::Create 1044
+  nsDialogs::Create 1018
   Pop $PageDialog
   ${If} $PageDialog == error
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
-  SetCtlColors $PageDialog "" ${COL_WHITE}
 
-  !insertmacro PageBand "اتصال به SQL Server" "پورت پیش‌فرض ۱۴۳۳ — رمز فقط برای همین نصب استفاده می‌شود؛ نه نمایش داده می‌شود و نه در گزارشی نوشته می‌شود"
+  !insertmacro PageBand ۲
 
-  !insertmacro CardPanel 0 32u 100% 66u ${COL_CARD}
-  !insertmacro SolidLabel 2% 36u 20% 10u "سرور SQL Server:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  ${NSD_CreateText} 23% 35u 41% 13u "$SqlHost"
+  !insertmacro CardBox 0 9 100 55
+  !insertmacro CardTitle 2% 14 96% "مشخصات ورود به SQL Server"
+  !insertmacro Txt 2% 25 26% 9 "سرور SQL Server:" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateText} 30% 23u 34% 13u "$SqlHost"
   Pop $hSqlHost
   SendMessage $hSqlHost ${WM_SETFONT} $FontBody 1
-  !insertmacro SolidLabel 66% 36u 10% 10u "پورت:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  ${NSD_CreateText} 77% 35u 21% 13u "$SqlPort"
+  !insertmacro Txt 66% 25 8% 9 "پورت:" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateText} 76% 23u 22% 13u "$SqlPort"
   Pop $hSqlPort
   SendMessage $hSqlPort ${WM_SETFONT} $FontBody 1
-
-  !insertmacro SolidLabel 2% 53u 46% 10u "روش ورود:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  ${NSD_CreateRadioButton} 2% 63u 46% 10u "کاربر SQL Server (نام کاربری و کلمهٔ عبور)"
+  ${NSD_CreateRadioButton} 2% 38u 48% 11u "کاربر SQL Server (نام کاربری و رمز)"
   Pop $hAuthSql
+  SetCtlColors $hAuthSql ${COL_TEXT} ${COL_CARD}
   SendMessage $hAuthSql ${WM_SETFONT} $FontSmall 1
-  ${NSD_CreateRadioButton} 50% 63u 48% 10u "حساب ویندوز همین سرور (بدون رمز SQL)"
+  ${NSD_CreateRadioButton} 52% 38u 46% 11u "حساب ویندوز همین سرور (بدون رمز)"
   Pop $hAuthWin
+  SetCtlColors $hAuthWin ${COL_TEXT} ${COL_CARD}
   SendMessage $hAuthWin ${WM_SETFONT} $FontSmall 1
   ${NSD_OnClick} $hAuthSql OnAuthClick
   ${NSD_OnClick} $hAuthWin OnAuthClick
@@ -606,51 +654,41 @@ Function PageSqlCreate
   ${Else}
     ${NSD_SetState} $hAuthSql ${BST_CHECKED}
   ${EndIf}
-
-  !insertmacro SolidLabel 2% 76u 20% 10u "نام کاربری:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-  ${NSD_CreateText} 23% 75u 41% 13u "$SqlUser"
+  !insertmacro Txt 2% 51 26% 9 "نام کاربری:" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateText} 30% 49u 34% 13u "$SqlUser"
   Pop $hSqlUser
   SendMessage $hSqlUser ${WM_SETFONT} $FontBody 1
-  !insertmacro SolidLabel 66% 76u 10% 10u "کلمهٔ عبور:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-  ${NSD_CreatePassword} 77% 75u 21% 13u ""
+  !insertmacro Txt 66% 51 8% 9 "کلمهٔ عبور:" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreatePassword} 76% 49u 22% 13u ""
   Pop $hSqlPass
   SendMessage $hSqlPass ${WM_SETFONT} $FontBody 1
 
-  !insertmacro SolidLabel 2% 90u 96% 8u "• کاربر SQL Server باید به دیتابیس‌های همین سرور دسترسی داشته باشد (مثلاً sa یا کاربر مدیر)." ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
+  !insertmacro CardBox 0 67 100 59
+  !insertmacro CardTitle 2% 72 96% "اتصال از بیرون شبکه و آزمایش اتصال"
+  !insertmacro Txt 2% 84 44% 9 "آی‌پی اختصاصی/اینترنتی سرور (اختیاری):" ${COL_TEXT} ${COL_CARD}
   SendMessage $0 ${WM_SETFONT} $FontSmall 1
-
-  !insertmacro CardPanel 0 102u 100% 44u ${COL_CARD}
-  !insertmacro SolidLabel 2% 106u 96% 10u "اتصال از بیرون شبکه (اختیاری):" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  !insertmacro SolidLabel 2% 117u 34% 8u "آی‌پی اختصاصی/اینترنتی سرور:" ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-  ${NSD_CreateText} 37% 115u 61% 13u "$PublicIpField"
+  ${NSD_CreateText} 48% 82u 50% 13u "$PublicIpField"
   Pop $hPublicIp
   SendMessage $hPublicIp ${WM_SETFONT} $FontBody 1
-  ${NSD_CreateCheckBox} 2% 131u 96% 12u "اجازهٔ اتصال به پورت ۱۴۳۳ از بیرون شبکه (فوروارد پورت در روتر لازم است)"
+  ${NSD_CreateCheckBox} 2% 98u 96% 11u "اجازهٔ اتصال به پورت ۱۴۳۳ از بیرون شبکه (فوروارد پورت در روتر)"
   Pop $hExternal
+  SetCtlColors $hExternal ${COL_TEXT} ${COL_CARD}
   SendMessage $hExternal ${WM_SETFONT} $FontSmall 1
   ${If} $ExternalOk == "1"
     ${NSD_SetState} $hExternal ${BST_CHECKED}
   ${EndIf}
-
-  !insertmacro FlatButton 0 150u 46% 15u "تست اتصال و شمردن دیتابیس‌ها" $hSqlTest ${COL_WHITE} ${COL_BRAND}
+  !insertmacro Btn 2% 111 32% 13 "تست اتصال" $hSqlTest
   ${NSD_OnClick} $hSqlTest OnTestSqlClick
-  !insertmacro SolidLabel 48% 150u 52% 15u "با دکمهٔ کناری، اتصال را قبل از ادامه امتحان کنید." ${COL_MUTED} ${COL_CARD2} ${SS_CENTER}
-  StrCpy $hSqlStatus $0
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}|${SS_NOTIFY}" 0 36% 111u 62% 13u "با این دکمه، اتصال را قبل از ادامه امتحان کنید."
+  Pop $hSqlStatus
+  SetCtlColors $hSqlStatus ${COL_MUTED} ${COL_CARD}
   SendMessage $hSqlStatus ${WM_SETFONT} $FontSmall 1
 
-  !insertmacro SolidLabel 0 168u 100% 9u "• در SQL Server باید TCP/IP فعال و پورت ۱۴۳۳ باز باشد (SQL Server Configuration Manager)." ${COL_MUTED} ${COL_WHITE} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-
-  !insertmacro PageCredit 182
-
+  !insertmacro PageCreditBar
   Call ToggleSqlFields
-  Call muiPageLoadFullWindow
   nsDialogs::Show
-  Call muiPageUnloadFullWindow
 FunctionEnd
 
 Function OnAuthClick
@@ -687,7 +725,7 @@ Function OnTestSqlClick
     StrCpy $4 ""
   ${EndIf}
   ${If} $PyExe == ""
-    SetCtlColors $hSqlStatus ${COL_WARN} ${COL_WARNBG}
+    SetCtlColors $hSqlStatus ${COL_WARN} ${COL_CARD}
     ${NSD_SetText} $hSqlStatus "پایتون روی این سیستم پیدا نشد؛ تست اتصال ممکن نیست ولی نصب پیش‌نیازها آن را می‌آورد."
     Return
   ${EndIf}
@@ -698,7 +736,7 @@ Function OnTestSqlClick
   WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "user" "$3"
   WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "pass" "$4"
 
-  SetCtlColors $hSqlStatus ${COL_MUTED} ${COL_CARD2}
+  SetCtlColors $hSqlStatus ${COL_MUTED} ${COL_CARD}
   ${NSD_SetText} $hSqlStatus "در حال تست اتصال ... چند ثانیه صبر کنید"
   Delete "$PLUGINSDIR\dbs.ini"
   nsExec::ExecToStack '"$PyExe" "$PLUGINSDIR\sql_admin_tools.py" databases --creds "$PLUGINSDIR\dbcreds.ini" --out-ini "$PLUGINSDIR\dbs.ini"'
@@ -715,19 +753,19 @@ Function OnTestSqlClick
     ${EndIf}
     ${If} $5 == "1"
       StrCpy $DbListOk "1"
-      SetCtlColors $hSqlStatus ${COL_OK} ${COL_OKBG}
-      ${NSD_SetText} $hSqlStatus "اتصال برقرار شد — $DbListCount دیتابیس روی این سرور پیدا شد. در صفحهٔ بعد از همین فهرست انتخاب می‌کنید."
+      SetCtlColors $hSqlStatus ${COL_OK} ${COL_CARD}
+      ${NSD_SetText} $hSqlStatus "اتصال برقرار شد — $DbListCount دیتابیس روی این سرور پیدا شد."
       Return
     ${EndIf}
     ReadINIStr $6 "$PLUGINSDIR\dbs.ini" "result" "error"
     ${If} $6 == ""
       StrCpy $6 "خطای نامشخص"
     ${EndIf}
-    SetCtlColors $hSqlStatus ${COL_ERR} ${COL_ERRBG}
-    ${NSD_SetText} $hSqlStatus "اتصال برقرار نشد: $6 — سرور، پورت، کاربر و رمز را بررسی کنید."
+    SetCtlColors $hSqlStatus ${COL_ERR} ${COL_CARD}
+    ${NSD_SetText} $hSqlStatus "اتصال برقرار نشد: $6"
     Return
   test_failed:
-    SetCtlColors $hSqlStatus ${COL_ERR} ${COL_ERRBG}
+    SetCtlColors $hSqlStatus ${COL_ERR} ${COL_CARD}
     ${NSD_SetText} $hSqlStatus "اجرای تست ممکن نشد (کد $9) — سرور/پورت/کاربر/رمز را بررسی کنید."
 FunctionEnd
 
@@ -778,31 +816,22 @@ FunctionEnd
 ;  صفحهٔ ۳ — انتخاب دیتابیس برنامه (فهرست + تایپ دستی)
 ; ---------------------------------------------------------------------------
 Function PageDbCreate
-  ${If} $RecheckOnly == 1
-    Abort
-  ${EndIf}
+  !insertmacro MUI_HEADER_TEXT "انتخاب دیتابیس برنامه" "از فهرست سرور انتخاب کنید یا نام آن را دستی بنویسید — هیچ دیتابیسی اجباری نیست"
 
-  !insertmacro MUI_HEADER_TEXT "انتخاب دیتابیس برنامه" "از فهرست سرور انتخاب کنید یا نام آن را دستی بنویسید"
-
-  nsDialogs::Create 1044
+  nsDialogs::Create 1018
   Pop $PageDialog
   ${If} $PageDialog == error
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
-  SetCtlColors $PageDialog "" ${COL_WHITE}
 
-  !insertmacro PageBand "انتخاب دیتابیس برنامه" "هیچ دیتابیسی اجباری نیست — دیتابیس حسابداری خودتان را از فهرست سرور انتخاب کنید یا نامش را بنویسید"
+  !insertmacro PageBand ۳
 
-  !insertmacro SolidLabel 0 30u 100% 9u "سرور جاری:  $SqlHost , پورت $SqlPort    •    روش ورود: $SqlAuth" ${COL_BRAND} ${COL_WHITE} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-
-  !insertmacro CardPanel 0 40u 100% 78u ${COL_CARD}
-  !insertmacro SolidLabel 2% 43u 44% 11u "۱) فهرست دیتابیس‌های سرور" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  !insertmacro FlatButton 52% 42u 46% 14u "دریافت فهرست دیتابیس‌ها" $hListBtn ${COL_WHITE} ${COL_BRAND}
+  !insertmacro CardBox 0 9 100 78
+  !insertmacro CardTitle 2% 14 46% "۱) فهرست دیتابیس‌های روی سرور"
+  !insertmacro Btn 50% 12 48% 13 "دریافت فهرست دیتابیس‌ها" $hListBtn
   ${NSD_OnClick} $hListBtn OnListDbClick
-  ${NSD_CreateListBox} 2% 58u 96% 40u ""
+  ${NSD_CreateListBox} 2% 27u 96% 40u ""
   Pop $hDbList
   SendMessage $hDbList ${WM_SETFONT} $FontBody 1
   SetCtlColors $hDbList ${COL_TEXT} ${COL_WHITE}
@@ -811,104 +840,27 @@ Function PageDbCreate
     ${NSD_LB_AddString} $hDbList "$ErpDb"
     ${NSD_LB_SelectString} $hDbList "$ErpDb"
   ${EndIf}
-  !insertmacro SolidLabel 2% 100u 96% 8u "هنوز فهرستی گرفته نشده — دکمهٔ آبی «دریافت فهرست دیتابیس‌ها» را بزنید." ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
-  StrCpy $hListStatus $0
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}|${SS_NOTIFY}" 0 2% 69u 96% 8u "هنوز فهرستی گرفته نشده — دکمهٔ آبی بالا را بزنید."
+  Pop $hListStatus
+  SetCtlColors $hListStatus ${COL_MUTED} ${COL_CARD}
   SendMessage $hListStatus ${WM_SETFONT} $FontSmall 1
-  !insertmacro SolidLabel 2% 109u 96% 8u "• با کلیک روی هر نام در فهرست، همان نام خودکار در کادر پایین می‌آید." ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
+  !insertmacro Txt 2% 78 96% 8 "• با کلیک روی هر نام در فهرست، همان نام خودکار در کادر پایین می‌آید." ${COL_MUTED} ${COL_CARD}
   SendMessage $0 ${WM_SETFONT} $FontSmall 1
 
-  !insertmacro CardPanel 0 121u 100% 38u ${COL_CARD}
-  !insertmacro SolidLabel 2% 124u 96% 10u "۲) نام دیتابیس برنامه (حسابداری) — انتخاب از فهرست یا تایپ دستی:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  ${NSD_CreateText} 2% 135u 54% 14u "$ErpDb"
+  !insertmacro CardBox 0 90 100 37
+  !insertmacro CardTitle 2% 94 96% "۲) نام دیتابیس برنامه (حسابداری) — انتخاب از فهرست یا تایپ دستی"
+  ${NSD_CreateText} 2% 105u 46% 14u "$ErpDb"
   Pop $hErpDbEdit
   SendMessage $hErpDbEdit ${WM_SETFONT} $FontBtn 1
-  SetCtlColors $hErpDbEdit ${COL_TEXT} ${COL_WHITE}
-  !insertmacro FlatButton 58% 134u 40% 16u "تأیید نام دیتابیس" $hConfirmBtn ${COL_WHITE} ${COL_OK}
+  !insertmacro Btn 50% 105 48% 14 "تأیید نام دیتابیس" $hConfirmBtn
   ${NSD_OnClick} $hConfirmBtn OnConfirmDbClick
-  !insertmacro SolidLabel 2% 150u 96% 8u "نام را بنویسید یا از فهرست انتخاب کنید، بعد دکمهٔ سبز «تأیید نام دیتابیس» را بزنید." ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
-  StrCpy $hDbConfirm $0
+  nsDialogs::CreateControl STATIC "${DEFAULT_STYLES}|${SS_LEFT}|${SS_NOTIFY}" 0 2% 121u 96% 8u "نام را بنویسید یا از فهرست انتخاب کنید، سپس دکمهٔ آبی را بزنید."
+  Pop $hDbConfirm
+  SetCtlColors $hDbConfirm ${COL_MUTED} ${COL_CARD}
   SendMessage $hDbConfirm ${WM_SETFONT} $FontSmall 1
 
-  !insertmacro PageSep 162u
-  !insertmacro SolidLabel 2% 166u 30% 8u "دیتابیس خود ویزیتور:" ${COL_MUTED} ${COL_WHITE} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
-  ${NSD_CreateText} 33% 165u 30% 13u "$DbName"
-  Pop $hDbName
-  SendMessage $hDbName ${WM_SETFONT} $FontBody 1
-  ${NSD_CreateCheckBox} 65% 166u 34% 16u "بررسی سلامت اتصال و جدول‌ها در پایان نصب (پیشنهادی)"
-  Pop $hHealth
-  SendMessage $hHealth ${WM_SETFONT} $FontSmall 1
-  ${NSD_SetState} $hHealth ${BST_CHECKED}
-
-  !insertmacro PageCredit 183
-
-  Call muiPageLoadFullWindow
+  !insertmacro PageCreditBar
   nsDialogs::Show
-  Call muiPageUnloadFullWindow
-FunctionEnd
-
-Function OnListDbClick
-  ${If} $PyExe == ""
-    SetCtlColors $hListStatus ${COL_WARN} ${COL_WARNBG}
-    ${NSD_SetText} $hListStatus "پایتون روی این سیستم پیدا نشد؛ نام دیتابیس را دستی در کادر پایین بنویسید."
-    Return
-  ${EndIf}
-
-  Delete "$PLUGINSDIR\dbcreds.ini"
-  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "server" "$SqlHost"
-  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "port" "$SqlPort"
-  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "user" "$SqlUser"
-  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "pass" "$SqlPass"
-
-  SetCtlColors $hListStatus ${COL_MUTED} ${COL_CARD}
-  ${NSD_SetText} $hListStatus "در حال گرفتن فهرست دیتابیس‌ها ... چند ثانیه صبر کنید"
-  Delete "$PLUGINSDIR\dbs.ini"
-  nsExec::ExecToStack '"$PyExe" "$PLUGINSDIR\sql_admin_tools.py" databases --creds "$PLUGINSDIR\dbcreds.ini" --out-ini "$PLUGINSDIR\dbs.ini"'
-  Pop $R0
-  Pop $R1
-
-  ${NSD_LB_Clear} $hDbList
-  StrCpy $DbCount "0"
-  StrCpy $DbListOk "0"
-  IfFileExists "$PLUGINSDIR\dbs.ini" 0 list_failed
-    ReadINIStr $DbCount "$PLUGINSDIR\dbs.ini" "result" "count"
-    ${If} $DbCount == ""
-      StrCpy $DbCount "0"
-    ${EndIf}
-    StrCmp $DbCount "0" list_empty
-    StrCpy $DbIdx "1"
-  ${If} $DbCount > 0
-    StrCpy $DbIdx "1"
-  loop_db:
-    ${If} $DbIdx > $DbCount
-      Goto list_done
-    ${EndIf}
-    ReadINIStr $5 "$PLUGINSDIR\dbs.ini" "db$DbIdx" "name"
-    ${If} $5 != ""
-      ${NSD_LB_AddString} $hDbList "$5"
-    ${EndIf}
-    IntOp $DbIdx $DbIdx + 1
-    Goto loop_db
-  ${EndIf}
-  list_done:
-    StrCpy $DbListOk "1"
-    ReadINIStr $6 "$PLUGINSDIR\dbs.ini" "db1" "name"
-    ${If} $6 != ""
-      ${NSD_LB_SelectString} $hDbList "$6"
-      ${NSD_SetText} $hErpDbEdit "$6"
-    ${EndIf}
-    SetCtlColors $hListStatus ${COL_OK} ${COL_CARD}
-    ${NSD_SetText} $hListStatus "$DbCount دیتابیس پیدا شد. روی نام موردنظر کلیک کنید یا نام را در کادر پایین بنویسید."
-    Goto list_end
-  list_empty:
-    SetCtlColors $hListStatus ${COL_WARN} ${COL_CARD}
-    ${NSD_SetText} $hListStatus "هیچ دیتابیس کاربری روی این سرور پیدا نشد — سرور، کاربر و رمز را بررسی کنید یا نام را دستی بنویسید."
-    Goto list_end
-  list_failed:
-    SetCtlColors $hListStatus ${COL_ERR} ${COL_CARD}
-    ${NSD_SetText} $hListStatus "گرفتن فهرست ممکن نشد (کد $R0) — سرور/پورت/کاربر/رمز را بررسی کنید یا نام را دستی بنویسید."
-  list_end:
 FunctionEnd
 
 Function OnDbSelChange
@@ -918,7 +870,7 @@ Function OnDbSelChange
   ${EndIf}
   ${NSD_SetText} $hErpDbEdit "$0"
   SetCtlColors $hDbConfirm ${COL_BRAND} ${COL_CARD}
-  ${NSD_SetText} $hDbConfirm "از فهرست انتخاب شد: $0 — برای ثبت نهایی، دکمهٔ سبز «تأیید نام دیتابیس» را بزنید."
+  ${NSD_SetText} $hDbConfirm "از فهرست انتخاب شد: $0 — برای ثبت نهایی دکمهٔ آبی «تأیید نام دیتابیس» را بزنید."
 FunctionEnd
 
 Function OnConfirmDbClick
@@ -946,12 +898,70 @@ Function OnConfirmDbClick
       ${NSD_SetText} $hDbConfirm "تأیید شد: دیتابیس «$0» در فهرست همین سرور وجود دارد."
     ${Else}
       SetCtlColors $hDbConfirm ${COL_WARN} ${COL_CARD}
-      ${NSD_SetText} $hDbConfirm "توجه: «$0» در فهرست گرفته‌شده نبود؛ اگر مطمئنید همین نام درست است، ادامه بدهید (بررسی سلامت نصب هم آن را امتحان می‌کند)."
+      ${NSD_SetText} $hDbConfirm "توجه: «$0» در فهرست نبود؛ اگر مطمئنید درست است ادامه بدهید (بررسی سلامت هم امتحان می‌کند)."
     ${EndIf}
     Return
   ${EndIf}
   SetCtlColors $hDbConfirm ${COL_OK} ${COL_CARD}
   ${NSD_SetText} $hDbConfirm "تأیید شد: دیتابیس «$0» برای اتصال برنامه استفاده می‌شود."
+FunctionEnd
+
+Function OnListDbClick
+  ${If} $PyExe == ""
+    SetCtlColors $hListStatus ${COL_WARN} ${COL_CARD}
+    ${NSD_SetText} $hListStatus "پایتون پیدا نشد؛ نام دیتابیس را دستی در کادر پایین بنویسید."
+    Return
+  ${EndIf}
+
+  Delete "$PLUGINSDIR\dbcreds.ini"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "server" "$SqlHost"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "port" "$SqlPort"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "user" "$SqlUser"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "pass" "$SqlPass"
+
+  SetCtlColors $hListStatus ${COL_MUTED} ${COL_CARD}
+  ${NSD_SetText} $hListStatus "در حال گرفتن فهرست دیتابیس‌ها ... چند ثانیه صبر کنید"
+  Delete "$PLUGINSDIR\dbs.ini"
+  nsExec::ExecToStack '"$PyExe" "$PLUGINSDIR\sql_admin_tools.py" databases --creds "$PLUGINSDIR\dbcreds.ini" --out-ini "$PLUGINSDIR\dbs.ini"'
+  Pop $R0
+  Pop $R1
+
+  ${NSD_LB_Clear} $hDbList
+  StrCpy $DbCount "0"
+  StrCpy $DbListOk "0"
+  IfFileExists "$PLUGINSDIR\dbs.ini" 0 list_failed
+    ReadINIStr $DbCount "$PLUGINSDIR\dbs.ini" "result" "count"
+    ${If} $DbCount == ""
+      StrCpy $DbCount "0"
+    ${EndIf}
+    StrCmp $DbCount "0" list_empty
+    StrCpy $DbIdx "1"
+  loop_db:
+    IntCmp $DbIdx $DbCount list_done
+    ReadINIStr $5 "$PLUGINSDIR\dbs.ini" "db$DbIdx" "name"
+    ${If} $5 != ""
+      ${NSD_LB_AddString} $hDbList "$5"
+    ${EndIf}
+    IntOp $DbIdx $DbIdx + 1
+    Goto loop_db
+  list_done:
+    StrCpy $DbListOk "1"
+    ReadINIStr $6 "$PLUGINSDIR\dbs.ini" "db1" "name"
+    ${If} $6 != ""
+      ${NSD_LB_SelectString} $hDbList "$6"
+      ${NSD_SetText} $hErpDbEdit "$6"
+    ${EndIf}
+    SetCtlColors $hListStatus ${COL_OK} ${COL_CARD}
+    ${NSD_SetText} $hListStatus "$DbCount دیتابیس پیدا شد — روی نام موردنظر کلیک کنید."
+    Goto list_end
+  list_empty:
+    SetCtlColors $hListStatus ${COL_WARN} ${COL_CARD}
+    ${NSD_SetText} $hListStatus "هیچ دیتابیس کاربری پیدا نشد — سرور/کاربر/رمز را بررسی کنید یا نام را دستی بنویسید."
+    Goto list_end
+  list_failed:
+    SetCtlColors $hListStatus ${COL_ERR} ${COL_CARD}
+    ${NSD_SetText} $hListStatus "گرفتن فهرست ممکن نشد (کد $R0) — سرور/پورت/کاربر/رمز را بررسی کنید یا نام را دستی بنویسید."
+  list_end:
 FunctionEnd
 
 Function PageDbLeave
@@ -977,57 +987,47 @@ FunctionEnd
 ;  صفحهٔ ۴ — کد فعال‌سازی و شناسنامهٔ سازنده
 ; ---------------------------------------------------------------------------
 Function PageActivationCreate
-  ${If} $RecheckOnly == 1
-    Abort
-  ${EndIf}
+  !insertmacro MUI_HEADER_TEXT "کد فعال‌سازی" "کد را از فروشندهٔ سامانه گرفته‌اید — اگر در دسترس نیست، تیک «بعداً» را بزنید"
 
-  !insertmacro MUI_HEADER_TEXT "کد فعال‌سازی" "برای فعال بودن سامانه، کد فعال‌سازی را وارد کنید"
-
-  nsDialogs::Create 1044
+  nsDialogs::Create 1018
   Pop $PageDialog
   ${If} $PageDialog == error
     Abort
   ${EndIf}
   nsDialogs::SetRTL $(^RTL)
-  SetCtlColors $PageDialog "" ${COL_WHITE}
 
-  !insertmacro PageBand "کد فعال‌سازی سامانه" "کد را از فروشندهٔ سامانه گرفته‌اید؛ اگر الان در دسترس نیست، تیک «بعداً» را بزنید"
+  !insertmacro PageBand ۴
 
-  !insertmacro CardPanel 0 32u 100% 58u ${COL_CARD}
-  !insertmacro SolidLabel 2% 36u 96% 20u "سامانه بدون کد هم نصب می‌شود، اما تا ورود کد فعال نمی‌شود. کد در فایل تنظیمات سرور ذخیره می‌شود و هرگز در گزارش نصب یا لاگ‌ها چاپ نمی‌شود." ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
+  !insertmacro CardBox 0 9 100 65
+  !insertmacro CardTitle 2% 14 96% "فعال‌سازی سامانه"
+  !insertmacro Txt 2% 26 96% 18 "سامانه بدون کد هم نصب می‌شود، اما تا ورود کد فعال نمی‌شود. کد فقط در فایل تنظیمات سرور ذخیره می‌شود و هرگز در گزارش نصب یا لاگ‌ها چاپ نمی‌شود." ${COL_MUTED} ${COL_CARD}
   SendMessage $0 ${WM_SETFONT} $FontSmall 1
-  !insertmacro SolidLabel 2% 58u 20% 10u "کد فعال‌سازی:" ${COL_TEXT} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  ${NSD_CreateText} 23% 57u 73% 14u "$ActCode"
+  !insertmacro Txt 2% 47 22% 9 "کد فعال‌سازی:" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  ${NSD_CreateText} 26% 45u 72% 14u "$ActCode"
   Pop $hAct
   SendMessage $hAct ${WM_SETFONT} $FontBtn 1
-  SetCtlColors $hAct ${COL_TEXT} ${COL_WHITE}
-  ${NSD_CreateCheckBox} 2% 74u 96% 12u "فعلاً کد ندارم؛ بعداً وارد می‌کنم."
+  ${NSD_CreateCheckBox} 2% 62u 96% 12u "فعلاً کد ندارم؛ بعداً وارد می‌کنم."
   Pop $hActLater
+  SetCtlColors $hActLater ${COL_TEXT} ${COL_CARD}
   SendMessage $hActLater ${WM_SETFONT} $FontSmall 1
   ${If} $ActLater == "1"
     ${NSD_SetState} $hActLater ${BST_CHECKED}
   ${EndIf}
   ${NSD_OnClick} $hActLater OnActLaterClick
-  !insertmacro SolidLabel 2% 86u 96% 8u "• قالب رایج کد: VIZ-XXXX-XXXX-XXXX" ${COL_MUTED} ${COL_CARD} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
 
-  !insertmacro CardPanel 0 94u 100% 76u ${COL_CARD2}
-  !insertmacro SolidLabel 2% 100u 96% 14u "سامانهٔ ویزیتور — نسخهٔ ${VERSION}" ${COL_BRAND} ${COL_CARD2} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontTitle 1
-  !insertmacro SolidLabel 2% 121u 96% 12u "طراحی و برنامه‌نویسی:  ${AUTHOR_FA}  (${AUTHOR_EN})" ${COL_TEXT} ${COL_CARD2} ${SS_LEFT}
+  !insertmacro CardBox 0 77 100 50
+  !insertmacro CardTitle 2% 82 96% "شناسنامهٔ سامانه"
+  !insertmacro Txt 2% 94 96% 11 "سامانهٔ ویزیتور — نسخهٔ ${VERSION}" ${COL_NAVY} ${COL_CARD}
   SendMessage $0 ${WM_SETFONT} $FontHead 1
-  !insertmacro SolidLabel 2% 136u 96% 12u "گروه نرم‌افزاری:  ${STUDIO}" ${COL_TEXT} ${COL_CARD2} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontHead 1
-  !insertmacro SolidLabel 2% 152u 96% 14u "اتصال برنامهٔ اندروید، مستقیم و امن به SQL Server (پورت ۱۴۳۳) — بدون IIS و بدون API میانی." ${COL_MUTED} ${COL_CARD2} ${SS_LEFT}
-  SendMessage $0 ${WM_SETFONT} $FontSmall 1
+  !insertmacro Txt 2% 105 96% 10 "طراحی و برنامه‌نویسی:  ${AUTHOR_FA}  (${AUTHOR_EN})" ${COL_TEXT} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
+  !insertmacro Txt 2% 114 96% 10 "گروه نرم‌افزاری:  ${STUDIO}" ${COL_BRAND} ${COL_CARD}
+  SendMessage $0 ${WM_SETFONT} $FontBody 1
 
-  !insertmacro PageCredit 176
-
+  !insertmacro PageCreditBar
   Call ToggleActField
-  Call muiPageLoadFullWindow
   nsDialogs::Show
-  Call muiPageUnloadFullWindow
 FunctionEnd
 
 Function OnActLaterClick
@@ -1145,23 +1145,65 @@ Function .onInit
     StrCpy $Detected "$Detected$\r$\nاتصال اندروید: مستقیم به SQL Server روی پورت 1433 — اگر آی‌پی اختصاصی داشته باشید، از بیرون شبکه هم وصل می‌شود"
   preflight_done:
 
-  IfSilent skip_prev_check
-
+  ; اگر نصب قبلی هست، کادرها با مقادیر همان نصب پر می‌شوند (رمز SQL هرگز ذخیره نمی‌شود)
   ${If} $PrevExists == "1"
-    MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "یک نصب قبلی ویزیتور روی این کامپیوتر پیدا شد.$\r$\n$\r$\nبله = فقط بازرسی و تعمیر (سریع)$\r$\nخیر = پیکربندی دوباره — فایل‌های برنامهٔ قبلی با نسخهٔ نو جایگزین می‌شوند ($\r$\nتنظیمات و داده‌های C:\ProgramData\Vizitor دست‌نخورده می‌مانند)$\r$\nانصراف = خروج" IDYES do_recheck IDNO do_fresh
-    Quit
+    Call LoadLastWizard
   ${EndIf}
-  Goto after_choice
 
-  do_fresh:
+  IfSilent skip_prev_check
+  ${If} $PrevExists == "1"
+    MessageBox MB_YESNO|MB_ICONQUESTION "نسخهٔ قبلی ویزیتور روی این کامپیوتر پیدا شد.$\r$\n$\r$\nبله = به‌روزرسانی و تعمیر: فایل‌های برنامهٔ قبلی با نسخهٔ نو جایگزین می‌شوند (تنظیمات و دیتابیس دست‌نخورده می‌مانند).$\r$\nخیر = نصب تازه: کادرها با مقادیر نصب قبلی پر شده‌اند و می‌توانید تغییرشان دهید.$\r$\n$\r$\nدر هر دو حالت، صفحه‌های تنظیمات نمایش داده می‌شوند." IDYES do_update
+  ${EndIf}
+  Goto skip_prev_check
+  do_update:
     StrCpy $FreshClean "1"
-    Goto after_choice
-
-  do_recheck:
-    StrCpy $RecheckOnly "1"
-
-  after_choice:
   skip_prev_check:
+FunctionEnd
+
+; خواندن مقادیر آخرین نصب (بدون رمز) برای پر بودن کادرها
+Function LoadLastWizard
+  IfFileExists "${DATA_HOME}\wizard_last.ini" 0 lw_end
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "ip"
+  ${If} $0 != ""
+    StrCpy $IpAddr "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "port"
+  ${If} $0 != ""
+    StrCpy $ApiPort "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "sqlhost"
+  ${If} $0 != ""
+    StrCpy $SqlHost "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "sqlport"
+  ${If} $0 != ""
+    StrCpy $SqlPort "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "sqlauth"
+  ${If} $0 != ""
+    StrCpy $SqlAuth "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "sqluser"
+  ${If} $0 != ""
+    StrCpy $SqlUser "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "erpdb"
+  ${If} $0 != ""
+    StrCpy $ErpDb "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "dbname"
+  ${If} $0 != ""
+    StrCpy $DbName "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "publicip"
+  ${If} $0 != ""
+    StrCpy $PublicIpField "$0"
+  ${EndIf}
+  ReadINIStr $0 "${DATA_HOME}\wizard_last.ini" "wizard" "external"
+  ${If} $0 != ""
+    StrCpy $ExternalOk "$0"
+  ${EndIf}
+  lw_end:
 FunctionEnd
 
 ; ---------------------------------------------------------------------------
