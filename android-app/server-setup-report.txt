@@ -1,16 +1,16 @@
 گزارش بررسی فایل‌های راه‌اندازی سرور — ویزیتور (نصب‌کنندهٔ ویندوز ↔ اندروید)
-تاریخ: 2026-09-18 15:03:57 UTC   کامیت: 061f6618f72b06ab33fbfb38c3b21a9e3bde0f34
+تاریخ: 2026-09-18 15:07:39 UTC   کامیت: 18d609a0a3f293f6f643b3dd7a713aad2064b44e
 ==================================================================================
 
 --- ۱) تحلیل نحوی با خودِ PowerShell (7.6.5) ---
 PowerShell transcript start
-Start time: 20260918150356
+Start time: 20260918150738
 Username: runnervmlun5p\runner
 RunAs User: runnervmlun5p\runner
 Configuration Name: 
 Machine: runnervmlun5p (Unix 6.17.0.1022)
-Host Application: /opt/microsoft/powershell/7/pwsh.dll -command . '/home/runner/work/_temp/74a6edc8-ff27-4485-a1e1-3f7565cb3ec1.ps1'
-Process ID: 2249
+Host Application: /opt/microsoft/powershell/7/pwsh.dll -command . '/home/runner/work/_temp/249ce2fd-992c-4e07-b054-1e1e87a34ad3.ps1'
+Process ID: 2149
 PSVersion: 7.6.5
 PSEdition: Core
 GitCommitId: 7.6.5
@@ -32,7 +32,7 @@ WSManStackVersion: 3.0
 نسخهٔ PowerShell: 7.6.5
 BOM (سه بایت اول) install.ps1: ef bb bf
 PowerShell transcript end
-End time: 20260918150356
+End time: 20260918150739
 
 --- ۲) بررسی قرارداد اتصال (کارت اتصال + دسترسی‌ها + مسیر ۱۴۳۳) ---
 بررسی قرارداد اتصال — ویزیتور مستقیم (سرور ↔ اندروید)
