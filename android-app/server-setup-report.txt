@@ -1,0 +1,47 @@
+گزارش بررسی فایل‌های راه‌اندازی سرور — ویزیتور (نصب‌کنندهٔ ویندوز ↔ اندروید)
+تاریخ: 2026-09-18 15:02:43 UTC   کامیت: b439cd8ac14f48d13da7e43c74edca284d88742d
+==================================================================================
+
+--- ۱) تحلیل نحوی با خودِ PowerShell (7.6.5) ---
+PowerShell transcript start
+Start time: 20260918150243
+Username: runnervmlun5p\runner
+RunAs User: runnervmlun5p\runner
+Configuration Name: 
+Machine: runnervmlun5p (Unix 6.17.0.1022)
+Host Application: /opt/microsoft/powershell/7/pwsh.dll -command . '/home/runner/work/_temp/921313b4-be22-4dd3-abf2-087f149eb441.ps1'
+Process ID: 2179
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Ubuntu 24.04.5 LTS
+Platform: Unix
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+[خطا] install.ps1
+   خط 1201: Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
+   خط 1268: Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
+   خط 1271: Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to delimit the name.
+[OK] installer/nsi/preflight.ps1 — 151 خط، 2 تابع
+[OK] تابع موجود: Invoke-AndroidPrep
+[OK] تابع موجود: Test-SqlTcpListener
+[OK] تابع موجود: Enable-SqlTcp
+[OK] تابع موجود: Resolve-SqlInstanceInfo
+[OK] تابع موجود: Provision-SqlServer
+[OK] تابع موجود: Run-Checks
+[OK] تابع موجود: Repair
+نسخهٔ PowerShell: 7.6.5
+BOM (سه بایت اول) install.ps1: ef bb bf
+PowerShell transcript end
+End time: 20260918150243
+
+--- ۲) بررسی قرارداد اتصال (کارت اتصال + دسترسی‌ها + مسیر ۱۴۳۳) ---
+
+--- ۳) نتیجه ---
+  ناهم‌خوانی پیدا شد ✗ (کد خروج )
+
+  سه بایت اول فایل‌های PowerShell (باید ef bb bf باشد):
+    install.ps1                        efbbbf
+    installer/nsi/preflight.ps1        efbbbf
