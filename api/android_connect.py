@@ -25,7 +25,7 @@ The QR generator (segno, BSD-3) is vendored under api/vendor/segno.
 
 Usage
     python android_connect.py --config <config.json> [--package-dir <dir>]
-        [--erp-db Meelano] [--login vizitor_android] [--password-file <path>]
+        --erp-db <database chosen from the list> [--login vizitor_android] [--password-file <path>]
         [--host-lan 192.168.1.150] [--host-public 37.143.147.19]
         [--update-config] [--no-qr]
 """
