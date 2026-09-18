@@ -400,4 +400,16 @@ implementation("com.microsoft.sqlserver:mssql-jdbc:12.4.2.jre8")
 | `VizitorViewModel.kt` | `dbHostExternal` / `dbHostLocal` / `dbUseExternal`، `setDbAddresses()`، `activeDbHost()`، `dbOptions`، `dbListLoading`، `loadDatabases()` |
 | `SettingsScreen.kt` | چیپ انتخاب روش اتصال، دو فیلد نشانی، دکمهٔ دریافت لیست، چیپ‌های دیتابیس، دکمهٔ اعمال تنظیمات و تست اتصال |
 
-پچ آماده: `patches/phase3-database-picker.patch` (نسخهٔ قبلی) و آخرین وضعیت در همین فایل‌ها.
+پچ آماده: `patches/phase3-database-picker.patch` — تفاوت کامل کد اندروید از کامیت `5346510` تا آخرین وضعیت
+(جریان «بیرون شبکه اول»، نگه‌داری هر دو نشانی، کادر تایپ دستی دیتابیس، دکمه‌های تأیید/تست و کارت «دربارهٔ سامانه»).
+کد کامل و نهایی همیشه در همین پوشه (`android-sql-direct/*.kt`) است.
+
+### شناسنامهٔ سازنده در برنامه (نسخهٔ ۱.۳)
+* سرصفحهٔ همهٔ فایل‌های `android-sql-direct/*.kt`: «Developed by Milad Yaghoobi — Meelano Studio Design».
+* در تب **تنظیمات**، بخش تازهٔ **«دربارهٔ سامانه»** اضافه شد:
+  «سامانهٔ ویزیتور — اتصال مستقیم و امن به SQL Server (پورت ۱۴۳۳)» +
+  «طراحی و برنامه‌نویسی: میلاد یقوبی (Milad Yaghoobi)» +
+  «گروه نرم‌افزاری: Meelano Studio Design».
+* کادر «نام دیتابیس انتخاب‌شده» همیشه باز است: حتی اگر فهرست سرور گرفته نشود
+  (سرور خاموش، رمز اشتباه، بیرون از شبکه) می‌توانید نام دیتابیس را **دستی تایپ** کنید و
+  با «اعمال تنظیمات و تست اتصال» همان نام آزمایش شود — هیچ دیتابیسی اجباری نیست.

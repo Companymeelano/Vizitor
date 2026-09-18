@@ -1,7 +1,7 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  *  Vizitor — آتیران ویزیتور | مدیریت اتصال مستقیم SQL Server (TDS 1433)
- *  Developed by Milano Technical Team, Milad Yaghoobi
+ *  Developed by Milad Yaghoobi — Meelano Studio Design
  *  ─────────────────────────────────────────────────────────────────────────
  *  معماری:  UI → ViewModel → Repository → DataSource → این Manager → SQL:1433
  *

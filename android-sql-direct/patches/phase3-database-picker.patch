@@ -1,7 +1,16 @@
 diff --git a/android-sql-direct/SecureDbStore.kt b/android-sql-direct/SecureDbStore.kt
-index 35bac85..7c91f0d 100644
+index 35bac85..11f04b1 100644
 --- a/android-sql-direct/SecureDbStore.kt
 +++ b/android-sql-direct/SecureDbStore.kt
+@@ -1,7 +1,7 @@
+ /*
+  * ═══════════════════════════════════════════════════════════════════════════
+  *  Vizitor — آتیران ویزیتور | ذخیرهٔ امن اطلاعات اتصال دیتابیس
+- *  Developed by Milano Technical Team, Milad Yaghoobi
++ *  Developed by Milad Yaghoobi — Meelano Studio Design
+  *  ─────────────────────────────────────────────────────────────────────────
+  *  اطلاعات اتصال SQL Server (شامل رمز) هرگز به‌صورت متن در SharedPreferences
+  *  یا DataStore نگه نمی‌دارند؛ یک بلوک JSON با AES-GCM و کلید غیرخارج‌شدنی
 @@ -48,23 +48,65 @@ object SecureDbStore {
          prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
      }
@@ -110,9 +119,18 @@ index 35bac85..7c91f0d 100644
                  trustServerCert = o.optBoolean("trustServerCert", true),
                  connectTimeoutSec = o.optInt("connectTimeoutSec", 10),
 diff --git a/android-sql-direct/SettingsScreen.kt b/android-sql-direct/SettingsScreen.kt
-index fc58a54..2f799c9 100644
+index fc58a54..f63060a 100644
 --- a/android-sql-direct/SettingsScreen.kt
 +++ b/android-sql-direct/SettingsScreen.kt
+@@ -1,7 +1,7 @@
+ /*
+  * ═══════════════════════════════════════════════════════════════════════════
+  *  Vizitor — آتیران ویزیتور | تب ۶: تنظیمات (Settings)
+- *  Developed by Milano Technical Team, Milad Yaghoobi
++ *  Developed by Milad Yaghoobi — Meelano Studio Design
+  *  ─────────────────────────────────────────────────────────────────────────
+  *  انتخاب تم اپلیکیشن + پیکربندی سرور آتیران (IP/پورت/مسیر/کلید) +
+  *  کارت وضعیت سلامت سرور (تست دقیق اتصال) + مدیریت همگام‌سازی
 @@ -10,6 +10,7 @@
  package ir.atiran.vizitor.ui.screens
  
@@ -217,9 +235,9 @@ index fc58a54..2f799c9 100644
 +                        },
 +                        label = { Text("آی‌پی اختصاصی سرور SQL (بیرون شبکه)") },
 +                        placeholder = { Text("مثلاً 37.143.147.19") },
-                         singleLine = true, colors = fieldColors,
-                         modifier = Modifier.fillMaxWidth()
-                     )
++                        singleLine = true, colors = fieldColors,
++                        modifier = Modifier.fillMaxWidth()
++                    )
 +                    OutlinedTextField(
 +                        value = dbHostLocal,
 +                        onValueChange = {
@@ -228,9 +246,9 @@ index fc58a54..2f799c9 100644
 +                        },
 +                        label = { Text("آی‌پی داخلی سرور SQL (داخل شبکهٔ فروشگاه)") },
 +                        placeholder = { Text("مثلاً 192.168.1.150") },
-+                        singleLine = true, colors = fieldColors,
-+                        modifier = Modifier.fillMaxWidth()
-+                    )
+                         singleLine = true, colors = fieldColors,
+                         modifier = Modifier.fillMaxWidth()
+                     )
 +
 +                    // ── ۲) پورت و کاربر/رمز ورود به SQL ─────────────────────────
 +                    Text(
@@ -309,7 +327,7 @@ index fc58a54..2f799c9 100644
                              Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                  rowItems.forEach { name ->
                                      val selected = name == dbName
-@@ -264,30 +339,38 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
+@@ -264,29 +339,37 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
                                          )
                                      }
                                  }
@@ -326,20 +344,20 @@ index fc58a54..2f799c9 100644
                      OutlinedTextField(
 -                        value = dbUser, onValueChange = { dbUser = it },
 -                        label = { Text("نام کاربری SQL") },
--                        singleLine = true, colors = fieldColors,
--                        modifier = Modifier.fillMaxWidth()
--                    )
--                    OutlinedTextField(
--                        value = dbPass, onValueChange = { dbPass = it },
--                        label = { Text("رمز عبور SQL") },
 +                        value = dbName, onValueChange = { dbName = it },
 +                        label = { Text("نام دیتابیس انتخاب‌شده") },
                          singleLine = true, colors = fieldColors,
--                        visualTransformation = PasswordVisualTransformation(),
--                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                          modifier = Modifier.fillMaxWidth()
                      )
- 
+-                    OutlinedTextField(
+-                        value = dbPass, onValueChange = { dbPass = it },
+-                        label = { Text("رمز عبور SQL") },
+-                        singleLine = true, colors = fieldColors,
+-                        visualTransformation = PasswordVisualTransformation(),
+-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+-                        modifier = Modifier.fillMaxWidth()
+-                    )
++
 +                    // ── ۵) اعمال تنظیمات و تست اتصال ────────────────────────────
 +                    Row {
 +                        NeonGreenButton(
@@ -360,10 +378,9 @@ index fc58a54..2f799c9 100644
 +                            onClick = { viewModel.disconnectDb() }
 +                        )
 +                    }
-+
+ 
                      // ── وضعیت زندهٔ اتصال ───────────────────────────────────────
                      val statusText = when (val st = dbState) {
-                         is ConnectionState.Ready -> "متصل به ${dbName} ✅ (${st.latencyMs}ms)"
 @@ -314,43 +397,13 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
                              modifier = Modifier.size(16.dp)
                          )
@@ -412,7 +429,45 @@ index fc58a54..2f799c9 100644
                                  "نه در سرور، نه در فایل پیکربندی و نه در هیچ Log.",
                          style = MaterialTheme.typography.bodySmall,
                          color = palette.textSecondary
-@@ -815,3 +868,41 @@ private fun HealthRow(ok: Boolean, label: String, value: String?) {
+@@ -359,6 +412,37 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
+             }
+         }
+ 
++        // ── شناسنامهٔ سامانه و سازنده ───────────────────────────────────────
++        item { SectionTitle(text = "دربارهٔ سامانه", icon = Icons.Filled.MilitaryTech) }
++
++        item {
++            GlassCard(modifier = Modifier.fillMaxWidth()) {
++                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
++                    Text(
++                        "سامانهٔ ویزیتور — اتصال مستقیم و امن به SQL Server (پورت ۱۴۳۳)",
++                        style = MaterialTheme.typography.bodyMedium,
++                        color = palette.textPrimary
++                    )
++                    Text(
++                        "طراحی و برنامه‌نویسی:  میلاد یقوبی  (Milad Yaghoobi)",
++                        style = MaterialTheme.typography.bodySmall,
++                        color = NeonPurple
++                    )
++                    Text(
++                        "گروه نرم‌افزاری:  Meelano Studio Design",
++                        style = MaterialTheme.typography.bodySmall,
++                        color = NeonPurple
++                    )
++                    Text(
++                        "نسخهٔ ۱.۳ — بدون IIS و بدون API میانی؛ رمزها فقط رمزنگاری‌شده " +
++                                "(Android Keystore) روی همین دستگاه می‌مانند.",
++                        style = MaterialTheme.typography.bodySmall,
++                        color = palette.textSecondary
++                    )
++                }
++            }
++        }
++
+         // ── پیکربندی سرور ───────────────────────────────────────────────────
+         item { SectionTitle(text = "پیکربندی سرور آتیران", icon = Icons.Filled.Dns) }
+ 
+@@ -815,3 +899,41 @@ private fun HealthRow(ok: Boolean, label: String, value: String?) {
  
  
  /** یک ردیف انتخاب تم: سواچ سه‌رنگ (پس‌زمینه/اصلی/طلایی) + نام + نشان انتخاب. */
@@ -454,10 +509,32 @@ index fc58a54..2f799c9 100644
 +        }
 +    }
 +}
+diff --git a/android-sql-direct/SqlConnectionManager.kt b/android-sql-direct/SqlConnectionManager.kt
+index b075606..a575198 100644
+--- a/android-sql-direct/SqlConnectionManager.kt
++++ b/android-sql-direct/SqlConnectionManager.kt
+@@ -1,7 +1,7 @@
+ /*
+  * ═══════════════════════════════════════════════════════════════════════════
+  *  Vizitor — آتیران ویزیتور | مدیریت اتصال مستقیم SQL Server (TDS 1433)
+- *  Developed by Milano Technical Team, Milad Yaghoobi
++ *  Developed by Milad Yaghoobi — Meelano Studio Design
+  *  ─────────────────────────────────────────────────────────────────────────
+  *  معماری:  UI → ViewModel → Repository → DataSource → این Manager → SQL:1433
+  *
 diff --git a/android-sql-direct/VizitorViewModel.kt b/android-sql-direct/VizitorViewModel.kt
-index 37583f8..7d76607 100644
+index 37583f8..63e5d36 100644
 --- a/android-sql-direct/VizitorViewModel.kt
 +++ b/android-sql-direct/VizitorViewModel.kt
+@@ -1,7 +1,7 @@
+ /*
+  * ═══════════════════════════════════════════════════════════════════════════
+  *  Vizitor — آتیران ویزیتور | ویومدیل مرکزی اپلیکیشن
+- *  Developed by Milano Technical Team, Milad Yaghoobi
++ *  Developed by Milad Yaghoobi — Meelano Studio Design
+  * ═══════════════════════════════════════════════════════════════════════════
+  */
+ package ir.atiran.vizitor
 @@ -306,6 +306,38 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
          }
      }

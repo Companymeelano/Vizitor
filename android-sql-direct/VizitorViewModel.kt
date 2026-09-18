@@ -1,7 +1,7 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  *  Vizitor — آتیران ویزیتور | ویومدیل مرکزی اپلیکیشن
- *  Developed by Milano Technical Team, Milad Yaghoobi
+ *  Developed by Milad Yaghoobi — Meelano Studio Design
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor

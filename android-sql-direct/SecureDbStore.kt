@@ -1,7 +1,7 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  *  Vizitor — آتیران ویزیتور | ذخیرهٔ امن اطلاعات اتصال دیتابیس
- *  Developed by Milano Technical Team, Milad Yaghoobi
+ *  Developed by Milad Yaghoobi — Meelano Studio Design
  *  ─────────────────────────────────────────────────────────────────────────
  *  اطلاعات اتصال SQL Server (شامل رمز) هرگز به‌صورت متن در SharedPreferences
  *  یا DataStore نگه نمی‌دارند؛ یک بلوک JSON با AES-GCM و کلید غیرخارج‌شدنی

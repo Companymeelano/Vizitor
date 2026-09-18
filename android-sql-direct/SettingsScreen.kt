@@ -1,7 +1,7 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  *  Vizitor — آتیران ویزیتور | تب ۶: تنظیمات (Settings)
- *  Developed by Milano Technical Team, Milad Yaghoobi
+ *  Developed by Milad Yaghoobi — Meelano Studio Design
  *  ─────────────────────────────────────────────────────────────────────────
  *  انتخاب تم اپلیکیشن + پیکربندی سرور آتیران (IP/پورت/مسیر/کلید) +
  *  کارت وضعیت سلامت سرور (تست دقیق اتصال) + مدیریت همگام‌سازی
@@ -405,6 +405,37 @@ fun SettingsScreen(viewModel: VizitorViewModel) {
                                 "از بیرون باز/فوروارد شده باشد). داخل فروشگاه همان آی‌پی داخلی کافی است. " +
                                 "رمز فقط رمزنگاری‌شده (Android Keystore) روی همین دستگاه ذخیره می‌شود؛ " +
                                 "نه در سرور، نه در فایل پیکربندی و نه در هیچ Log.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = palette.textSecondary
+                    )
+                }
+            }
+        }
+
+        // ── شناسنامهٔ سامانه و سازنده ───────────────────────────────────────
+        item { SectionTitle(text = "دربارهٔ سامانه", icon = Icons.Filled.MilitaryTech) }
+
+        item {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        "سامانهٔ ویزیتور — اتصال مستقیم و امن به SQL Server (پورت ۱۴۳۳)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = palette.textPrimary
+                    )
+                    Text(
+                        "طراحی و برنامه‌نویسی:  میلاد یقوبی  (Milad Yaghoobi)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NeonPurple
+                    )
+                    Text(
+                        "گروه نرم‌افزاری:  Meelano Studio Design",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NeonPurple
+                    )
+                    Text(
+                        "نسخهٔ ۱.۳ — بدون IIS و بدون API میانی؛ رمزها فقط رمزنگاری‌شده " +
+                                "(Android Keystore) روی همین دستگاه می‌مانند.",
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.textSecondary
                     )

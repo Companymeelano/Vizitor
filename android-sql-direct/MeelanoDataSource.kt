@@ -1,7 +1,7 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  *  Vizitor — آتیران ویزیتور | منبع دادهٔ مستقیم SQL Server (دیتابیس Meelano)
- *  Developed by Milano Technical Team, Milad Yaghoobi
+ *  Developed by Milad Yaghoobi — Meelano Studio Design
  *  ─────────────────────────────────────────────────────────────────────────
  *  معماری:  UI (Compose) → ViewModel → Repository → DataSource (اینجا) →
  *           SqlConnectionManager → SQL Server 192.168.1.150:1433 → Meelano
