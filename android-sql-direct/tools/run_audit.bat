@@ -24,7 +24,10 @@ REM ===========================================================================
 cd /d "%~dp0"
 
 set "DBSERVER=localhost"
-set "DBNAME=Meelano"
+REM  database to audit. Default Meelano; an argument overrides it, e.g.
+REM      run_audit.bat Atiran14050603
+set "DBNAME=%~1"
+if "%DBNAME%"=="" set "DBNAME=Meelano"
 set "SQLCMD="
 set "FOUND="
 

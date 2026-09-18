@@ -11,6 +11,9 @@
     05_gaps_small.sql
     08_which_db.sql
 
+    اگر می‌خواهی همهٔ بررسی‌ها روی دیتابیس دیگری اجرا شود (مثلاً Atiran14050603):
+        run_audit.bat Atiran14050603
+
 راه ۱ (پیشنهادی — همه‌چیز با یک بار):
     ۱) فایل‌ها را در یک پوشه بگذار، مثلا  C:\vizitor_audit\
     ۲) در File Explorer روی  run_audit.bat  راست‌کلیک کن → "Run as administrator"

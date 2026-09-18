@@ -51,6 +51,32 @@ SELECT DB_ = d.name,
  ORDER BY DB_, TBL;
 GO
 
+/* 2b) every database that carries a sal_mali table, and its fiscal year rows -
+   the ERP calls the fiscal year "current" with sal_mali.[Current] = 1, so this
+   is the strongest single answer to "which database does the ERP work in".   */
+DECLARE @dbs TABLE (rn INT IDENTITY(1,1) PRIMARY KEY, name SYSNAME);
+INSERT INTO @dbs (name)
+SELECT name FROM sys.databases WHERE database_id > 4 AND state_desc = 'ONLINE';
+
+DECLARE @i INT = 1, @n INT, @db SYSNAME, @q NVARCHAR(MAX);
+SELECT @n = COUNT(*) FROM @dbs;
+
+WHILE @i <= @n
+BEGIN
+    SELECT @db = name FROM @dbs WHERE rn = @i;
+    SET @q = N'IF EXISTS (SELECT 1 FROM ' + QUOTENAME(@db) + N'.sys.tables WHERE name = N''sal_mali'') '
+           + N'SELECT ''SALMALI|'' + ' + QUOTENAME(@db, '''') + N' AS DB_, rdf, name, nam_db, [Current] '
+           + N'FROM ' + QUOTENAME(@db) + N'.dbo.sal_mali ORDER BY rdf;';
+    BEGIN TRY
+        EXEC sp_executesql @q;
+    END TRY
+    BEGIN CATCH
+        SELECT ERR = 'SALMALI|' + @db + '|' + ERROR_MESSAGE();
+    END CATCH
+    SET @i = @i + 1;
+END
+GO
+
 /* 3) fiscal years of the SELECTED database ----------------------------------
    (this is the list ChangeUserPassInSalMali walks: one row per fiscal year)  */
 SELECT SALMALI = 'sal_mali|' + DB_NAME(),
