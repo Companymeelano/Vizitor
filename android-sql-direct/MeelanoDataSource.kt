@@ -124,6 +124,12 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
     //  امنیت: رمز فقط پارامتر همین کوئری است — در اپ ذخیره نمی‌شود، لاگ نمی‌شود و
     //  در هیچ پیام خطایی چاپ نمی‌شود. (بستهٔ ورود SQL Server نیز در همان handshake
     //  رمزنگاری می‌شود، ولی توصیهٔ ما فعال بودن TLS روی اتصال است.)
+    //
+    //  IsLocked: نوع واقعی ستون bit NULL است و مقدار هر دو کاربر NULL (تست زندهٔ
+    //  sql/07_login_verify.sql v2 روی سرور، 2026-09-18: V1|MATCH و V2=0).
+    //  خودِ ERP هم در شرط ورود روی IsLocked فیلتر نمی‌کند (همان تست با همان شرط
+    //  ERP ردیف را برگرداند). پس اینجا با CASE به صفر/یک تبدیل می‌شود تا اپ هرگز
+    //  NULL را «قفل‌بودن» تفسیر نکند: تنها IsLocked = 1 یعنی قفل. صفر و NULL = باز.
     suspend fun login(username: String, password: String): DbLoginRow? =
         db.withConnection { c ->
             c.prepareStatement(
@@ -135,7 +141,7 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                        sys_users.user_lname,
                        sys_users.role_id,
                        sys_users.active,
-                       sys_users.IsLocked,
+                       CASE WHEN sys_users.IsLocked = 1 THEN 1 ELSE 0 END AS is_locked,
                        sys_users.shmo
                   FROM dbo.sys_users
                  WHERE sys_users.user_name = ?
@@ -155,7 +161,7 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
                         ).joinToString(" "),
                         roleId = rs.nullableInt("role_id"),
                         active = rs.getBoolean("active"),
-                        locked = rs.getBoolean("IsLocked"),
+                        locked = rs.getBoolean("is_locked"),
                         companyId = rs.getInt("shmo"),
                     )
                 }

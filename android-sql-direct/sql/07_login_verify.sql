@@ -63,8 +63,8 @@ SELECT @out = @out + N'V1|MATCH|user_id=' + ISNULL(CAST(u.user_id AS NVARCHAR(6)
             + N'|user=' + ISNULL(u.user_name, N'<null>')
             + N'|fullname=' + ISNULL(u.user_fname, N'') + N' ' + ISNULL(u.user_lname, N'')
             + N'|role_id=' + ISNULL(CAST(u.role_id AS NVARCHAR(6)), N'<null>')
-            + N'|active=' + ISNULL(CAST(u.active AS NVARCHAR(2)), N'<null>')
-            + N'|IsLocked=' + ISNULL(CAST(u.IsLocked AS NVARCHAR(2)), N'null')
+            + N'|active=' + ISNULL(CAST(u.active AS NVARCHAR(10)), N'<null>')
+            + N'|IsLocked=' + ISNULL(CAST(u.IsLocked AS NVARCHAR(10)), N'<null>')
             + N'|shmo=' + ISNULL(CAST(u.shmo AS NVARCHAR(6)), N'<null>')
 FROM dbo.sys_users u
 WHERE u.user_name = @testUser

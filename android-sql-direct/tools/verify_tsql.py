@@ -297,6 +297,30 @@ def check_variable_scope(text: str):
     return problems
 
 
+def check_isnull_truncation(text: str):
+    """ISNULL returns the type of its FIRST argument - a longer replacement is cut.
+
+    Real case (part 7 v2, live run 2026-09-18): the login proof line printed
+    IsLocked=nu for a NULL value. The expression was
+    ISNULL(CAST(u.IsLocked AS NVARCHAR(2)), N'null'), so the replacement literal
+    'null' was silently truncated to 'nu' and looked like a weird schema value.
+    COALESCE does not have this problem (it takes the widest argument)."""
+    problems = []
+    code = strip_comments(text)
+    pat = re.compile(
+        r"ISNULL\s*\(\s*CAST\s*\(.*?\s+AS\s+(n?varchar|n?char)\s*\(\s*(\d+)\s*\)\s*\)"
+        r"\s*,\s*N?'((?:[^']|'')*)'",
+        flags=re.I)
+    for m in pat.finditer(code):
+        type_name, width, lit = m.group(1).lower(), int(m.group(2)), m.group(3)
+        if len(lit) > width:
+            problems.append(
+                f"ISNULL(CAST(... AS {type_name}({width})), N'{lit}') prints only "
+                f"N'{lit[:width]}' - ISNULL keeps the type of its first argument, "
+                f"so widen the CAST (or use CASE WHEN ... IS NULL)")
+    return sorted(set(problems))
+
+
 def split_statements(batch: str):
     """Split one batch at top-level semicolons (depth 0, BEGIN/END balanced).
 
@@ -495,6 +519,14 @@ def check(path: pathlib.Path) -> bool:
     else:
         print("  variable scope per batch .... OK (every @var is declared in its batch)")
 
+    trunc = check_isnull_truncation(text)
+    if trunc:
+        ok = False
+        for pr in trunc:
+            print(f"  [FAIL] {pr}")
+    else:
+        print("  ISNULL return type .......... OK (no replacement literal is cut)")
+
     return ok
 
 
@@ -511,6 +543,14 @@ def selftest():
          check_reserved_identifiers("SELECT * FROM EMS.user;"), True),
         ("reserved object name bracketed",
          check_reserved_identifiers("SELECT * FROM [EMS].[user];"), False),
+        ("ISNULL literal longer than the CAST width",
+         check_isnull_truncation(
+             "SELECT ISNULL(CAST(u.IsLocked AS NVARCHAR(2)), N'null') FROM dbo.sys_users u;"),
+         True),
+        ("ISNULL literal that fits the CAST width",
+         check_isnull_truncation(
+             "SELECT ISNULL(CAST(u.IsLocked AS NVARCHAR(10)), N'null') FROM dbo.sys_users u;"),
+         False),
     ]
     failed = 0
     for name, found, should_find in cases:

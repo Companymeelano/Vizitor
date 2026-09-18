@@ -98,7 +98,7 @@ DECLARE @out NVARCHAR(MAX) = N'';
 SELECT @out = @out + N'G4|sys_users|id=' + CAST(user_id AS NVARCHAR(10))
             + N'|name=' + ISNULL(user_name, N'<null>')
             + N'|hash_bytes=' + ISNULL(CAST(DATALENGTH(user_password) AS NVARCHAR(6)), N'<null>')
-            + N'|active=' + ISNULL(CAST(active AS NVARCHAR(2)), N'<null>')
+            + N'|active=' + ISNULL(CAST(active AS NVARCHAR(10)), N'<null>')
             + N'|pwdcompare_result=' + CAST(PWDCOMPARE(N'PUT_THE_ERP_PASSWORD_HERE', user_password) AS NVARCHAR(4))
             + CHAR(10)
 FROM dbo.sys_users
@@ -137,7 +137,7 @@ FROM dbo.sys_cus;
 SELECT @out = @out + N'G5|custgroup|group_rdf=' + CAST(group_rdf AS NVARCHAR(10))
             + N'|name=' + ISNULL(group_name, N'<null>')
             + N'|price_tier=' + ISNULL(CAST(price AS NVARCHAR(6)), N'<null>')
-            + N'|Active=' + ISNULL(CAST(Active AS NVARCHAR(2)), N'<null>')
+            + N'|Active=' + ISNULL(CAST(Active AS NVARCHAR(10)), N'<null>')
             + N'|PerGain=' + ISNULL(CAST(PerGain AS NVARCHAR(12)), N'<null>') + CHAR(10)
 FROM dbo.custgroup;
 
@@ -148,7 +148,7 @@ SELECT @out = @out + N'G5|CUSTOMERS|SHMO=' + CAST(SHMO AS NVARCHAR(10))
             + N'|active=' + ISNULL(active, N'<null>')
             + N'|man=' + CAST(man AS NVARCHAR(20))
             + N'|cred=' + CAST(cred AS NVARCHAR(20))
-            + N'|black_list=' + ISNULL(CAST(black_list AS NVARCHAR(4)), N'<null>')
+            + N'|black_list=' + ISNULL(CAST(black_list AS NVARCHAR(10)), N'<null>')
             + CHAR(10)
 FROM dbo.CUSTOMERS;
 

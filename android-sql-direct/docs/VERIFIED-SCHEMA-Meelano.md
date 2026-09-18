@@ -406,6 +406,57 @@ databases. The app targets the current one (`Meelano`);
 `sql/07_login_verify.sql` lists what `dbo.sal_mali` contains, so we know whether a
 fiscal-year switch has to be handled later.
 
+### 13.1 Live proof — `sql/07_login_verify.sql` v2 run on the server (2026-09-18)
+
+The operator ran the whole file (8 of 8 output lines) and this is the raw result:
+
+```
+V1|MATCH|user_id=1|user=Admin|fullname=آتيران آتيران نوين|role_id=1|active=1|IsLocked=nu|shmo=1
+V1b|control|rows_with_that_user_name=1|active_1_rows=1
+V1c|PWDCOMPARE_result=0 (expected 0 - this ERP does not use SQL Server password hashing)
+V2|wrong_password_rows=0 (must be 0, otherwise the comparison is broken)
+V3|security.ConfirmUser|COLS|RowID,RealUserID,RealUserName,FakeUserID,FakeUserName,P,SumMab,
+   SumPos,SumCheck,Shmo,Moname,RealPlusFake,Ghno|rows=1
+V3|security.LoginDetails|COLS|RowID,UserID,DateClient,DateServer,ComputerIP,ComputerName|rows=16
+V4|sal_mali|COLS|sal_maliID,rdf,name,nam_db,StartDate,EndDate,Current
+V4|sal_mali|nam_db=Meelano|rows=1|overal_setting_rows=352|IsAccountingSystemStarted=0
+```
+
+Conclusions:
+
+* **The app's login predicate is proven against the real database**:
+  `user_name = ? AND CONVERT(varchar(50), user_password) = ? AND active = 1` on
+  `dbo.sys_users` returns the Admin row (V1) and rejects a wrong password (V2 = 0).
+  Live proof supersedes the earlier `PWDCOMPARE` idea; V1c confirms that hashing
+  is not in use (result 0 for the *correct* password).
+* `IsLocked=nu` was **our own display bug, not a schema surprise**: the expression
+  was `ISNULL(CAST(u.IsLocked AS NVARCHAR(2)), N'null')` and `ISNULL` returns the
+  type of its *first* argument, so the replacement literal `null` was truncated to
+  `nu`. `sys_users.IsLocked` is `bit NULL` and its value is **NULL** for both users.
+  Consequence for the app: locking is only signalled by `IsLocked = 1`; 0 and NULL
+  both mean "not locked", and the ERP's own login does not filter on it either.
+  `MeelanoDataSource.login()` now returns a non-NULL `is_locked` flag
+  (`CASE WHEN IsLocked = 1 THEN 1 ELSE 0 END`) so the app never has to interpret a
+  NULL. `tools/verify_tsql.py` gained a check that fails this truncation pattern
+  (`02`, `05`, `06`, `07` were fixed by widening the CAST).
+* `security.ConfirmUser` is the ERP's **impersonation table** ("login as another
+  user": RealUserID/FakeUserID + a `P` column of unknown semantics). 1 row. The app
+  does **not** read it, does not use it for login, and never reads/stores `P`.
+* `security.LoginDetails` is the ERP's **login history** (16 rows: UserID, client
+  and server timestamps, ComputerIP, ComputerName). It holds no secrets; the app
+  does not write to it (that would need write access the read-only SQL user must
+  not have). Recording app logins there is an option for a later phase, to be
+  decided by the ERP owner.
+* `dbo.sal_mali` has exactly **1 row** (`nam_db = Meelano`) → a single fiscal-year
+  database today, so no fiscal-year switch is needed for the app. The columns are
+  `sal_maliID, rdf, name, nam_db, StartDate, EndDate, Current`; `name` (the fiscal
+  year label) was not printed and is only needed if the app ever shows/reports it.
+* `dbo.IsAccountingSystemStarted()` returns **0** (`overal_setting` has 352 rows;
+  the flag is row id 67). The accounting system is therefore not "started" on this
+  server yet. Whether the write path (`add_sail_pish` / `AddInvoice`) refuses to
+  post while it is 0 must be checked against those procedure bodies — this is one
+  of the acceptance tests for the pre-invoice phase.
+
 ## 10. Still open (filled by scripts 02 and 03)
 
 * ~~real TCP port~~ → **RESOLVED: 1433** (`sys.dm_tcp_listener_states` shows

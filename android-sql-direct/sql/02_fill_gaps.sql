@@ -62,12 +62,12 @@ DECLARE @out NVARCHAR(MAX) = N'';
 BEGIN TRY
     SELECT @out = @out + N'B|sys_users|id=' + CAST(user_id AS NVARCHAR(10))
                 + N'|name=' + ISNULL(user_name, N'<null>')
-                + N'|active=' + ISNULL(CAST(active AS NVARCHAR(2)), N'<null>')
+                + N'|active=' + ISNULL(CAST(active AS NVARCHAR(10)), N'<null>')
                 + N'|role_id=' + ISNULL(CAST(role_id AS NVARCHAR(6)), N'<null>')
                 + N'|shmo=' + ISNULL(CAST(shmo AS NVARCHAR(6)), N'<null>')
                 + N'|pw_bytes=' + ISNULL(CAST(DATALENGTH(user_password) AS NVARCHAR(6)), N'<null>')
                 + N'|pwdcompare(''x'')=' + CAST(PWDCOMPARE(N'x', user_password) AS NVARCHAR(4))
-                + N'|locked=' + ISNULL(CAST(IsLocked AS NVARCHAR(2)), N'<null>') + CHAR(10)
+                + N'|locked=' + ISNULL(CAST(IsLocked AS NVARCHAR(10)), N'<null>') + CHAR(10)
     FROM dbo.sys_users
     ORDER BY user_id;
 END TRY

@@ -50,8 +50,8 @@ SELECT @out = @out + N'L1|user_id=' + CAST(user_id AS NVARCHAR(6))
                  WHEN DATALENGTH(user_password) = 0 THEN N'empty'
                  WHEN DATALENGTH(user_password) = 1 THEN N'single byte - not a hash'
                  ELSE N'other length - not a standard hash' END
-            + N'|active=' + ISNULL(CAST(active AS NVARCHAR(2)), N'<null>')
-            + N'|locked=' + ISNULL(CAST(IsLocked AS NVARCHAR(2)), N'<null>')
+            + N'|active=' + ISNULL(CAST(active AS NVARCHAR(10)), N'<null>')
+            + N'|locked=' + ISNULL(CAST(IsLocked AS NVARCHAR(10)), N'<null>')
             + N'|role_id=' + ISNULL(CAST(role_id AS NVARCHAR(6)), N'<null>')
             + N'|shmo=' + ISNULL(CAST(shmo AS NVARCHAR(6)), N'<null>')
             + CHAR(10)
@@ -130,7 +130,7 @@ FROM dbo.sys_use;
 SELECT @out = @out + N'L4|sys_users_list|' + CAST(user_id AS NVARCHAR(6))
             + N'|' + ISNULL(user_name, N'<null>')
             + N'|' + ISNULL(user_fname, N'') + N' ' + ISNULL(user_lname, N'')
-            + N'|active=' + ISNULL(CAST(active AS NVARCHAR(2)), N'<null>') + CHAR(10)
+            + N'|active=' + ISNULL(CAST(active AS NVARCHAR(10)), N'<null>') + CHAR(10)
 FROM dbo.sys_users;
 IF LEN(@out) = 0 SET @out = N'L4|(no scope rows)' + CHAR(10);
 INSERT INTO #o (line) SELECT line FROM (SELECT line = @out) x;

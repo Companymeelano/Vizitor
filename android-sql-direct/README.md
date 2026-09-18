@@ -185,6 +185,23 @@ WHERE user_name = ? AND CONVERT(varchar(50), user_password) = ? AND active = 1
   کاربر SQL مجازِ کم‌دسترسی، فقط LAN، ترجیح TLS، رمزنگاری روی دستگاه با Keystore، و
   عملیات «پاک‌کردن پیکربندی».
 
+### نتیجهٔ اجرای واقعی `07` نسخهٔ v2 روی سرور (۲۰۲۶-۰۹-۱۸) ✅
+هر ۸ خط خروجی رسید: `V1|MATCH|user_id=1|user=Admin|role_id=1|active=1|shmo=1`،
+`V1b` (نام کاربری درست است)، `V1c|PWDCOMPARE_result=0`، `V2|wrong_password_rows=0`.
+⇒ **ورود اپ روی دیتابیس واقعی اثبات شد.** چند یافتهٔ جانبی از همان خروجی:
+* `IsLocked=nu` **باگ نمایشی خودِ ما بود، نه چیز عجیب در دیتابیس**:
+  `ISNULL(CAST(x AS NVARCHAR(2)), N'null')` نوعش را از آرگومان اول می‌گیرد و `null`
+  را به `nu` می‌بُرد. نوع واقعی `bit NULL` است و مقدارش برای هر دو کاربر NULL؛
+  یعنی «قفل» فقط با `IsLocked = 1` معنا دارد (خود ERP هم روی آن فیلتر نمی‌کند).
+  اپ حالا `CASE WHEN IsLocked = 1 THEN 1 ELSE 0 END AS is_locked` می‌گیرد تا هیچ‌وقت
+  NULL را «قفل» تعبیر نکند. ابزار `verify_tsql.py` هم چکِ این الگو را گرفت
+  (در `02`, `05`, `06`, `07` رفع شد).
+* `security.ConfirmUser` = جدول «ورود به‌جای کاربر دیگر» ERP (۱ ردیف، ستون `P`) —
+  اپ به آن دست نمی‌زند. `security.LoginDetails` = تاریخچهٔ ۱۶ ورود (بدون رمز).
+* `dbo.sal_mali` فقط ۱ ردیف دارد (`nam_db=Meelano`) ⇒ الان تک‌سال‌مالی است و سوییچ
+  سال مالی لازم نیست. `IsAccountingSystemStarted()=0` ⇒ وقتی مسیر نوشتن را وصل
+  کردیم باید بررسی شود که پروسیجرها با این وضعیت سند می‌زنند یا نه.
+
 ## تاریخچهٔ `sql/06_login_probe.sql` (v3)
 * **v1** → `Msg 156 ... near the keyword 'user'`: `FROM EMS.user` بدون براکت (کل batch مرد).
 * **v2** → هر بخش `GO` جدا + جدول موقت `#o`؛ اما دو بخش با `Msg 8155 No column name was
