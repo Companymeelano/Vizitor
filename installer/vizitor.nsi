@@ -56,6 +56,16 @@ Var /GLOBAL PageDialog
 Var /GLOBAL RecheckOnly
 Var /GLOBAL PrevExists
 Var /GLOBAL FreshClean
+Var /GLOBAL PyExe
+Var /GLOBAL hIisReset
+Var /GLOBAL hHealth
+Var /GLOBAL hDbList
+Var /GLOBAL hBtnList
+Var /GLOBAL hListStatus
+Var /GLOBAL DbCount
+Var /GLOBAL DbIdx
+Var /GLOBAL IisReset
+Var /GLOBAL HealthWanted
 Var /GLOBAL IpAddr
 Var /GLOBAL ApiPort
 Var /GLOBAL IisProxy
@@ -81,7 +91,6 @@ Var /GLOBAL hWinAuth
 Var /GLOBAL hSqlUser
 Var /GLOBAL hSqlPass
 Var /GLOBAL hDbName
-Var /GLOBAL hErpDb
 Var /GLOBAL hStatus
 Var /GLOBAL hAct
 Var /GLOBAL hActLater
@@ -127,6 +136,7 @@ Var /GLOBAL hUrlHint
 !define MUI_PAGE_CUSTOMFUNCTION_PRE PagePreSkip
 !insertmacro MUI_PAGE_DIRECTORY
 Page custom PageServerCreate PageServerLeave
+Page custom PageDbCreate PageDbLeave
 Page custom PageActivationCreate PageActivationLeave
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_PAGE_CUSTOMFUNCTION_PRE PagePreFinish
@@ -347,7 +357,7 @@ FunctionEnd
 
 Function OpenPanel
   ${If} $ApiUrlDisplay == ""
-    StrCpy $ApiUrlDisplay "http://127.0.0.1:8080/api"
+    StrCpy $ApiUrlDisplay "http://127.0.0.1:9595/api"
   ${EndIf}
   ExecShell "open" "$ApiUrlDisplay"
 FunctionEnd
@@ -357,6 +367,8 @@ Function WriteAnswers
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "addr"         "$IpAddr"
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "port"         "$ApiPort"
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "iis"          "$IisProxy"
+  WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "iisreset"     "$IisReset"
+  WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "lanip"        "$IpAddr"
   WriteINIStr "$PLUGINSDIR\answers.ini" "server"     "apphome"      "$INSTDIR"
   WriteINIStr "$PLUGINSDIR\answers.ini" "db"         "engine"       "sqlserver"
   WriteINIStr "$PLUGINSDIR\answers.ini" "db"         "host"         "$SqlHost"
@@ -370,6 +382,7 @@ Function WriteAnswers
   WriteINIStr "$PLUGINSDIR\answers.ini" "android"    "erpdb"        "$ErpDb"
   WriteINIStr "$PLUGINSDIR\answers.ini" "android"    "login"        "vizitor_android"
   WriteINIStr "$PLUGINSDIR\answers.ini" "android"    "openfirewall" "1"
+  WriteINIStr "$PLUGINSDIR\answers.ini" "db"         "health"       "$HealthWanted"
   WriteINIStr "$PLUGINSDIR\answers.ini" "ui"         "source"       "vizitor-setup"
 FunctionEnd
 
@@ -381,7 +394,7 @@ Function PageServerCreate
     Abort
   ${EndIf}
 
-  !insertmacro MUI_HEADER_TEXT "تنظیمات سرور و دیتابیس" "آدرس API، مشخصات SQL Server و دیتابیس ERP"
+  !insertmacro MUI_HEADER_TEXT "سرور سامانه و IIS" "آدرس سرور، پورت و تنظیم IIS"
 
   nsDialogs::Create 1018
   Pop $PageDialog
@@ -389,71 +402,93 @@ Function PageServerCreate
     Abort
   ${EndIf}
 
-  ${NSD_CreateLabel} 0 0 100% 9u "این مقادیر را بعداً هم می‌توانید تغییر دهید. رمز SQL Server هرگز نمایش داده نمی‌شود و در گزارش‌ها نوشته نمی‌گردد."
+  ${NSD_CreateLabel} 0 0 100% 9u "سامانه ویزیتور روی پورت پیش‌فرض ۹۵۹۵ اجرا می‌شود. رمزها هرگز نمایش داده نمی‌شوند."
   Pop $0
 
-  ${NSD_CreateGroupBox} 0 10u 100% 58u "دسترسی برنامهٔ اندروید به API"
+  ${NSD_CreateGroupBox} 0 10u 100% 72u "سرور و IIS"
   Pop $0
-  ${NSD_CreateLabel} 2% 20u 38% 9u "آدرس سرور (IP یا دامنه):"
+  ${NSD_CreateLabel} 2% 20u 34% 9u "آدرس سرور (IP یا دامنه):"
   Pop $0
-  ${NSD_CreateText} 41% 19u 57% 12u "$IpAddr"
+  ${NSD_CreateText} 38% 19u 60% 12u "$IpAddr"
   Pop $hIp
-  ${NSD_CreateLabel} 2% 33u 38% 9u "پورت API:"
+  ${NSD_CreateLabel} 2% 32u 34% 9u "پورت سامانه:"
   Pop $0
-  ${NSD_CreateText} 41% 32u 20% 12u "$ApiPort"
+  ${NSD_CreateText} 38% 31u 20% 12u "$ApiPort"
   Pop $hPort
-  ${NSD_CreateCheckBox} 2% 46u 96% 10u "اجرای API از طریق IIS روی پورت ۸۰ (پیشنهادی اگر IIS نصب است)"
+  ${NSD_CreateCheckBox} 2% 44u 96% 10u "اجرای سامانه روی IIS (پورت پیش‌فرض ۹۵۹۵)"
   Pop $hIis
   ${If} $IisProxy == "1"
     ${NSD_SetState} $hIis ${BST_CHECKED}
   ${EndIf}
-  ${NSD_CreateLabel} 2% 57u 96% 9u "آدرس نهایی برای برنامهٔ اندروید:  $ApiUrlDisplay"
+  ${NSD_CreateCheckBox} 2% 55u 96% 10u "پاک‌سازی کامل تنظیمات موجود IIS و ساخت دوبارهٔ سایت ویزیتور"
+  Pop $hIisReset
+  ${NSD_SetState} $hIisReset ${BST_CHECKED}
+  ${NSD_CreateLabel} 2% 68u 96% 9u "پیشنهاد: سایت و اپلیکیشن جدید ساخته می‌شود و تنظیمات قبلی IIS (با پشتیبان) پاک می‌گردد."
+  Pop $0
+  ${NSD_CreateLabel} 2% 78u 96% 9u "آدرس نهایی سامانه:  $ApiUrlDisplay"
   Pop $hUrlHint
 
-  ${NSD_CreateGroupBox} 0 70u 100% 76u "دیتابیس سامانهٔ ویزیتور (SQL Server)"
-  Pop $0
-  ${NSD_CreateLabel} 2% 80u 38% 9u "سرور SQL Server:"
-  Pop $0
-  ${NSD_CreateText} 41% 79u 57% 12u "$SqlHost"
-  Pop $hSqlHost
-  ${NSD_CreateLabel} 2% 93u 38% 9u "پورت SQL Server:"
-  Pop $0
-  ${NSD_CreateText} 41% 92u 20% 12u "$SqlPort"
-  Pop $hSqlPort
-  ${NSD_CreateCheckBox} 2% 105u 96% 10u "اتصال با احراز هویت ویندوز (بدون نام کاربری و رمز)"
-  Pop $hWinAuth
-  ${If} $SqlAuth == "windows"
-    ${NSD_SetState} $hWinAuth ${BST_CHECKED}
-  ${EndIf}
-  ${NSD_OnClick} $hWinAuth OnWinAuthClick
-  ${NSD_CreateLabel} 2% 117u 38% 9u "نام کاربری SQL:"
-  Pop $0
-  ${NSD_CreateText} 41% 116u 57% 12u "$SqlUser"
-  Pop $hSqlUser
-  ${NSD_CreateLabel} 2% 129u 38% 9u "رمز SQL Server:"
-  Pop $0
-  ${NSD_CreatePassword} 41% 128u 57% 12u ""
-  Pop $hSqlPass
-  ${NSD_CreateLabel} 2% 141u 38% 9u "نام دیتابیس سامانه:"
-  Pop $0
-  ${NSD_CreateText} 41% 140u 57% 12u "$DbName"
-  Pop $hDbName
-
-  ${NSD_CreateGroupBox} 0 148u 100% 28u "اتصال مستقیم اندروید به SQL Server"
-  Pop $0
-  ${NSD_CreateLabel} 2% 158u 38% 9u "نام دیتابیس ERP:"
-  Pop $0
-  ${NSD_CreateText} 41% 157u 57% 12u "$ErpDb"
-  Pop $hErpDb
-  ${NSD_CreateLabel} 2% 168u 96% 8u "کاربر محدود vizitor_android و رمزش خودکار ساخته و در فایلی با دسترسی محدود ذخیره می‌شود (چاپ نمی‌شود)."
-  Pop $0
-
-  ${NSD_CreateLabel} 0 178u 100% 11u "$Detected"
+  ${NSD_CreateLabel} 0 92u 100% 22u "$Detected"
   Pop $hStatus
 
-  Call ToggleSqlFields
   Call RefreshUrlHint
   nsDialogs::Show
+FunctionEnd
+
+Function OnListDbClick
+  ${NSD_GetText} $hSqlHost $1
+  ${NSD_GetText} $hSqlPort $2
+  ${NSD_GetText} $hSqlUser $3
+  ${NSD_GetText} $hSqlPass $4
+  ${If} $1 == ""
+    StrCpy $1 "localhost"
+  ${EndIf}
+  ${If} $2 == ""
+    StrCpy $2 "1433"
+  ${EndIf}
+
+  Delete "$PLUGINSDIR\dbcreds.ini"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "server" "$1"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "port" "$2"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "user" "$3"
+  WriteINIStr "$PLUGINSDIR\dbcreds.ini" "sql" "pass" "$4"
+
+  ${NSD_SetText} $hListStatus "در حال گرفتن لیست دیتابیس‌ها ... چند ثانیه صبر کنید"
+  Delete "$PLUGINSDIR\dbs.ini"
+  nsExec::ExecToStack '"$PyExe" "$PLUGINSDIR\sql_admin_tools.py" databases --creds "$PLUGINSDIR\dbcreds.ini" --out-ini "$PLUGINSDIR\dbs.ini"'
+  Pop $R0
+  Pop $R1
+
+  ${NSD_LB_Clear} $hDbList
+  StrCpy $DbCount "0"
+  IfFileExists "$PLUGINSDIR\dbs.ini" 0 list_failed
+    ReadINIStr $DbCount "$PLUGINSDIR\dbs.ini" "result" "count"
+    ${If} $DbCount == ""
+      StrCpy $DbCount "0"
+    ${EndIf}
+    StrCmp $DbCount "0" list_empty
+    StrCpy $DbIdx "1"
+  loop_db:
+    IntCmp $DbIdx $DbCount list_done
+    ReadINIStr $5 "$PLUGINSDIR\dbs.ini" "db$DbIdx" "name"
+    ${If} $5 != ""
+      ${NSD_LB_AddString} $hDbList "$5"
+    ${EndIf}
+    IntOp $DbIdx $DbIdx + 1
+    Goto loop_db
+  list_done:
+    ReadINIStr $6 "$PLUGINSDIR\dbs.ini" "db1" "name"
+    ${If} $6 != ""
+      ${NSD_LB_SelectString} $hDbList "$6"
+    ${EndIf}
+    ${NSD_SetText} $hListStatus "لیست گرفته شد ($DbCount دیتابیس). دیتابیس حسابداری را انتخاب کنید."
+    Goto list_end
+  list_empty:
+    ${NSD_SetText} $hListStatus "هیچ دیتابیس کاربری پیدا نشد — سرور، کاربر و رمز را بررسی کنید."
+    Goto list_end
+  list_failed:
+    ${NSD_SetText} $hListStatus "گرفتن لیست ممکن نشد (کد $R0): سرور/پورت/کاربر/رمز را بررسی کنید یا نام را دستی بنویسید."
+  list_end:
 FunctionEnd
 
 Function OnWinAuthClick
@@ -480,7 +515,7 @@ Function RefreshUrlHint
     StrCpy $0 "127.0.0.1"
   ${EndIf}
   ${If} $1 == ""
-    StrCpy $1 "8080"
+    StrCpy $1 "9595"
   ${EndIf}
   StrCpy $ApiUrlDisplay "http://$0:$1/api"
   ${If} $1 == "80"
@@ -498,20 +533,114 @@ Function PageServerLeave
   ${Else}
     StrCpy $IisProxy "0"
   ${EndIf}
+  ${NSD_GetState} $hIisReset $0
+  ${If} $0 == ${BST_CHECKED}
+    StrCpy $IisReset "1"
+  ${Else}
+    StrCpy $IisReset "0"
+  ${EndIf}
+  ${If} $IpAddr == ""
+    MessageBox MB_ICONEXCLAMATION "آدرس سرور (IP یا دامنه) را وارد کنید."
+    Abort
+  ${EndIf}
+  ${If} $ApiPort == ""
+    StrCpy $ApiPort "9595"
+  ${EndIf}
+  Call RefreshUrlHint
+FunctionEnd
+
+Function PageDbCreate
+  ${If} $RecheckOnly == 1
+    Abort
+  ${EndIf}
+
+  !insertmacro MUI_HEADER_TEXT "دیتابیس حسابداری" "کاربر و رمز دیتابیس را وارد کنید، لیست را بگیرید و دیتابیس را انتخاب کنید"
+
+  nsDialogs::Create 1018
+  Pop $PageDialog
+  ${If} $PageDialog == error
+    Abort
+  ${EndIf}
+
+  ${NSD_CreateLabel} 0 0 100% 9u "رمز فقط برای اتصال همین نصب استفاده می‌شود؛ نه نمایش داده می‌شود و نه در گزارشی نوشته می‌شود."
+  Pop $0
+
+  ${NSD_CreateGroupBox} 0 10u 100% 96u "دیتابیس حسابداری روی SQL Server (پورت ۱۴۳۳)"
+  Pop $0
+  ${NSD_CreateLabel} 2% 20u 34% 9u "سرور SQL Server:"
+  Pop $0
+  ${NSD_CreateText} 38% 19u 60% 12u "$SqlHost"
+  Pop $hSqlHost
+  ${NSD_CreateLabel} 2% 32u 34% 9u "پورت SQL Server:"
+  Pop $0
+  ${NSD_CreateText} 38% 31u 20% 12u "$SqlPort"
+  Pop $hSqlPort
+  ${NSD_CreateCheckBox} 2% 43u 96% 9u "اتصال با احراز هویت ویندوز (بدون نام کاربری و رمز)"
+  Pop $hWinAuth
+  ${If} $SqlAuth == "windows"
+    ${NSD_SetState} $hWinAuth ${BST_CHECKED}
+  ${EndIf}
+  ${NSD_OnClick} $hWinAuth OnWinAuthClick
+  ${NSD_CreateLabel} 2% 54u 34% 9u "نام کاربری (دسترسی کامل):"
+  Pop $0
+  ${NSD_CreateText} 38% 53u 60% 12u "$SqlUser"
+  Pop $hSqlUser
+  ${NSD_CreateLabel} 2% 66u 34% 9u "کلمهٔ عبور:"
+  Pop $0
+  ${NSD_CreatePassword} 38% 65u 60% 12u ""
+  Pop $hSqlPass
+  ${NSD_CreateButton} 2% 78u 32% 12u "دریافت لیست دیتابیس‌ها"
+  Pop $hBtnList
+  ${NSD_OnClick} $hBtnList OnListDbClick
+  ${NSD_CreateListBox} 36% 78u 62% 22u ""
+  Pop $hDbList
+  ${If} $ErpDb != ""
+    ${NSD_LB_AddString} $hDbList "$ErpDb"
+    ${NSD_LB_SelectString} $hDbList "$ErpDb"
+  ${EndIf}
+  ${NSD_CreateLabel} 2% 89u 96% 8u "دیتابیس حسابداری را از لیست انتخاب کنید."
+  Pop $hListStatus
+
+  ${NSD_CreateGroupBox} 0 108u 100% 34u "نام دیتابیس خود سامانه و بررسی سلامت"
+  Pop $0
+  ${NSD_CreateLabel} 2% 118u 34% 9u "دیتابیس خود ویزیتور:"
+  Pop $0
+  ${NSD_CreateText} 38% 117u 60% 12u "$DbName"
+  Pop $hDbName
+  ${NSD_CreateCheckBox} 2% 130u 96% 9u "بررسی سلامت اتصال و جدول‌های لازم در پایان نصب (پیشنهادی)"
+  Pop $hHealth
+  ${NSD_SetState} $hHealth ${BST_CHECKED}
+
+  ${NSD_CreateLabel} 0 146u 100% 20u "$Detected"
+  Pop $hStatus
+
+  Call ToggleSqlFields
+  ${If} $PyExe == ""
+    EnableWindow $hBtnList 0
+    ${NSD_SetText} $hListStatus "پایتون پیدا نشد؛ نام دیتابیس را دستی در فایل تنظیمات بنویسید."
+  ${EndIf}
+  nsDialogs::Show
+FunctionEnd
+
+Function PageDbLeave
   Call ToggleSqlFields
   ${NSD_GetText} $hSqlHost $SqlHost
   ${NSD_GetText} $hSqlPort $SqlPort
   ${NSD_GetText} $hSqlUser $SqlUser
   ${NSD_GetText} $hSqlPass $SqlPass
   ${NSD_GetText} $hDbName $DbName
-  ${NSD_GetText} $hErpDb $ErpDb
-
-  ${If} $IpAddr == ""
-    MessageBox MB_ICONEXCLAMATION "آدرس سرور (IP یا دامنه) را وارد کنید."
-    Abort
+  ${NSD_LB_GetSelection} $hDbList $ErpDb
+  ${NSD_GetState} $hHealth $0
+  ${If} $0 == ${BST_CHECKED}
+    StrCpy $HealthWanted "1"
+  ${Else}
+    StrCpy $HealthWanted "0"
   ${EndIf}
-  ${If} $ApiPort == ""
-    StrCpy $ApiPort "8080"
+  ${If} $SqlHost == ""
+    StrCpy $SqlHost "localhost"
+  ${EndIf}
+  ${If} $SqlPort == ""
+    StrCpy $SqlPort "1433"
   ${EndIf}
   ${If} $DbName == ""
     StrCpy $DbName "vizitor"
@@ -521,20 +650,16 @@ Function PageServerLeave
   ${EndIf}
   ${If} $SqlAuth == "sql"
     ${If} $SqlUser == ""
-      MessageBox MB_ICONEXCLAMATION "نام کاربری SQL Server را وارد کنید یا گزینهٔ احراز هویت ویندوز را تیک بزنید."
+      MessageBox MB_ICONEXCLAMATION "نام کاربری دیتابیس را وارد کنید یا گزینهٔ احراز هویت ویندوز را تیک بزنید."
       Abort
     ${EndIf}
     ${If} $SqlPass == ""
-      MessageBox MB_ICONEXCLAMATION "رمز SQL Server را وارد کنید. (رمز فقط برای نصب استفاده می‌شود و هرگز چاپ نمی‌شود.)"
+      MessageBox MB_ICONEXCLAMATION "کلمهٔ عبور دیتابیس را وارد کنید. (فقط برای همین نصب استفاده می‌شود.)"
       Abort
     ${EndIf}
   ${EndIf}
-  Call RefreshUrlHint
 FunctionEnd
 
-; ---------------------------------------------------------------------------
-;  صفحهٔ فعال‌سازی
-; ---------------------------------------------------------------------------
 Function PageActivationCreate
   ${If} $RecheckOnly == 1
     Abort
@@ -614,7 +739,7 @@ Function .onInit
   ${EndIf}
 
   StrCpy $IpAddr ""
-  StrCpy $ApiPort "8080"
+  StrCpy $ApiPort "9595"
   StrCpy $IisProxy "0"
   StrCpy $SqlHost "localhost"
   StrCpy $SqlPort "1433"
@@ -632,14 +757,20 @@ Function .onInit
   StrCpy $Detected "در حال تشخیص وضعیت سیستم ..."
   StrCpy $PrevExists "0"
   StrCpy $FreshClean "0"
+  StrCpy $PyExe ""
+  StrCpy $DbCount "0"
+  StrCpy $IisReset "1"
+  StrCpy $HealthWanted "1"
 
   InitPluginsDir
   File /oname=$PLUGINSDIR\preflight.ps1 "nsi\preflight.ps1"
+  File /oname=$PLUGINSDIR\sql_admin_tools.py "..\api\sql_admin_tools.py"
   nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\preflight.ps1" -Out "$PLUGINSDIR\pre.ini"'
   Pop $0
   Pop $1
 
   IfFileExists "$PLUGINSDIR\pre.ini" 0 preflight_done
+    ReadINIStr $PyExe "$PLUGINSDIR\pre.ini" "pre" "pythonexe"
     ReadINIStr $0 "$PLUGINSDIR\pre.ini" "pre" "ip"
     ${If} $0 != ""
       StrCpy $IpAddr $0

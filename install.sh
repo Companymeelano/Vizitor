@@ -374,10 +374,10 @@ if [ -n "$FORCE_PORT" ]; then
 else
   DEFAULT_PORT="${PREV_PORT:-}"
   if [ -z "$DEFAULT_PORT" ]; then
-    for p in 80 8080 8090 8180; do
+    for p in 9595 9596 9597 9600; do
       if [ "$(port_free "$p")" = "free" ]; then DEFAULT_PORT="$p"; break; fi
     done
-    [ -z "$DEFAULT_PORT" ] && DEFAULT_PORT=8080
+    [ -z "$DEFAULT_PORT" ] && DEFAULT_PORT=9595
   fi
   PORT="$(ask "پورت API (پیشنهاد هوشمند: $DEFAULT_PORT — پورت 80 یعنی بدون شماره پورت در آدرس)" "$DEFAULT_PORT")"
   case "$PORT" in (*[!0-9]*|'') PORT="$DEFAULT_PORT" ;; esac
@@ -794,7 +794,7 @@ def esc(v):
 c = json.load(open(sys.argv[1], encoding="utf-8"))
 api = c.get("api", {}); db = c.get("db", {}); ac = c.get("activation", {})
 print('BIND_IP="%s"' % esc(api.get("bind_ip", "0.0.0.0")))
-print('PORT="%s"' % esc(api.get("port", 8080)))
+print('PORT="%s"' % esc(api.get("port", 9595)))
 print('API_URL="%s"' % esc(api.get("url", "")))
 print('DB_ENGINE="%s"' % esc(db.get("engine", "sqlite")))
 print('DB_HOST="%s"' % esc(db.get("host", "127.0.0.1")))

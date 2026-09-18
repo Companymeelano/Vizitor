@@ -43,7 +43,7 @@
 
 ```
 http://<host>/api/config
-http://<host>:8080/api/config        (اختیاری — اگر نصب روی پورت غیرمعمول باشد)
+http://<host>:9595/api/config        (پورت پیش‌فرض سامانه)
 https://<host>/api/config            (فقط اگر کاربر HTTPS را انتخاب کند)
 ```
 
@@ -204,7 +204,7 @@ object VizitorApi {
         val candidates = buildList {
             val h = hostInput.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
             add("http://$h/api/config")
-            add("http://$h:8080/api/config")
+            add("http://$h:9595/api/config")
         }
         for (url in candidates) {
             try {
@@ -452,90 +452,79 @@ class VisitorsViewModel(private val repo: VizitorRepository) : ViewModel() {
 
 ---
 
-## اتصال مستقیم به SQL Server (بدون تنظیم دستی) — از نسخهٔ نصب‌کنندهٔ ۱.۰
+## اتصال مستقیم به SQL Server — مسیر رسمی برنامهٔ اندروید (نسخهٔ ۱.۱)
 
-نصب‌کنندهٔ ویندوز می‌تواند «اتصال مستقیم اندروید به SQL Server» را آماده کند؛ آن‌وقت
-برنامهٔ اندروید بدون هیچ تایپ کردنی به همان SQL Server وصل می‌شود.
+از این نسخه، **بخش اتصال با API در برنامهٔ اندروید حذف شده است** و برنامه فقط با
+**اتصال مستقیم به SQL Server** کار می‌کند. API و پنل وب سرور سرِ جای خود می‌مانند
+(فعال‌سازی، سلامت سامانه، پنل مدیریت)، اما مسیر دادهٔ ویزیتور مستقیم است.
 
-### ۱. دو درخواست اضافه (سمت سرور آماده و تست‌شده است)
+### ۱. پورت‌ها (پیش‌فرض‌های جدید)
+| کاربرد | پورت |
+|---|---|
+| سامانه/پنل (IIS یا خود API) | **9595** |
+| SQL Server (اتصال مستقیم اندروید) | **1433** |
 
-```http
-GET http://<server>/api/config
+### ۲. تنظیم یک‌بارهٔ برنامهٔ اندروید (همان چیزی که کاربر می‌بیند)
+۱) نشانی سرور: **آی‌پی داخلی** (مثل `192.168.1.150`) یا **آی‌پی ثابت اینترنتی** — صفحهٔ اول نصب‌کننده هر دو را
+   خودکار تشخیص می‌دهد و کارت اتصال/کد QR هر دو را دارد.
+۲) پورت: `1433`.
+۳) نام کاربری و کلمهٔ عبور دیتابیس **با دسترسی کامل** (همان کاربر برنامهٔ حسابداری) — فقط همین یک‌بار.
+۴) دکمهٔ **«دریافت لیست دیتابیس‌ها»** → لیست دیتابیس‌های آن سرور نمایش داده می‌شود → دیتابیس حسابداری
+   (مثلاً `Meelano`) انتخاب می‌شود.
+۵) برنامه تنظیمات لازم خود را از همان دیتابیس می‌خواند (جدول‌های `sys_users`، `CUSTOMERS`،
+   `inventory`، `custgroup`، `forosh_price`، `ka_act`، `sailfact_pish`، `subsailfact_pish`،
+   `subsailtemp_pish`، `sal_mali` و پروسیجرهای `add_sail_pish`/`Edit_sail_pish`/`new_cust`/
+   `FixManCustomer` + تریگر `trig_sst_pish`).
+۶) **بررسی سلامت اتصال**: اتصال، وجود همان جدول‌ها/پروسیجرها و تعداد کاربران فعال بررسی و نمایش داده می‌شود.
+
+بعد از این مرحله، هر ویزیتور فقط **نام کاربری و کلمهٔ عبور خودش** را وارد می‌کند و می‌تواند
+پیش‌فاکتور ثبت و ارسال کند.
+
+### ۳. ابزار سرور که همین کارها را انجام می‌دهد (تست‌شده)
+```bash
+python api/sql_admin_tools.py databases --creds creds.ini --out list.json [--out-ini dbs.ini]
+python api/sql_admin_tools.py probe     --creds creds.ini --db Meelano --out probe.json
+python api/sql_admin_tools.py health    --config config.json --db Meelano --out health.json
 ```
+* `creds.ini` = `[sql] server=… port=1433 user=… pass=…` — رمز **هرگز** از خط فرمان گرفته نمی‌شود و
+  در خروجی/لاگ نمی‌آید.
+* هر سه دستور فقط می‌خوانند: هیچ شیئی ساخته/تغییر/حذف نمی‌شود.
+* `--out-ini` همان لیست را به‌صورت INI (مخصوص نصب‌کنندهٔ ویندوز) می‌نویسد.
+
+خروجی `databases` (نمونه):
 ```json
-{
-  "api_url": "http://<server>/api",
-  "db_engine": "sqlserver",
-  "direct_sql": {
-    "enabled": true,
-    "mode": "direct_sql",
-    "host": "192.168.1.150",
-    "port": 1433,
-    "database": "Meelano",
-    "login": "vizitor_android",
-    "encrypt": "no",
-    "trust_server_certificate": true,
-    "application_intent": "ReadOnly",
-    "password_required": true,
-    "setup_path": "/api/direct-sql/setup",
-    "token_required": true
-  }
-}
+{"ok": true, "server": "192.168.1.150,1433", "count": 3,
+ "databases": [{"name": "Meelano", "state": "ONLINE", "has_vizitor_tables": true}]}
 ```
-> رمز SQL **در این پاسخ نیست**؛ فقط این‌که اتصال مستقیم آماده است.
+خروجی `health` شامل `ok`, `db_name`, `server_time`, `checks` (هر جدول/پروسیجر: true/false) و
+`missing_count` است.
 
-```http
-GET http://<server>/api/direct-sql/setup      X-Vizitor-Token: <کد راه‌اندازی>
-```
-```json
-{
-  "ok": true, "host": "192.168.1.150", "port": 1433, "database": "Meelano",
-  "login": "vizitor_android", "password": "…",
-  "connection_string": "jdbc:jtds:sqlserver://192.168.1.150,1433/Meelano;user=vizitor_android;password=…?useUnicode=true&characterEncoding=UTF-8"
-}
-```
-* کد غلط/نبود → `403 {"error":"bad_setup_code"}` (۱۰ تلاش غلط = یک دقیقه قفل). کد هرگز در لاگ سرور نمی‌آید.
-* کد راه‌اندازی روی **کارت اتصال** و **کد QR** نصب‌کننده است
-  (`C:\Vizitor\setup\android-connect.txt` و `.png`).
-
-### ۲. کد QR کارت اتصال
+### ۴. کارت اتصال و کد QR (ساختهٔ نصب‌کننده)
+`C:\Vizitor\setup\android-connect.png` / `.txt` / `.json`
 
 ```
-vizitor://c?h=<host>&p=<port>&d=<database>&u=<login>&t=<token>&a=<api base (url-encoded)>
+vizitor://c?h=<آی‌پی داخلی>&p=1433&d=<دیتابیس>&u=<کاربر محدود اختیاری>&H=<آی‌پی ثابت>
 ```
 
-### ۳. کوتاه‌ترین مسیر در برنامهٔ اندروید (حدود ۲۰ خط به کد موجود اضافه می‌شود)
-
-۱) کاربر یک‌بار QR را اسکن می‌کند (یا فقط نشانی سرور را می‌زند):
-`C:\Vizitor` → `setup\android-connect.txt` یا همان QR در صفحهٔ پایان نصب.
-
-۲) اپ `GET /api/config` را می‌زند (همان تابع `discover()` که در همین سند آمده). اگر پاسخ
-`direct_sql.enabled = true` داشت:
-
+### ۵. کوتاه‌ترین پیاده‌سازی در برنامهٔ اندروید (Kotlin/JDBC؛ نمونهٔ آماده)
 ```kotlin
-val ds = json.optJSONObject("direct_sql")
-if (ds != null && ds.optBoolean("enabled")) {
-    // ۳) گرفتن رمز با کد راه‌اندازی (فقط یک‌بار، در شبکهٔ محلی)
-    val setup = httpGetJson(
-        apiBase + "/direct-sql/setup",
-        mapOf("X-Vizitor-Token" to prefs.setupToken)      // کد از QR
-    )
-    // ۴) ذخیره در همان Settings موجود (هیچ صفحهٔ جدیدی لازم نیست)
-    prefs.saveDirectSql(
-        host     = setup.getString("host"),
-        port     = setup.getInt("port"),
-        database = setup.getString("database"),
-        user     = setup.getString("login"),
-        password = setup.getString("password"),
-        options  = "encrypt=false;trustServerCertificate=true;applicationIntent=ReadOnly"
-    )
+// مرحلهٔ ۱: گرفتن لیست دیتابیس‌ها با اعتبارنامهٔ کامل (یک‌بار)
+val url = "jdbc:jtds:sqlserver://$host:$port/master;user=$user;password=$pass;encrypt=false"
+DriverManager.getConnection(url).use { cn ->
+    cn.createStatement().use { st ->
+        val rs = st.executeQuery("SELECT name FROM sys.databases WHERE database_id > 4 ORDER BY name")
+        val dbs = generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+        showDatabasePicker(dbs)                    // کاربر دیتابیس حسابداری را انتخاب می‌کند
+    }
 }
+
+// مرحلهٔ ۲: خواندن تنظیمات لازم از دیتابیس انتخاب‌شده + بررسی سلامت
+val appUrl = "jdbc:jtds:sqlserver://$host:$port/$chosenDb;user=$user;password=$pass"
+DriverManager.getConnection(appUrl).use { cn -> /* وجود جدول‌ها و تست اتصال */ }
+
+// مرحلهٔ ۳ (از این پس، هر ویزیتور): ورود با dbo.sys_users
+//   SELECT ... FROM dbo.sys_users WHERE user_name = ? AND CONVERT(varchar(50), user_password) = ? AND active = 1
 ```
 
-۳) از این لحظه، فقط صفحهٔ ورود می‌ماند: **نام کاربری و کلمهٔ عبور ویزیتور** (همان
-`dbo.sys_users` سامانهٔ اصلی). اگر اینترنت/SQL قطع شد، پیام واضح + تلاش مجدد (خواستهٔ
-پروژه) و هیچ دادهٔ کهنه‌ای بدون نمایش وضعیت نشان داده نمی‌شود.
-
-> نکتهٔ امنیتی: `vizitor_android` فقط `db_datareader` و روی چند شیء مشخص `EXECUTE/INSERT`
-> دارد؛ رمز آن در `C:\ProgramData\Vizitor\android_app_password.txt` (فقط SYSTEM و admin) است و
-> فقط با کد راه‌اندازی از طریق شبکهٔ محلی قابل گرفتن است.
+> نکته: برای استفادهٔ روزمره، کاربر محدود `vizitor_android` (که نصب‌کننده می‌سازد) امن‌تر است؛
+> اعتبارنامهٔ کامل فقط برای همان مرحلهٔ تنظیم اولیه لازم است.

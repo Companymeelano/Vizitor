@@ -115,7 +115,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Port 9000 -Ip 1.2.3.4
 برای نصب روی **ویندوز ۷ / ۸ / ۱۰ / ۱۱** یک فایل نصب گرافیکی تک‌فایلی هم آماده است:
 
 ```
-release/Vizitor-Setup-1.0.0.exe   ~ ۵۲۰ کیلوبایت
+release/Vizitor-Setup-1.0.0.exe   ~ ۵۹۹ کیلوبایت
 ```
 
 - 🎨 رابط فارسی راست‌به‌چپ با آیکن و تصاویر اختصاصی ویزیتور

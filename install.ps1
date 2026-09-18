@@ -67,6 +67,8 @@ $script:ErpDb          = "Meelano"
 $script:AndroidLogin   = "vizitor_android"
 $script:AndroidFirewall = $true
 $script:AndroidOk      = $false
+$script:IisReset       = $true      # پاک‌سازی کامل IIS و ساخت دوباره (پیش‌فرض طبق درخواست)
+$script:HealthWanted   = $true      # تیک «بررسی سلامت اتصال» در نصب‌کننده
 
 function Get-Answer([string]$Key, [string]$Default = "") {
     if ($script:Ans.ContainsKey($Key)) {
@@ -402,6 +404,10 @@ if (-not $script:PrevAdminUser) { $script:PrevAdminUser = Get-Answer "admin/user
 if (-not $script:PrevAdminPass) { $script:PrevAdminPass = Get-Answer "admin/password" "" }
 if (-not $script:PrevActCode)   { $script:PrevActCode   = Get-Answer "activation/code" "" }
 $script:AnswerIis       = Get-Answer "server/iis" ""
+$script:IisReset        = ((Get-Answer "server/iisreset" "1") -ne "0")
+$script:HealthWanted    = ((Get-Answer "db/health" "1") -ne "0")
+$script:HostLan         = Get-Answer "server/lanip" ""
+$script:HostPublic      = Get-Answer "server/publicip" ""
 $script:ErpDb           = Get-Answer "android/erpdb" "Meelano"
 $script:AndroidLogin    = Get-Answer "android/login" "vizitor_android"
 $script:AndroidFirewall = ((Get-Answer "android/openfirewall" "1") -ne "0")
@@ -430,12 +436,13 @@ if ($Port -gt 0) {
 } else {
     $defaultPort = $script:PrevPort
     if (-not $defaultPort) {
-        foreach ($p in @(80, 8080, 8090, 8180)) {
+        # پورت پیش‌فرض سامانه 9595 است؛ اگر اشغال بود پورت‌های نزدیک را امتحان می‌کنیم
+        foreach ($p in @(9595, 9596, 9597, 9598, 9600)) {
             if (Test-PortFree $p) { $defaultPort = [string]$p; break }
         }
-        if (-not $defaultPort) { $defaultPort = "8080" }
+        if (-not $defaultPort) { $defaultPort = "9595" }
     }
-    $portAns = Read-Prompt "پورت API (پیشنهاد هوشمند: $defaultPort — پورت 80 یعنی بدون شماره پورت در آدرس)" $defaultPort
+    $portAns = Read-Prompt "پورت سامانه (پیش‌فرض 9595)" $defaultPort
     $parsedPort = 0
     [int]::TryParse($portAns, [ref]$parsedPort)
     if ($parsedPort -le 0) { $parsedPort = [int]$defaultPort }
@@ -549,18 +556,15 @@ if (-not $SkipIis -and $script:Mode -ne "keep" -and (Test-IisInstalled)) {
     }
     if ($iisAnswer -eq "آ" -or $iisAnswer -eq "y" -or $iisAnswer -eq "yes" -or [string]::IsNullOrEmpty($iisAnswer)) {
         $script:IisProxyMode = $true
-        # API روی پورت داخلی گوش می‌دهد؛ IIS ترافیک پورت 80 را به آن انتقال می‌دهد
-        $candidate = $script:Port
-        if (($candidate -eq 80 -or $candidate -eq 443) -or -not (Test-PortFree $candidate)) { $candidate = 0 }
-        if ($candidate -eq 0) {
-            foreach ($p in @(8080, 8081, 8090, 8180, 8280)) {
-                if (Test-PortFree $p) { $candidate = $p; break }
-            }
-            if ($candidate -eq 0) { $candidate = 8080 }
+        # سایت IIS روی پورت عمومی 9595 می‌نشیند و ترافیک را به API داخلی می‌دهد
+        $script:PublicPort = 9595
+        $candidate = 0
+        foreach ($p in @(9596, 9597, 9598, 9600, 9601)) {
+            if (Test-PortFree $p) { $candidate = $p; break }
         }
+        if ($candidate -eq 0) { $candidate = 9596 }
         $script:InternalPort = [int]$candidate
-        $script:PublicPort = 80
-        Write-Ok "اتصال از طریق IIS: پورت عمومی 80 → API روی پورت داخلی $($script:InternalPort)"
+        Write-Ok "اتصال از طریق IIS: سایت روی پورت عمومی $($script:PublicPort) → API روی پورت داخلی $($script:InternalPort)"
     }
 }
 
@@ -811,6 +815,67 @@ function Seed-Db {
 if ($script:Mode -ne "keep") { Install-VizitorTask }
 
 # ---------------------------- IIS: پروکسی معکوس غیرتلفیقی -------------------
+# ---------------------------------------------------------------------------
+#  پاک‌سازی کامل IIS و ساخت دوباره از صفر روی پورت 9595
+#  ابتدا از تنظیمات فعلی IIS یک پشتیبان XML گرفته می‌شود (قابل برگشت)، بعد
+#  همهٔ سایت‌ها/اپلیکیشن‌ها/استخرها پاک و یک سایت تازهٔ ویزیتور ساخته می‌شود.
+#  اگر این مرحله را نمی‌خواهید، تیک «پاک‌سازی کامل IIS» را در نصب‌کننده بردارید.
+# ---------------------------------------------------------------------------
+function Backup-IisConfiguration {
+    $dir = Join-Path $script:DataDir ("iis-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+    try {
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        $appcmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
+        if (Test-Path $appcmd) {
+            foreach ($what in @("site", "app", "apppool", "vdir", "config")) {
+                try {
+                    $out = & $appcmd list $what /xml 2>&1 | Out-String
+                    Set-Content -Path (Join-Path $dir "$what.xml") -Value $out -Encoding UTF8
+                } catch {}
+            }
+        }
+        # پشتیبان رسمی خود IIS (اگر ممکن باشد)
+        try { & $appcmd add backup "vizitor-before-install" 2>&1 | Out-Null } catch {}
+        Write-Ok "پشتیبان تنظیمات فعلی IIS گرفته شد: $dir"
+        return $dir
+    } catch {
+        Write-Warn "گرفتن پشتیبان IIS ممکن نشد: $($_.Exception.Message)"
+        return ""
+    }
+}
+
+function Reset-IisForVizitor {
+    $appcmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
+    if (-not (Test-Path $appcmd)) { Write-Warn "appcmd پیدا نشد؛ پاک‌سازی IIS انجام نشد"; return $false }
+
+    $backup = Backup-IisConfiguration
+
+    Write-Info "پاک‌سازی کامل تنظیمات IIS (همهٔ سایت‌ها، اپلیکیشن‌ها و استخرها) ..."
+    # 1) سایت‌ها
+    try {
+        $sites = @(& $appcmd list sites 2>$null | ForEach-Object { ($_ -split '"')[1] } | Where-Object { $_ })
+        foreach ($name in $sites) {
+            & $appcmd delete site "$name" 2>&1 | Out-Null
+            Write-Info "   سایت حذف شد: $name"
+        }
+    } catch { Write-Warn "حذف سایت‌ها ناقص ماند: $($_.Exception.Message)" }
+
+    # 2) استخرهای برنامه (به‌جز آن‌هایی که سیستم به آن‌ها وابسته است)
+    try {
+        $pools = @(& $appcmd list apppools 2>$null | ForEach-Object { ($_ -split '"')[1] } | Where-Object { $_ })
+        foreach ($name in $pools) {
+            if ($name -eq "DefaultAppPool") { continue }
+            & $appcmd delete apppool "$name" 2>&1 | Out-Null
+            Write-Info "   استخر برنامه حذف شد: $name"
+        }
+    } catch { Write-Warn "حذف استخرها ناقص ماند: $($_.Exception.Message)" }
+
+    # 3) بایندینگ‌های باقی‌مانده روی پورت‌های قبلی پاک می‌شوند چون سایت‌ها حذف شدند
+    Write-Ok "IIS خالی شد؛ از این پس فقط سایت ویزیتور روی پورت $($script:PublicPort) وجود دارد"
+    if ($backup) { Write-Info "در صورت نیاز، بازگردانی از پشتیبان: $backup" }
+    return $true
+}
+
 function New-IisProxy {
     # فقط شیء جدید می‌سازد (سایت VizitorAPI یا اپ /api)؛ هیچ سایت/آپلیکیشن موجودی را لمس نمی‌کند
     if (Get-Module -Name WebAdministration -ErrorAction SilentlyContinue) {} else {
@@ -858,39 +923,46 @@ function New-IisProxy {
 "@
     Set-Content -Path (Join-Path $iisWebDir "web.config") -Value $webCfg -Encoding UTF8
 
+    # --- ساخت سایت تازه روی پورت 9595 (پورت پیش‌فرض سامانه) ---------------
+    $siteName = "Vizitor"
+    $poolName = "VizitorPool"
+    try {
+        if (-not (Get-AppPool -Name $poolName -ErrorAction SilentlyContinue)) {
+            New-WebAppPool -Name $poolName -ErrorAction Stop | Out-Null
+            try { Set-ItemProperty "IIS:\AppPools\$poolName" -Name managedRuntimeVersion -Value "" } catch {}
+            try { Set-ItemProperty "IIS:\AppPools\$poolName" -Name startMode -Value "AlwaysRunning" } catch {}
+            Write-Ok "استخر برنامه ساخته شد: $poolName (No Managed Code)"
+        }
+    } catch { Write-Warn "ساخت استخر برنامه ناموفق بود: $($_.Exception.Message)" }
+
     $bound = $false
     try {
-        if (-not (Get-WebBinding -Name "VizitorAPI" -ErrorAction SilentlyContinue)) {
-            try {
-                New-Website -Name "VizitorAPI" -Port 80 -PhysicalPath $iisWebDir -ErrorAction Stop
-                Write-Ok "سایت IIS ساخته شد: VizitorAPI (پورت 80)"
-                $bound = $true
-            } catch {
-                Write-Warn "ساخت سایت VizitorAPI روی پورت 80 ممکن نشد (پورت اشغال است؟) — به حالت اپلیکیشن /api می‌روم"
+        if (Get-Website -Name $siteName -ErrorAction SilentlyContinue) {
+            Set-ItemProperty "IIS:\Sites\$siteName" -Name physicalPath -Value $iisWebDir -ErrorAction SilentlyContinue
+            try { Set-ItemProperty "IIS:\Sites\$siteName" -Name applicationPool -Value $poolName } catch {}
+            if (-not (Get-WebBinding -Name $siteName -Protocol http -Port $script:PublicPort -ErrorAction SilentlyContinue)) {
+                New-WebBinding -Name $siteName -Protocol http -Port $script:PublicPort -IPAddress "*" | Out-Null
             }
-        } else { $bound = $true }
-    } catch {
-        Write-Warn "دسترسی به سایت‌های IIS ممکن نشد؛ تلاش برای حالت اپلیکیشن /api"
-    }
-    if (-not $bound) {
-        $defaultSite = (Get-Website -ErrorAction SilentlyContinue | Where-Object { $_.ID -eq 1 }).Name
-        if (-not $defaultSite) { $defaultSite = "Default Web Site" }
-        $existing = Get-WebApplication -Name "api" -Site $defaultSite -ErrorAction SilentlyContinue
-        if ($existing) {
-            Write-Warn "مسیر /api روی سایت '$defaultSite' از قبل وجود دارد و دست‌نخورده می‌ماند؛ لطفاً تنظیم دستی انجام دهید (مطابق INSTALL.md)"
+            $bound = $true
         } else {
-            try {
-                New-WebApplication -Name "api" -Site $defaultSite -PhysicalPath $iisWebDir -ErrorAction Stop
-                Write-Ok "اپلیکیشن IIS ساخته شد: /api روی سایت '$defaultSite' (پورت 80) — محتوای سایت موجود دست‌نخورده است"
-            } catch {
-                Write-Warn "ساخت اپلیکیشن /api ناموفق بود: $($_.Exception.Message)"
-            }
+            New-Website -Name $siteName -Port $script:PublicPort -PhysicalPath $iisWebDir -ApplicationPool $poolName -HostHeader "" -ErrorAction Stop | Out-Null
+            $bound = $true
         }
+        if ($bound) {
+            try { Start-Website -Name $siteName -ErrorAction SilentlyContinue | Out-Null } catch {}
+            Write-Ok "سایت IIS آماده است: $siteName روی پورت $($script:PublicPort) (استخر: $poolName)"
+        }
+    } catch {
+        Write-Warn "ساخت سایت $siteName روی پورت $($script:PublicPort) ممکن نشد: $($_.Exception.Message)"
     }
-    return $true
+    return $bound
 }
 
 if ($script:IisProxyMode -and (Test-IisInstalled) -and -not $SkipIis) {
+    if ($script:IisReset) {
+        Write-Info "طبق انتخاب شما، IIS کاملاً پاک و از نو ساخته می‌شود ..."
+        Reset-IisForVizitor | Out-Null
+    }
     New-IisProxy | Out-Null
 }
 
@@ -999,7 +1071,14 @@ function Invoke-AndroidPrep {
     try {
         $prevEap2 = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
-        $cardOut = & $script:PyExe "$script:AppHome\api\android_connect.py" --config "$script:ConfigFile" --package-dir "$pkgDir" --erp-db $erp --login $login --password-file $pwFile --token auto --update-config 2>&1
+        $cardArgs = @("$script:AppHome\api\android_connect.py", "--config", "$script:ConfigFile",
+                      "--package-dir", "$pkgDir", "--erp-db", $erp, "--login", $login,
+                      "--password-file", $pwFile, "--update-config")
+        if ($script:HostLan)    { $cardArgs += @("--host-lan", $script:HostLan) }
+        elseif ($script:LocalIp) { $cardArgs += @("--host-lan", $script:LocalIp) }
+        if ($script:HostPublic) { $cardArgs += @("--host-public", $script:HostPublic) }
+        elseif ($script:PublicIp) { $cardArgs += @("--host-public", $script:PublicIp) }
+        $cardOut = & $script:PyExe @cardArgs 2>&1
         $ErrorActionPreference = $prevEap2
         foreach ($l in $cardOut) { Write-Info $l }
         if (Test-Path (Join-Path $pkgDir "android-connect.png")) {
@@ -1243,6 +1322,46 @@ for ($round = 1; $round -le 4; $round++) {
 }
 }   # پایان گزینهٔ «بازرسی و تعمیر خودکار»
 
+# ---------------- بررسی سلامت اتصال به دیتابیس حسابداری -------------------
+function Test-VizitorSqlHealth {
+    if ($script:DbEngine -ne "sqlserver") { return }
+    $erp = $script:ErpDb
+    if (-not $erp) { $erp = "Meelano" }
+    $jsonOut = Join-Path $script:DataDir "sql_health.json"
+    Write-Info "بررسی سلامت اتصال و وجود جدول‌های لازم در دیتابیس [$erp] ..."
+    $script:HealthOk = $false
+    try {
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $out = & $script:PyExe "$script:AppHome\api\sql_admin_tools.py" health --config "$script:ConfigFile" --db $erp --out $jsonOut 2>&1
+        $ErrorActionPreference = $prevEap
+        $obj = $null
+        if (Test-Path $jsonOut) { try { $obj = Get-Content $jsonOut -Raw | ConvertFrom-Json } catch {} }
+        if ($obj) {
+            if ($obj.ok) {
+                $script:HealthOk = $true
+                Write-Ok "اتصال به دیتابیس [$erp] سالم است (DB_NAME=$($obj.db_name) — سرور پاسخ داد)"
+            } else {
+                Write-Warn "بررسی سلامت: $($obj.error) $(if ($obj.detail) { "- $($obj.detail)" })"
+            }
+            if ($obj.checks) {
+                $missing = @()
+                foreach ($k in $obj.checks.PSObject.Properties.Name) {
+                    if (-not $obj.checks.$k) { $missing += $k }
+                }
+                if ($missing.Count -eq 0) { Write-Ok "همهٔ جدول‌ها/پروسیجرهای لازم موجودند ✓" }
+                else { Write-Warn "این موارد در دیتابیس [$erp] پیدا نشد: $($missing -join ', ')" }
+            }
+        } else {
+            foreach ($l in $out) { Write-Info "$l" }
+            Write-Warn "خروجی بررسی سلامت خوانده نشد"
+        }
+    } catch {
+        Write-Warn "بررسی سلامت اتصال انجام نشد: $($_.Exception.Message)"
+    }
+    Write-Info "نتیجهٔ کامل (بدون رمز): $jsonOut"
+}
+
 # ---------------------------- فایل اتصال (بدون رمز) -----------------------
 try {
     $connectFile = Join-Path $script:AppHome "connect.txt"
@@ -1274,6 +1393,10 @@ try {
 } catch {
     Write-Warn "نوشتن فایل اتصال ممکن نشد: $($_.Exception.Message)"
 }
+
+# بررسی سلامت اتصال (تیک «بررسی سلامت اتصال» در نصب‌کننده)
+$script:HealthOk = $false
+if ($script:HealthWanted) { Test-VizitorSqlHealth }
 
 # سخت‌تر کردن دسترسی پوشهٔ تنظیمات (رمز دیتابیس داخل config.json است)
 try { & icacls $script:DataDir /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" | Out-Null } catch {}
@@ -1326,6 +1449,10 @@ if ($script:AndroidOk) {
 Write-Host "  کارت اتصال  : $(Join-Path $script:AppHome 'setup\android-connect.txt')"
 Write-Host "  تصویر QR    : $(Join-Path $script:AppHome 'setup\android-connect.png')"
 Write-Host "  فایل اتصال  : $(Join-Path $script:AppHome 'connect.txt')"
+if ($script:DbEngine -eq "sqlserver") {
+    if ($script:HealthOk) { Write-Host "  سلامت اتصال : تایید شد ✓ (دیتابیس $($script:ErpDb))" -ForegroundColor Green }
+    else { Write-Host "  سلامت اتصال : تایید نشد — جزئیات در $(Join-Path $script:DataDir 'sql_health.json')" -ForegroundColor Yellow }
+}
 Write-Host "  فایل تنظیمات : $script:ConfigFile"
 Write-Host "  لاگ سرویس   : $script:LogFile"
 Write-Host "  فایل‌های برنامه: $script:AppHome"

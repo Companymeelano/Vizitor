@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Vizitor — connection card for the Android app  (direct SQL Server mode)
+Vizitor — connection card for the Android app  (DIRECT SQL Server only)
 
-Writes everything the Android app needs so the visitor only types his own
-user name and password:
+The Android app talks to SQL Server directly; there is no API hop in its
+connection settings.  This script writes everything needed to configure the app
+once, so that afterwards a visitor only types his own user name and password:
 
-    C:\\ProgramData\\Vizitor\\android_config.json     full card  (has the SQL password, ACL protected)
-    <package>\\android-connect.json                   safe card  (no password, has the setup token)
-    <package>\\android-connect.txt                    Persian instructions (printable)
-    <package>\\android-connect.png / .svg             QR code  (scan -> app configures itself)
+    1. server address:  192.168.1.150 (LAN)  and/or  the fixed/public IP
+    2. port 1433, plus a database user with full access (one time only)
+    3. the app lists the databases of the instance, the operator picks the
+       accounting database
+    4. the app reads the settings it needs from that database
+    5. the connection health is checked and shown
 
-It also (with --update-config) records the block in config.json so that the
-running API can hand the settings to the app over the LAN:
-
-    GET /api/config                 -> host, port, database, login (no password)
-    GET /api/direct-sql/setup?token=<setup_token>  -> the same + password
+Writes:
+    C:\ProgramData\Vizitor\android_config.json     full card (has the SQL password, ACL protected)
+    <package>\android-connect.json                   safe card (no password)
+    <package>\android-connect.txt                    Persian instructions (printable)
+    <package>\android-connect.png / .svg             QR code (server + port + database + user)
 
 The SQL password is NEVER printed to the console or written to the safe card.
 The QR generator (segno, BSD-3) is vendored under api/vendor/segno.
@@ -23,14 +26,13 @@ The QR generator (segno, BSD-3) is vendored under api/vendor/segno.
 Usage
     python android_connect.py --config <config.json> [--package-dir <dir>]
         [--erp-db Meelano] [--login vizitor_android] [--password-file <path>]
-        [--token <8 chars>|auto|none] [--update-config] [--no-qr]
+        [--host-lan 192.168.1.150] [--host-public 37.143.147.19]
+        [--update-config] [--no-qr]
 """
 import argparse
 import datetime
 import json
 import os
-import secrets
-import string
 import sys
 import urllib.parse
 
@@ -42,7 +44,6 @@ except Exception:
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "vendor"))
 
-TOKEN_ALPHABET = string.ascii_uppercase + string.digits
 SQL_PORT = 1433
 
 
@@ -67,20 +68,24 @@ def write_json(path, obj, indent=2):
         fh.write("\n")
 
 
-def new_token(n=8):
-    return "".join(secrets.choice(TOKEN_ALPHABET) for _ in range(n))
-
-
-def lan_ip(cfg):
-    """The address the Android app must dial: LAN IP first, then public, then host."""
-    meta = cfg.get("meta") or {}
-    dsql = cfg.get("direct_sql") or {}
-    for cand in (dsql.get("host"), meta.get("local_ip"), meta.get("public_ip"),
-                 (cfg.get("db") or {}).get("host")):
+def first_good(*cands):
+    for cand in cands:
         cand = (cand or "").strip()
         if cand and cand not in ("127.0.0.1", "localhost", "0.0.0.0"):
             return cand
-    return (meta.get("local_ip") or "").strip() or "SERVER-IP"
+    return ""
+
+
+def host_addresses(cfg, arg_lan="", arg_public=""):
+    """Both server addresses: the LAN one (inside the shop) and the fixed/public one."""
+    meta = cfg.get("meta") or {}
+    dsql = cfg.get("direct_sql") or {}
+    lan = first_good(arg_lan, dsql.get("host_lan"), dsql.get("host"),
+                     meta.get("local_ip"), (cfg.get("db") or {}).get("host"))
+    public = first_good(arg_public, dsql.get("host_public"), meta.get("public_ip"))
+    if not lan:
+        lan = public or "SERVER-IP"
+    return lan, public
 
 
 def api_base(cfg, host):
@@ -115,10 +120,11 @@ def main():
     ap = argparse.ArgumentParser(description="Vizitor - Android direct SQL connection card")
     ap.add_argument("--config", required=True, help="config.json written by the installer")
     ap.add_argument("--package-dir", default="", help="folder for the safe card / QR (e.g. C:\\Vizitor\\setup)")
+    ap.add_argument("--host-lan", default="", help="LAN address of the server (inside the shop)")
+    ap.add_argument("--host-public", default="", help="fixed / public address of the server (optional)")
     ap.add_argument("--erp-db", default="", help="ERP database (default: taken from config / Meelano)")
     ap.add_argument("--login", default="", help="restricted SQL login (default: vizitor_android)")
     ap.add_argument("--password-file", default="", help="file that holds the SQL password for that login")
-    ap.add_argument("--token", default="auto", help="setup token: 8 chars, 'auto' or 'none'")
     ap.add_argument("--update-config", action="store_true", help="record the direct_sql block in config.json")
     ap.add_argument("--no-qr", action="store_true", help="skip the QR image")
     args = ap.parse_args()
@@ -131,7 +137,7 @@ def main():
     data_dir = os.path.dirname(os.path.abspath(args.config))
     prev = cfg.get("direct_sql") or {}
 
-    host = lan_ip(cfg)
+    host, host_public = host_addresses(cfg, args.host_lan, args.host_public)
     erp = (args.erp_db or prev.get("database") or "Meelano").strip()
     login = (args.login or prev.get("login") or "vizitor_android").strip()
     pw_file = (args.password_file or prev.get("password_file")
@@ -145,32 +151,26 @@ def main():
         except Exception:
             password = ""
 
-    token = args.token
-    if token == "auto":
-        token = (prev.get("setup_token") or "").strip() or new_token(8)
-    elif token in ("none", "-", "off"):
-        token = ""
-
     base = api_base(cfg, host)
     sql_server = "%s,%d" % (host, SQL_PORT)
 
     block = {
         "enabled": True,
         "mode": "direct_sql",
-        "host": host,
+        "host": host,                     # LAN address (phones inside the shop)
+        "host_lan": host,
+        "host_public": host_public,       # fixed / internet address, optional
         "port": SQL_PORT,
         "database": erp,
         "login": login,
         "password_file": pw_file,
         "password_ready": bool(password),
-        "setup_token": token,
-        "allow_anonymous": False,
         "encrypt": "no",
         "trust_server_certificate": True,
         "application_intent": "ReadOnly",
-        "api_base": base,
-        "config_url": base + "/config",
-        "setup_url": base + "/direct-sql/setup",
+        "flow": ["server", "sql_credentials", "list_databases", "pick_database",
+                 "read_settings", "health_check", "visitor_login"],
+        "panel_url": base,
         "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "updated_by": "vizitor installer",
     }
@@ -196,10 +196,10 @@ def main():
     safe = dict(block)
     safe["password"] = None
     safe["password_required"] = True
-    safe["how_to_get_password"] = (
-        "GET %s?token=%s   (from the server LAN)  -  or read the file on the server: %s"
-        % (block["setup_url"], token or "<no-token>", pw_file)
-    )
+    safe["setup_hint"] = ("the app asks once for a database user with full access, lists the databases, "
+                          "the operator picks the accounting one, then the app reads its settings and "
+                          "checks the connection health")
+    safe["restricted_login_password_file"] = pw_file
     pkg = args.package_dir or os.path.dirname(os.path.abspath(__file__)) + os.sep + ".."
     pkg = os.path.abspath(pkg)
 
@@ -210,35 +210,42 @@ def main():
     # کوتاه و استاندارد: همان پنج مقدار، با کلیدهای یک‌حرفی تا کد QR کم‌چگالی
     # و راحت‌اسکن بماند. معنی کلیدها در کارت متنی آمده است.
     uri = "vizitor://c?" + urllib.parse.urlencode({
-        "h": host,                                   # host
+        "h": host,                                   # host (LAN)
         "p": str(SQL_PORT),                          # port
         "d": erp,                                    # database
-        "u": login,                                  # user
-        "t": token,                                  # setup token
-        "a": base,                                   # api base
+        "u": login,                                  # restricted user (optional)
+        "H": host_public,                            # fixed / public host (optional)
     })
-    pretty = ("vizitor://connect?api=%s&sql=%s&db=%s&user=%s&token=%s"
-              % (base, sql_server, erp, login, token))
+    pretty = ("vizitor://connect?sql=%s&db=%s&user=%s%s"
+              % (sql_server, erp, login, ("&public=" + host_public) if host_public else ""))
     text_path = os.path.join(pkg, "android-connect.txt")
     with open(text_path, "w", encoding="utf-8") as fh:
-        fh.write("کارت اتصال برنامهٔ اندروید ویزیتور (حالت اتصال مستقیم به SQL Server)\r\n")
-        fh.write("=====================================================================\r\n\r\n")
-        fh.write("سرور SQL      : %s\r\n" % sql_server)
-        fh.write("دیتابیس       : %s\r\n" % erp)
-        fh.write("نام کاربری    : %s\r\n" % login)
-        fh.write("رمز           : %s\r\n" % (
-            "در فایل «%s» روی همین سرور (فقط مدیر)" % pw_file if not password
-            else "در فایل «%s» روی همین سرور (به‌صورت خودکار ساخته شد)" % pw_file))
-        fh.write("آدرس API      : %s\r\n" % base)
-        fh.write("کد راه‌اندازی  : %s\r\n" % (token or "(غیرفعال)"))
-        fh.write("\r\nراه ساده (بدون تایپ کردن):\r\n")
-        fh.write("  ۱) تصویر QR کنار همین فایل (android-connect.png) را با برنامهٔ اندروید اسکن کنید\r\n")
-        fh.write("  ۲) یا در برنامهٔ اندروید فقط نشانی «%s» را وارد کنید؛ بقیهٔ تنظیمات خودکار گرفته می‌شود\r\n" % base)
-        fh.write("  ۳) بعد از آن، ویزیتور فقط نام کاربری و کلمهٔ عبور خودش را وارد می‌کند\r\n")
+        fh.write("کارت اتصال برنامهٔ اندروید ویزیتور — اتصال مستقیم به SQL Server\r\n")
+        fh.write("========================================================================\r\n\r\n")
+        fh.write("نشانی سرور (شبکهٔ داخلی) : %s\r\n" % host)
+        if host_public:
+            fh.write("نشانی ثابت / اینترنتی    : %s\r\n" % host_public)
+        fh.write("پورت SQL Server          : %d\r\n" % SQL_PORT)
+        fh.write("دیتابیس حسابداری         : %s\r\n" % erp)
+        fh.write("کاربر محدود سامانه       : %s   (اختیاری — برای استفادهٔ روزمره)\r\n" % login)
+        fh.write("رمز کاربر محدود          : در فایل «%s» روی همین سرور (فقط مدیر)\r\n" % pw_file)
+        fh.write("\r\n--------------------------------------------------------------\r\n")
+        fh.write("تنظیم یک‌باره در برنامهٔ اندروید (انجام می‌دهید، بعد تمام):\r\n")
+        fh.write("--------------------------------------------------------------\r\n")
+        fh.write("  ۱) در برنامه بخش «اتصال به دیتابیس» را باز کنید\r\n")
+        fh.write("  ۲) نشانی سرور را بزنید: %s   (یا QR کنار همین فایل را اسکن کنید)\r\n" % host)
+        fh.write("  ۳) پورت: %d\r\n" % SQL_PORT)
+        fh.write("  ۴) نام کاربری و کلمهٔ عبور دیتابیس با دسترسی کامل را وارد کنید\r\n")
+        fh.write("     (همان کاربری که در برنامهٔ حسابداری استفاده می‌کنید)\r\n")
+        fh.write("  ۵) دکمهٔ «دریافت لیست دیتابیس‌ها» را بزنید و دیتابیس حسابداری («%s») را انتخاب کنید\r\n" % erp)
+        fh.write("  ۶) برنامه تنظیمات لازم را از خود دیتابیس می‌خواند و «بررسی سلامت اتصال» را انجام می‌دهد\r\n")
+        fh.write("\r\nاز این پس هر ویزیتور فقط نام کاربری و کلمهٔ عبور خودش را در برنامه وارد می‌کند\r\n")
+        fh.write("و می‌تواند پیش‌فاکتور ثبت و ارسال کند.\r\n")
         fh.write("\r\nمتن QR (در صورت نیاز به تایپ دستی):\r\n  %s\r\n" % uri)
-        fh.write("  معنی کلیدها: h=سرور، p=پورت، d=دیتابیس، u=کاربر، t=کد راه‌اندازی، a=آدرس API\r\n")
-        fh.write("\r\nشکل خوانا (برای مستندسازی برنامهٔ اندروید):\r\n  %s\r\n" % pretty)
-        fh.write("\r\nنکته: این اتصال فقط در شبکهٔ محلی باز است. رمز SQL را در اختیار کسی نگذارید.\r\n")
+        fh.write("  معنی کلیدها: h=نشانی شبکهٔ داخلی، p=پورت، d=دیتابیس، u=کاربر محدود، H=نشانی ثابت\r\n")
+        fh.write("\r\nشکل خوانا:  %s\r\n" % pretty)
+        fh.write("\r\nنکتهٔ امنیتی: دسترسی پورت ۱۴۳۳ فقط در شبکهٔ محلی باز است.\r\n")
+        fh.write("رمز SQL Server را در اختیار کسی نگذارید؛ برای استفادهٔ روزمره «%s» کافی است.\r\n" % login)
     say("05|OK|Persian connection card: %s" % text_path)
 
     if not args.no_qr:

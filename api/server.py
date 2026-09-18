@@ -608,9 +608,9 @@ def main():
     api = cfg.get("api") or {}
     host = api.get("bind_ip", "0.0.0.0")
     try:
-        port = int(api.get("port", 8080))
+        port = int(api.get("port", 9595))
     except (TypeError, ValueError):
-        port = 8080
+        port = 9595
 
     try:
         httpd = ThreadingHTTPServer((host, port), Handler)

@@ -5,5 +5,5 @@ setlocal
 set "HERE=%~dp0"
 set "URL="
 for /f "tokens=2 delims==" %%a in ('findstr /b /i "apiurl=" "%HERE%..\setup\connect.txt" 2^>nul') do set "URL=%%a"
-if "%URL%"=="" set "URL=http://127.0.0.1:8080/api/health"
+if "%URL%"=="" set "URL=http://127.0.0.1:9595/api/health"
 start "" "%URL%"
