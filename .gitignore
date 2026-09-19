@@ -14,3 +14,12 @@ data/
 # گزارش‌های بررسی CI (توسط خودِ ورک‌فلو ساخته و با add -f ثبت می‌شوند)
 /android-app/server-setup-report.txt
 /installer/exe-build-report.txt
+
+# کلید امضا و فایل‌های بیلد محلی
+vizitor-app/keystore.properties
+vizitor-app/*.jks
+vizitor-app/build.log
+vizitor-app/app/build/
+vizitor-app/build/
+vizitor-app/dist/
+vizitor-app/.gradle/
