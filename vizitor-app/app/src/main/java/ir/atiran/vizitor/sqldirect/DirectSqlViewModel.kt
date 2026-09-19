@@ -63,12 +63,13 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
         SecureDbStore.init(app)
         // اگر نصب‌کننده یا اجرای قبلی، تنظیمات را ذخیره کرده باشد، فرم پیش‌پر می‌شود
         SecureDbStore.load()?.let { s ->
-            val (lan, pub, usePub) = SecureDbStore.loadAddresses()
+            // loadAddresses: Triple(hostExternal, hostLocal, useExternal) — ترتیب دقیقاً همین است
+            val (external, local, useExternal) = SecureDbStore.loadAddresses()
             _state.update {
                 it.copy(
-                    host = lan.ifBlank { s.host },
-                    publicHost = pub,
-                    usePublicHost = usePub,
+                    host = local.ifBlank { s.host },
+                    publicHost = external.ifBlank { if (local.isNotBlank()) s.host else "" },
+                    usePublicHost = useExternal && external.isNotBlank(),
                     port = s.port.toString(),
                     database = s.database,
                     user = s.username,
@@ -178,9 +179,9 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
         }
         SecureDbStore.save(currentSettings())
         SecureDbStore.saveAddresses(
-            hostExternal = s.publicHost.ifBlank { s.host },
+            hostExternal = s.publicHost,
             hostLocal = s.host,
-            useExternal = s.usePublicHost,
+            useExternal = s.usePublicHost && s.publicHost.isNotBlank(),
         )
         _state.update {
             it.copy(
