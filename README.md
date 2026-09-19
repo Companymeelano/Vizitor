@@ -18,6 +18,7 @@
 | `ANDROID_INTEGRATION.md` | راهنمای ساخت **بخش اتصال هوشمند اندروید** (چند کلیک + لحظه‌ای) با کد آمادهٔ Kotlin |
 | `android-app/` | **برنامهٔ اندروید «ویزیتور مستقیم»** — اتصال مستقیم به SQL Server روی پورت ۱۴۳۳. **فایل APK آمادهٔ نصب:** [ریلیز v1.0.0](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-direct-v1.0.0) ([راهنما](android-app/README.md)) |
 | `vizitor-app/` | **پروژهٔ کامل اندروید آتیران ویزیتور (۲٫۱۳٫۵) + اتصال مستقیم SQL Server (۱۴۳۳)**: صفحهٔ «اتصال مستقیم SQL» با کارت اتصال نصب‌کننده، ورود از `dbo.sys_users` و خواندن جدول/ستون‌های ویزیتورها (`dbo.sys_vis → dbo.visitors`) — [راهنما](vizitor-app/README-DIRECT-SQL.md) |
+| `ANDROID-DIRECT-HANDOVER.md` | **تحویل نسخهٔ نهایی اندروید با اتصال مستقیم SQL (پورت ۱۴۳۳)** — فایل نصب، هش، امضا، گام‌های ست‌کردن با نصب‌کننده و نکته‌های صادقانه |
 | `android-sql-direct/` | لایهٔ داده و ممیزی SQL (جایگزین‌شدنی در برنامهٔ موجود) + مستندات طرح و اسکریپت‌های فقط‌خواندنی سرور |
 | `INSTALL.md` | راهنمای کامل نصب و پیکربندی (Linux + Windows) |
 

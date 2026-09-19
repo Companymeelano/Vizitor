@@ -1,65 +1,56 @@
-# اتصال مستقیم اپ ویزیتور به SQL Server (پورت ۱۴۳۳) — نسخهٔ نهایی
+# اپ اندروید آتیران ویزیتور با **اتصال مستقیم** به SQL Server (پورت ۱۴۳۳)
 
-این پوشه، **پروژهٔ کامل اندروید آتیران ویزیتور** (نسخهٔ ۲٫۱۳٫۵ — آخرین سورس موجود در مخزن)
-است که امکانات زیر به آن اضافه شده تا با **نصب‌کنندهٔ ویندوز `Vizitor-Setup-1.0.0.exe`**
-هماهنگ کار کند:
+این پوشه، پروژهٔ کامل اندروید برنامه است که مسیر اتصال مستقیم به SQL Server — بدون IIS و بدون API —
+به آن اضافه شده تا دقیقاً با **نصب‌کنندهٔ ویندوز** (`release/Vizitor-Setup-1.0.0.exe`) هماهنگ کار کند.
 
-| افزوده | فایل‌ها |
-|---|---|
-| لایهٔ اتصال مستقیم JDBC روی پورت ۱۴۳۳ | `app/src/main/java/ir/atiran/vizitor/sqldirect/{DirectSql,SqlConnectionManager}.kt` |
-| خواندن جدول و ستون‌های ویزیتورها | `.../sqldirect/VisitorRepository.kt` |
-| ورود با جدول واقعی کاربران ERP | `.../sqldirect/MeelanoDataSource.kt` (تابع `login` → `dbo.sys_users`) |
-| ذخیرهٔ رمزنگاری‌شدهٔ تنظیمات (AES-GCM + Keystore) | `.../sqldirect/SecureDbStore.kt` |
-| خواندن کارت اتصال نصب‌کننده (`vizitor://c?…`) | `.../sqldirect/ConnectCards.kt` |
-| پل بین اپ و دیتابیس | `.../sqldirect/DirectSqlViewModel.kt` |
-| صفحهٔ «اتصال مستقیم SQL» | `app/src/main/java/ir/atiran/vizitor/ui/screens/DirectSqlScreen.kt` |
-| ورود به آن صفحه از تنظیمات | `ui/screens/SettingsScreen.kt` + `ui/navigation/VizitorNavigation.kt` |
+📄 راهنمای کاربری و تحویل: [`../ANDROID-DIRECT-HANDOVER.md`](../ANDROID-DIRECT-HANDOVER.md)
+📦 فایل نصب: ریلیز [`vizitor-app-direct-2.13.5`](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-app-direct-2.13.5)
+🤖 بیلد خودکار: `.github/workflows/build-vizitor-app.yml` — گزارش در `vizitor-app/apk-report.txt`
 
 ## مسیر کار در برنامه
 
-۱. **تنظیمات → اتصال مستقیم به SQL Server → «ورود به صفحهٔ اتصال مستقیم SQL»**
-۲. متن کارت اتصال نصب‌کننده را می‌چسبانید (`setup\android-connect.txt` یا محتوای
-   `android-connect.json`) و «خواندن کارت اتصال» را می‌زنید.
-۳. «تست اتصال و فهرست دیتابیس‌ها» → پورت ۱۴۳۳ بررسی و فهرست `sys.databases` گرفته می‌شود.
-۴. دیتابیس حسابداری را از فهرست انتخاب **یا دستی تایپ** می‌کنید.
-۵. نام کاربری و رمز خودتان (همان کاربر ویزیتور در `dbo.sys_users`) را می‌زنید و
-   «اتصال و بارگذاری ویزیتورها» را می‌زنید.
+**تنظیمات → «اتصال مستقیم به SQL Server» → «ورود به صفحهٔ اتصال مستقیم SQL»**
 
-خروجی: وضعیت اتصال، مشخصات سرور، **فهرست ویزیتورهای زیرمجموعهٔ شما** با ستون‌های واقعی
-(`vis_name`, `vis_cell`, `vis_tell1`, `vis_addre`, `VIs_region`, `vis_city`, `active`,
-`is_supervisor`, `eteb`, `per_p_d_naghd`, `per_p_d_check`, `TedadFactorMojazMande`) و
-شمارش دامنهٔ دسترسی (مشتری/کالا/انبار) و همچنین **فهرست کامل ستون‌های جدول `dbo.visitors`**
-که از `sys.columns` خوانده می‌شود (ستون `Password` هرگز خوانده یا نمایش داده نمی‌شود).
+| گام | کار | نتیجه |
+|---|---|---|
+| ۱ | چسباندن کارت اتصال نصب‌کننده (`C:\Vizitor\setup\android-connect.txt` / `.json` / QR) و زدن «خواندن کارت اتصال» | نشانی داخلی (`h`)، آی‌پی اختصاصی (`H`)، پورت ۱۴۳۳ (`p`)، دیتابیس (`d`)، کاربر محدود (`u`) خودکار پر می‌شود |
+| ۲ | روشن کردن «اتصال از بیرون شبکه» (اگر بیرون از شبکه هستید) و وارد کردن **رمز کاربر محدود دیتابیس** | رمز در کارت نیست؛ فقط مدیر سامانه آن را دارد |
+| ۳ | «تست اتصال و فهرست دیتابیس‌ها» | فهرست `sys.databases` می‌آید؛ دیتابیس را انتخاب یا **دستی تایپ** می‌کنید |
+| ۴ | «اتصال به دیتابیس» | تنظیمات با AES-GCM + Android Keystore ذخیره می‌شود؛ تیک‌های سلامت مسیر پیش‌فاکتور نمایش داده می‌شود |
+| ۵ | وارد کردن **نام کاربری/کلمهٔ عبور خودتان** و زدن «ورود و بارگذاری ویزیتورها» | ورود با جدول واقعی `dbo.sys_users` |
 
-## دسترسی‌ها (همان چیزی که نصب‌کننده می‌سازد)
+دو اعتبارنامه جدا هستند (همان الگوی آزمایش‌شدهٔ «ویزیتور مستقیم»): **کاربر محدود SQL** برای باز کردن
+اتصال، و **کاربر ویزیتور** برای ورود به سامانه. رمز مرحلهٔ ۱ رمزنگاری‌شده ذخیره می‌شود، رمز مرحلهٔ ۲ ذخیره نمی‌شود.
 
-* `db_datareader` برای همهٔ خواندن‌ها (`sys_users`, `sys_vis`, `visitors`, `sys_cus`,
-  `sys_kal`, `sys_anb`, `CUSTOMERS`, `inventory`, `forosh_price`, …)
-* `EXECUTE` روی `dbo.add_sail_pish` (و پروسیجرهای تأییدشدهٔ دیگر)
-* `INSERT` روی `dbo.subsailtemp_pish`
-* `DELETE`/`UPDATE` عمداً داده نمی‌شود.
+## چه داده‌ای خوانده می‌شود
 
-## بیلد
+* **جدول ویزیتورها**: `dbo.sys_vis` ⋈ `dbo.visitors` با ستون‌های واقعی
+  (`vis_name`, `vis_cell`, `vis_tell1`, `vis_addre`, `VIs_region`, `vis_city`, `active`,
+  `is_supervisor`, `eteb`, `per_p_d_naghd`, `per_p_d_check`, `TedadFactorMojazMande`)
+* **دامنهٔ دسترسی**: شمارش مجازها از `sys_cus` (مشتری)، `sys_kal` (کالا)، `sys_anb` (انبار)
+* **ستون‌های جدول**: فهرست کامل از `sys.columns` + `sys.types` — ستون رمز (`Password`) خوانده نمی‌شود
+* **اطلاعات سرور**: `DB_NAME()`، نسخهٔ SQL Server، تعداد مشتریان، و تیک‌های سلامت پیش‌فاکتور
+
+هیچ نام جدول/ستونی حدس زده نشده: همه از خروجی ممیزی واقعی سرور
+(`android-sql-direct/docs/schema/meelano-columns.tsv`) و بدنهٔ توابع خودِ سامانه گرفته شده است.
+
+## ساخت مجدد
 
 ```bash
 cd vizitor-app
-./gradlew :app:assembleDebug :app:assembleRelease
+./gradlew :app:assembleDebug :app:assembleRelease     # JDK 17 و Android SDK 35
 ```
 
-خروجی: `app/build/outputs/apk/release/app-release.apk`
+خروجی: `app/build/outputs/apk/release/app-release.apk` — نسخه `2.13.5-direct` (شمارهٔ ساخت ۲۱۸۰۰).
+در CI، کلید امضا از `vizitor-app/vizitor-app-signing.p12` خوانده می‌شود (یا از Secretهای
+`VIZITOR_APP_KEY_B64` / `VIZITOR_APP_KEY_PASS`، اگر برای کلید اختصاصی تنظیم شوند) تا همهٔ نسخه‌ها
+یک امضا داشته باشند و به‌روزرسانی روی گوشی بدون حذف/نصب انجام شود.
 
-بیلد خودکار در CI: ورک‌فلوی `.github/workflows/build-vizitor-app.yml` (JDK 17، ساخت کلید امضا،
-`assembleDebug` + `assembleRelease`، بازرسی APK، ثبت گزارش در `vizitor-app/apk-report.txt` و
-انتشار ریلیز با APKها). روی خطا، لاگ در `vizitor-app/build-failure.txt` ثبت می‌شود.
+## نکته‌ها
 
-## نکته‌های صادقانه
-
-* آخرین سورس اندروید در مخزن **۲٫۱۳٫۵** است؛ فایل `Vizitor-v2.17.1-release.zip` که روی `main`
-  گذاشته شد فقط شامل **APK امضاشده با کلید Debug** بود (بدون سورس)، بنابراین همان نسخه
-  قابل تغییر نبود و این اپ از سورس موجود ساخته شده است.
-* بخش‌های دیگر اپ (ویترین/سبد/گفتگو/گزارش) همان مسیر قبلی خود را دارند؛ این تغییر
-  یک مسیر **موازی و بی‌خطر** برای دادهٔ واقعی ERP اضافه می‌کند و به رابط کاربری فعلی دست نمی‌زند.
-* پوشه‌های `server/` (وب‌سرویس PHP) و `worker/` (پراکسی هوش مصنوعی) از شاخهٔ مبدأ آورده
-  **نشدند**، چون طبق درخواست کارفرما مسیر محصول «اتصال مستقیم، بدون IIS/API» است.
+* پوشه‌های `server/` (وب‌سرویس PHP) و `worker/` (پراکسی هوش مصنوعی) از شاخهٔ مبدأ آورده **نشدند**؛
+  طبق تصمیم کارفرما مسیر محصول «اتصال مستقیم، بدون IIS/API» است.
+* صفحهٔ اتصال مستقیم از داخل **تنظیمات** خود برنامه باز می‌شود؛ طرح و فونت و بقیهٔ صفحات دست‌نخورده است.
+* سورس پایه: آخرین سورس موجود در مخزن (۲٫۱۳٫۵). فایل آپلودی ۲٫۱۷٫۱ فقط APK بود (بدون سورس).
 
 طراحی و برنامه‌نویسی: **میلاد یقوبی** — گروه نرم‌افزاری **Meelano Studio Design**
