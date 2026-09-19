@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پیش‌نمایش ویزارد نصب سامانهٔ ویزیتور</title>
+
+<style>
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Bold.woff2") format("woff2");font-weight:700;font-display:swap}
+</style>
+
+<style>
+  :root{
+    --navy:#0b2138; --band:#102a45; --card:#f4f8fc; --card-2:#e8f0f8;
+    --ice:#eef5fc; --muted:#93aec9; --gold:#e3b967; --line:rgba(150,195,240,.20);
+    --brand:#1b5fa8; --brand-2:#3f8fd8; --ok:#1e7b45; --err:#a93125;
+    --s1:6px; --s2:10px; --s3:14px; --s4:20px; --s5:28px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; direction:rtl; background:var(--navy); color:var(--ice);
+    font-family:"Vazirmatn","Tahoma",system-ui,sans-serif; font-size:14px; line-height:1.9;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:var(--s5) var(--s4) 60px}
+  .head{display:flex; align-items:center; gap:var(--s3); margin-bottom:var(--s4)}
+  .head img{width:150px; height:57px; border-radius:10px; border:1px solid var(--line)}
+  .head h1{margin:0; font-size:18px}
+  .head p{margin:2px 0 0; color:var(--muted); font-size:12.5px}
+  .warnbox{
+    background:rgba(227,185,103,.12); border:1px solid rgba(227,185,103,.45); color:#ffe7bd;
+    border-radius:12px; padding:10px 14px; font-size:12.5px; margin-bottom:var(--s4)
+  }
+  .warnbox a{color:#ffe7bd; font-weight:700}
+
+  /* ── پنجرهٔ ویزارد (شبیه پنجرهٔ واقعی ویندوز) ── */
+  .win{
+    background:#0e2942; border:1px solid rgba(150,195,240,.28); border-radius:14px;
+    box-shadow:0 26px 60px rgba(0,0,0,.55); overflow:hidden
+  }
+  .titlebar{
+    display:flex; align-items:center; gap:var(--s2); padding:8px 12px; background:#0c2338;
+    border-bottom:1px solid var(--line); font-size:12.5px; color:#dbe9f7
+  }
+  .titlebar .dot{width:9px;height:9px;border-radius:50%;background:var(--gold)}
+  .titlebar .sp{margin-inline-start:auto; color:var(--muted)}
+  .wizheader{
+    display:grid; grid-template-columns:1fr 150px; gap:var(--s3); align-items:center;
+    background:var(--band); border-bottom:1px solid var(--line); padding:10px 14px
+  }
+  .wizheader h2{margin:0; font-size:16px}
+  .wizheader p{margin:2px 0 0; color:var(--muted); font-size:12px}
+  .body{background:var(--navy); padding:var(--s4); min-height:330px}
+
+  /* ── کارت‌ها: همان زبان ویزارد واقعی ── */
+  .card{background:var(--card); color:#1d2a38; border-radius:12px; padding:var(--s3) var(--s4);
+        box-shadow:0 2px 0 rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.25)}
+  .card + .card{margin-top:var(--s3)}
+  .card h3{margin:0 0 var(--s2); font-size:13.5px; color:#0e2b4a; padding-bottom:var(--s1);
+           border-bottom:1px solid var(--gold)}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:var(--s2) var(--s3)}
+  .grid3{display:grid; grid-template-columns:1fr 1fr; gap:var(--s2)}
+  label{display:block; font-size:12px; color:#5c6c7c; margin-bottom:4px}
+  input[type=text],input[type=password],select{
+    width:100%; font-family:inherit; font-size:13px; color:#1d2a38; padding:8px 10px;
+    border-radius:8px; border:1px solid #bfd0e0; background:#fff;
+    box-shadow:inset 0 2px 5px rgba(0,0,0,.08)
+  }
+  .row{display:grid; gap:var(--s2)}
+  .row.two{grid-template-columns:1fr 1fr}
+  .row.host{grid-template-columns:1fr 96px}
+  .chk{display:flex; align-items:center; gap:8px; font-size:12.5px; color:#1d2a38; margin-top:var(--s2)}
+  .radio{display:flex; gap:var(--s3); flex-wrap:wrap; margin:var(--s2) 0}
+  .radio label{display:flex; align-items:center; gap:6px; margin:0; color:#1d2a38; font-size:12.5px}
+  .hint{font-size:11.5px; color:#5c6c7c; margin-top:var(--s2)}
+  .hint.ok{color:var(--ok); font-weight:600}
+  .hint.err{color:var(--err); font-weight:600}
+
+  /* ── دکمه‌های ویزارد (سه‌بعدی، فشاری) ── */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;
+    font-family:inherit; font-size:13px; font-weight:700; color:#fff; border:0;
+    padding:9px 18px; border-radius:9px;
+    background:linear-gradient(180deg,#4a90d6,var(--brand) 50%,#144a79);
+    box-shadow:0 4px 0 #0e3457, 0 8px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
+    transition:transform .07s ease, box-shadow .12s ease
+  }
+  .btn:active{transform:translateY(3px); box-shadow:0 1px 0 #0e3457, 0 4px 10px rgba(0,0,0,.35)}
+  .btn.gold{background:linear-gradient(180deg,#f2d392,var(--gold) 50%,#b98d2e); color:#2a1c02;
+            box-shadow:0 4px 0 #7a5a17, 0 8px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5)}
+  .btn.ghost{background:linear-gradient(180deg,#f7fafd,#e3ecf5); color:#1d2a38; border:1px solid #bfd0e0;
+             box-shadow:0 3px 0 #b3c4d4, inset 0 1px 0 rgba(255,255,255,.8)}
+  .btn.sm{font-size:12px; padding:7px 13px}
+  .actions{display:flex; gap:var(--s2); align-items:center; margin-top:var(--s3)}
+  .actions .sp{margin-inline-start:auto}
+
+  /* ── فهرست دیتابیس‌ها ── */
+  .listbox{
+    border:1px solid #bfd0e0; border-radius:9px; background:#fff; margin-top:var(--s2);
+    height:132px; overflow:auto; box-shadow:inset 0 2px 6px rgba(0,0,0,.10)
+  }
+  .listbox div{padding:5px 11px; font-size:12.5px; color:#1d2a38; cursor:pointer}
+  .listbox div:hover{background:#eef4fb}
+  .listbox div.on{background:linear-gradient(180deg,#f4dba8,var(--gold)); font-weight:700}
+
+  /* ── نوار پایین ویزارد (امضای سازنده) ── */
+  .credit{
+    background:var(--band); border-top:2px solid var(--gold); color:#eaf3fb;
+    text-align:center; font-size:11.5px; padding:7px 10px
+  }
+  .footer{display:flex; gap:var(--s2); align-items:center; padding:12px 14px; background:#0c2338;
+          border-top:1px solid var(--line)}
+  .footer .space{flex:1}
+  .stepper{display:flex; gap:var(--s1); flex-wrap:wrap; justify-content:center; margin-top:var(--s4)}
+  .stepper button{
+    font-family:inherit; font-size:12px; padding:7px 12px; border-radius:999px; cursor:pointer;
+    background:rgba(255,255,255,.06); color:var(--ice); border:1px solid var(--line)
+  }
+  .stepper button.on{background:linear-gradient(180deg,#f4dba8,var(--gold)); color:#2a1c02; font-weight:700; border-color:#f7e3b6}
+  .sidewrap{display:grid; grid-template-columns:164px 1fr; gap:0; background:var(--navy)}
+  .sidewrap img{width:164px; height:314px; display:block}
+  .sidenote{padding:var(--s4); font-size:12.8px; color:#dbe9f7}
+  .sidenote h3{color:#ffe7bd; font-size:14px; margin:0 0 var(--s2)}
+  .sidenote ul{margin:0; padding-inline-start:18px}
+  .sidenote li{margin-bottom:6px}
+  .sidenote .who{margin-top:var(--s4); padding-top:var(--s3); border-top:1px solid var(--line); color:#ffe7bd; font-size:12.5px}
+  [hidden]{display:none !important}
+  @media (max-width:620px){
+    .wizheader{grid-template-columns:1fr}
+    .row.two,.row.host,.grid2{grid-template-columns:1fr}
+    .sidewrap{grid-template-columns:1fr} .sidewrap img{width:100%; height:auto}
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <img src="img/wizard-header.png" alt="نوار سرصفحهٔ ویزارد">
+    <div>
+      <h1>پیش‌نمایش ویزارد نصب سامانهٔ ویزیتور</h1>
+      <p>همان صفحه‌هایی که داخل فایل <b>Vizitor-Setup-1.0.0.exe</b> اجرا می‌شوند — برای بازبینی ظاهر، پیش از نصب</p>
+    </div>
+  </div>
+
+  <div class="warnbox">
+    این یک <b>پیش‌نمایش طراحی</b> است (فقط ظاهر و ترتیب صفحه‌ها)؛ نصب‌کنندهٔ واقعی همان فایل
+    <b>release/Vizitor-Setup-1.0.0.exe</b> ویندوز است و کار واقعی (سرویس، فایروال، اتصال SQL) را همان انجام می‌دهد.
+    عکس‌های این صفحه دقیقاً همان تصاویری هستند که در فایل exe قرار می‌گیرند.
+    <br>برای دیدن طرح پنل مدیریت به صفحهٔ <a href="index.html">پیش‌نمایش پنل</a> بروید.
+  </div>
+
+  <div class="win">
+    <div class="titlebar">
+      <span class="dot"></span>
+      <span>نصب سامانهٔ ویزیتور ۱.۰.۰  •  Meelano Studio Design</span>
+      <span class="sp">—  □  ×</span>
+    </div>
+
+    <!-- ═══════ صفحهٔ خوش‌آمد ═══════ -->
+    <section class="screen" data-step="0">
+      <div class="sidewrap">
+        <img src="img/wizard-side.png" alt="تصویر کناری ویزارد">
+        <div class="sidenote">
+          <h3>به نصب‌کنندهٔ سامانهٔ ویزیتور خوش آمدید</h3>
+          <ul>
+            <li>سرویس سامانه و پنل مدیریت روی پورت ۹۵۹۵ (فقط شبکهٔ محلی)</li>
+            <li>اتصال مستقیم برنامهٔ اندروید به SQL Server روی پورت ۱۴۳۳ — بدون IIS و بدون API میانی</li>
+            <li>دیتابیس سامانه در SQL Server (فقط ساخت چیزهای ناموجود؛ هیچ دادهٔ موجودی تغییر نمی‌کند)</li>
+            <li>کاربر محدود دیتابیس، قاعده‌های فایروال، کارت اتصال و راهنماهای فارسی</li>
+          </ul>
+          <div class="who">طراحی و برنامه‌نویسی: میلاد یقوبی (Milad Yaghoobi)  •  گروه: Meelano Studio Design</div>
+        </div>
+      </div>
+      <div class="footer">
+        <span class="space"></span>
+        <button class="btn ghost" type="button">انصراف</button>
+        <button class="btn" type="button" onclick="go(1)">بعدی ❯</button>
+      </div>
+    </section>
+
+    <!-- ═══════ گام ۱ — سرور سامانه ═══════ -->
+    <section class="screen" data-step="1" hidden>
+      <div class="wizheader">
+        <div>
+          <h2>سرور سامانه</h2>
+          <p>آدرس و پورت پنل مدیریت — اتصال برنامهٔ اندروید مستقل و مستقیم به SQL Server است</p>
+        </div>
+        <img src="img/wizard-header.png" alt="">
+      </div>
+      <div class="body">
+        <div class="card">
+          <h3>آدرس سرور و پورت پنل مدیریت</h3>
+          <div class="row host">
+            <div><label>آدرس سرور (IP یا دامنهٔ داخلی)</label><input type="text" value="192.168.1.150"></div>
+            <div><label>پورت</label><input type="text" value="9595"></div>
+          </div>
+          <div class="hint">• این پورت فقط برای شبکهٔ محلی باز می‌شود؛ IIS و API میانی وجود ندارد.</div>
+          <div class="hint" style="color:#1b5fa8;font-weight:600">آدرس نهایی پنل:  http://192.168.1.150:9595/api</div>
+        </div>
+
+        <div class="card">
+          <h3>دیتابیس خود سامانهٔ ویزیتور و وضعیت همین سیستم</h3>
+          <div class="row two">
+            <div><label>دیتابیس خود ویزیتور</label><input type="text" value="vizitor"></div>
+            <div style="align-self:end">
+              <div class="chk"><input type="checkbox" id="h1" checked><label for="h1" style="margin:0">بررسی سلامت در پایان نصب</label></div>
+            </div>
+          </div>
+          <div class="hint">وضعیت سیستم:  ویندوز ۱۰  •  PowerShell 5.1  •  Python 3.12  •  SQL Server: در حال اجرا  •  درایور ODBC: نصب است<br>
+            اتصال اندروید: مستقیم به SQL Server روی پورت ۱۴۳۳ — اگر آی‌پی اختصاصی داشته باشید، از بیرون شبکه هم وصل می‌شود</div>
+        </div>
+      </div>
+      <div class="credit">طراحی و برنامه‌نویسی: میلاد یقوبی (Milad Yaghoobi)   •   گروه نرم‌افزاری: Meelano Studio Design</div>
+      <div class="footer">
+        <button class="btn ghost" type="button" onclick="go(0)">❮ قبلی</button>
+        <span class="space"></span>
+        <button class="btn ghost" type="button">انصراف</button>
+        <button class="btn" type="button" onclick="go(2)">بعدی ❯</button>
+      </div>
+    </section>
+
+    <!-- ═══════ گام ۲ — اتصال به SQL Server ═══════ -->
+    <section class="screen" data-step="2" hidden>
+      <div class="wizheader">
+        <div>
+          <h2>اتصال به SQL Server</h2>
+          <p>پورت پیش‌فرض ۱۴۳۳ — رمز فقط برای همین نصب استفاده می‌شود</p>
+        </div>
+        <img src="img/wizard-header.png" alt="">
+      </div>
+      <div class="body">
+        <div class="card">
+          <h3>مشخصات ورود به SQL Server</h3>
+          <div class="row host">
+            <div><label>سرور SQL Server</label><input type="text" value="localhost"></div>
+            <div><label>پورت</label><input type="text" value="1433"></div>
+          </div>
+          <div class="radio">
+            <label><input type="radio" name="auth" checked> کاربر SQL Server (نام کاربری و رمز)</label>
+            <label><input type="radio" name="auth"> حساب ویندوز همین سرور (بدون رمز)</label>
+          </div>
+          <div class="row two">
+            <div><label>نام کاربری</label><input type="text" value="sa"></div>
+            <div><label>کلمهٔ عبور</label><input type="password" value="secret"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>اتصال از بیرون شبکه و آزمایش اتصال</h3>
+          <div><label>آی‌پی اختصاصی/اینترنتی سرور (اختیاری)</label><input type="text" value="37.143.147.19"></div>
+          <div class="chk"><input type="checkbox" id="ex" checked><label for="ex" style="margin:0">اجازهٔ اتصال به پورت ۱۴۳۳ از بیرون شبکه (فوروارد پورت در روتر)</label></div>
+          <div class="actions">
+            <button class="btn sm" type="button" onclick="document.getElementById('sqltest').className='hint ok';document.getElementById('sqltest').textContent='اتصال برقرار شد — ۶ دیتابیس روی این سرور پیدا شد.'">تست اتصال</button>
+            <span class="hint" id="sqltest">با این دکمه، اتصال را قبل از ادامه امتحان کنید.</span>
+          </div>
+        </div>
+      </div>
+      <div class="credit">طراحی و برنامه‌نویسی: میلاد یقوبی (Milad Yaghoobi)   •   گروه نرم‌افزاری: Meelano Studio Design</div>
+      <div class="footer">
+        <button class="btn ghost" type="button" onclick="go(1)">❮ قبلی</button>
+        <span class="space"></span>
+        <button class="btn ghost" type="button">انصراف</button>
+        <button class="btn" type="button" onclick="go(3)">بعدی ❯</button>
+      </div>
+    </section>
+
+    <!-- ═══════ گام ۳ — انتخاب دیتابیس برنامه ═══════ -->
+    <section class="screen" data-step="3" hidden>
+      <div class="wizheader">
+        <div>
+          <h2>انتخاب دیتابیس برنامه</h2>
+          <p>از فهرست سرور انتخاب کنید یا نام آن را دستی بنویسید — هیچ دیتابیسی اجباری نیست</p>
+        </div>
+        <img src="img/wizard-header.png" alt="">
+      </div>
+      <div class="body">
+        <div class="card">
+          <h3>۱) فهرست دیتابیس‌های روی سرور</h3>
+          <div class="actions" style="margin-top:0">
+            <button class="btn sm" type="button" onclick="fillList()">دریافت فهرست دیتابیس‌ها</button>
+            <span class="hint" id="listhint">هنوز فهرستی گرفته نشده — دکمهٔ آبی را بزنید.</span>
+          </div>
+          <div class="listbox" id="listbox">
+            <div>master</div><div>model</div><div>msdb</div>
+            <div class="on">Meelano</div>
+            <div>AtiranUnit1</div>
+            <div>Report_Archive</div>
+          </div>
+          <div class="hint">• با کلیک روی هر نام در فهرست، همان نام خودکار در کادر پایین می‌آید.</div>
+        </div>
+
+        <div class="card">
+          <h3>۲) نام دیتابیس برنامه (حسابداری) — انتخاب از فهرست یا تایپ دستی</h3>
+          <div class="row two">
+            <div><input type="text" id="erp" value="Meelano"></div>
+            <div><button class="btn" type="button" onclick="document.getElementById('dbhint').className='hint ok';document.getElementById('dbhint').textContent='تأیید شد: دیتابیس «Meelano» در فهرست همین سرور وجود دارد.'">تأیید نام دیتابیس</button></div>
+          </div>
+          <div class="hint" id="dbhint">نام را بنویسید یا از فهرست انتخاب کنید، سپس این دکمه را بزنید.</div>
+        </div>
+      </div>
+      <div class="credit">طراحی و برنامه‌نویسی: میلاد یقوبی (Milad Yaghoobi)   •   گروه نرم‌افزاری: Meelano Studio Design</div>
+      <div class="footer">
+        <button class="btn ghost" type="button" onclick="go(2)">❮ قبلی</button>
+        <span class="space"></span>
+        <button class="btn ghost" type="button">انصراف</button>
+        <button class="btn" type="button" onclick="go(4)">بعدی ❯</button>
+      </div>
+    </section>
+
+    <!-- ═══════ گام ۴ — کد فعال‌سازی ═══════ -->
+    <section class="screen" data-step="4" hidden>
+      <div class="wizheader">
+        <div>
+          <h2>کد فعال‌سازی</h2>
+          <p>کد را از فروشندهٔ سامانه گرفته‌اید — اگر در دسترس نیست، تیک «بعداً» را بزنید</p>
+        </div>
+        <img src="img/wizard-header.png" alt="">
+      </div>
+      <div class="body">
+        <div class="card">
+          <h3>فعال‌سازی سامانه</h3>
+          <div class="hint">سامانه بدون کد هم نصب می‌شود، اما تا ورود کد فعال نمی‌شود. کد فقط در فایل تنظیمات سرور ذخیره می‌شود
+            و هرگز در گزارش نصب یا لاگ‌ها چاپ نمی‌شود.</div>
+          <div class="row two" style="margin-top:10px">
+            <div><label>کد فعال‌سازی</label><input type="text" value="VIZ-4K2H-91XA-77QD"></div>
+            <div style="align-self:end">
+              <div class="chk"><input type="checkbox" id="later"><label for="later" style="margin:0">فعلاً کد ندارم؛ بعداً وارد می‌کنم.</label></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>شناسنامهٔ سامانه</h3>
+          <div style="font-size:14px;font-weight:700;color:#0e2b4a">سامانهٔ ویزیتور — نسخهٔ ۱.۰.۰</div>
+          <div style="margin-top:6px">طراحی و برنامه‌نویسی:  میلاد یقوبی  (Milad Yaghoobi)</div>
+          <div style="color:#1b5fa8;font-weight:600">گروه نرم‌افزاری:  Meelano Studio Design</div>
+        </div>
+      </div>
+      <div class="credit">طراحی و برنامه‌نویسی: میلاد یقوبی (Milad Yaghoobi)   •   گروه نرم‌افزاری: Meelano Studio Design</div>
+      <div class="footer">
+        <button class="btn ghost" type="button" onclick="go(3)">❮ قبلی</button>
+        <span class="space"></span>
+        <button class="btn ghost" type="button">انصراف</button>
+        <button class="btn gold" type="button" onclick="go(5)">نصب سامانه</button>
+      </div>
+    </section>
+
+    <!-- ═══════ پایان نصب ═══════ -->
+    <section class="screen" data-step="5" hidden>
+      <div class="sidewrap">
+        <img src="img/wizard-side.png" alt="">
+        <div class="sidenote">
+          <h3>نصب سامانهٔ ویزیتور کامل شد</h3>
+          <ul>
+            <li>آدرس پنل مدیریت سامانه:  http://192.168.1.150:9595/api</li>
+            <li>اتصال مستقیم اندروید به SQL Server (پورت ۱۴۳۳) آماده شد؛ کارت اتصال و کد QR:
+              <code>C:\Vizitor\setup\android-connect.png</code></li>
+            <li>تنظیمات و لاگ‌ها:  <code>C:\ProgramData\Vizitor</code></li>
+            <li>اگر بازرسی خودکار به مشکل خورد، از میان‌بر «بازرسی و تعمیر» استفاده کنید.</li>
+          </ul>
+          <div class="who">سامانهٔ ویزیتور — طراحی و برنامه‌نویسی: میلاد یقوبی (Milad Yaghoobi)  •  گروه نرم‌افزاری: Meelano Studio Design</div>
+        </div>
+      </div>
+      <div class="footer">
+        <button class="btn ghost" type="button" onclick="go(4)">❮ قبلی</button>
+        <span class="space"></span>
+        <button class="btn" type="button">بازکردن پنل مدیریت</button>
+        <button class="btn gold" type="button">پایان</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="stepper" id="stepper"></div>
+</div>
+
+<script>
+  var screens = Array.prototype.slice.call(document.querySelectorAll('.screen'));
+  var labels  = ['خوش‌آمد', 'گام ۱ — سرور', 'گام ۲ — اتصال SQL', 'گام ۳ — دیتابیس', 'گام ۴ — فعال‌سازی', 'پایان'];
+  var stepper = document.getElementById('stepper');
+
+  labels.forEach(function (text, index) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = text;
+    b.onclick = function () { go(index); };
+    stepper.appendChild(b);
+  });
+
+  function go(step) {
+    screens.forEach(function (section) {
+      section.hidden = Number(section.dataset.step) !== step;
+    });
+    Array.prototype.forEach.call(stepper.children, function (b, index) {
+      b.className = index === step ? 'on' : '';
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function fillList() {
+    var box = document.getElementById('listbox');
+    Array.prototype.forEach.call(box.children, function (row) {
+      row.onclick = function () {
+        Array.prototype.forEach.call(box.children, function (r) { r.className = ''; });
+        row.className = 'on';
+        document.getElementById('erp').value = row.textContent.trim();
+      };
+    });
+    var hint = document.getElementById('listhint');
+    hint.className = 'hint ok';
+    hint.textContent = '۶ دیتابیس پیدا شد — روی نام موردنظر کلیک کنید.';
+  }
+
+  fillList();
+  go(1);
+</script>
+</body>
+</html>

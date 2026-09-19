@@ -1,0 +1,44 @@
+گزارش آزمون اتصال به SQL Server — ویزیتور مستقیم (پورت ۱۴۳۳)
+تاریخ: 2026-09-18 15:19:23 UTC   کامیت: 2d3a2101502b25b5ddd457849da69083fa14c6d3
+SQL Server: mcr.microsoft.com/mssql/server:2019-latest (کانتینر CI، شبیه‌سازی مسیر گوشی→سرور)
+==================================================================================
+
+--- ۱) اتصال از بیرون کانتینر (مسیر واقعی گوشی → سرور) ---
+TCP 127.0.0.1:1433 از بیرون کانتینر باز است ✓ — همان مسیر گوشی → سرور
+
+--- ۲) اسکیمای آزمون و کاربر محدود ساخته شد ---
+what                 n          
+sys_users                      3
+CUSTOMERS                      3
+inventory                      2
+customer of vizitor1           3
+       1433 TSQL                 ONLINE           ::                                              
+       1433 TSQL                 ONLINE           0.0.0.0                                         
+       1434 TSQL                 ONLINE           ::1                                             
+       1434 TSQL                 ONLINE           127.0.0.1                                       
+
+--- ۳) نتیجهٔ تک‌تک آزمون‌ها (فایل XML گِریدل = مرجع) ---
+  [موفق] ٦- بررسی سلامت مسیر پیش فاکتور بدون هیچ نوشتنی
+  [موفق] ٧- کاربر محدود نباید بتواند بنویسد (فقط خواندن)
+  [موفق] ١- هر دو درایور بار می شوند و نشانی هایشان پذیرفته می شود
+  [موفق] ٤- ورود ویزیتور از جدول sys_users و رد شدن حساب غیرفعال و قفل
+  [موفق] ٥- مشتریان، گروه ها و تیر قیمت، کالاها و موجودی انبار
+  [موفق] ٢- اتصال با کاربر محدود به master و فهرست دیتابیس ها
+  [موفق] ٣- اتصال به دیتابیس انتخاب شده و خواندن مشخصات سرور
+  [موفق] ۸- ثبت پیش‌فاکتور با کاربر محدود (EXEC + INSERT + تریگر)
+  ── جمع: 8 آزمون، 0 ناکام، 0 خطا، 0 پرش
+  ── نتیجه: همهٔ آزمون‌ها موفق ✓
+
+--- ۴) خروجی آزمون‌ها (کد خود برنامه روی SQL Server واقعی) ---
+ir.atiran.vizitor.data.RealSqlConnectionTest > ٦- بررسی سلامت مسیر پیش فاکتور بدون هیچ نوشتنی PASSED
+ir.atiran.vizitor.data.RealSqlConnectionTest > ٧- کاربر محدود نباید بتواند بنویسد (فقط خواندن) PASSED
+ir.atiran.vizitor.data.RealSqlConnectionTest > ١- هر دو درایور بار می شوند و نشانی هایشان پذیرفته می شود PASSED
+ir.atiran.vizitor.data.RealSqlConnectionTest > ٤- ورود ویزیتور از جدول sys_users و رد شدن حساب غیرفعال و قفل PASSED
+ir.atiran.vizitor.data.RealSqlConnectionTest > ٥- مشتریان، گروه ها و تیر قیمت، کالاها و موجودی انبار PASSED
+ir.atiran.vizitor.data.RealSqlConnectionTest > ٢- اتصال با کاربر محدود به master و فهرست دیتابیس ها PASSED
+ir.atiran.vizitor.data.RealSqlConnectionTest > ٣- اتصال به دیتابیس انتخاب شده و خواندن مشخصات سرور PASSED
+ir.atiran.vizitor.data.RealSqlConnectionTest > ۸- ثبت پیش‌فاکتور با کاربر محدود (EXEC + INSERT + تریگر) PASSED
+BUILD SUCCESSFUL in 2m 4s
+
+--- ۵) اگر آزمونی رد شد: پیام خطاها ---
+  (همهٔ آزمون‌ها موفق بودند یا لاگ شکست ساخته نشد)

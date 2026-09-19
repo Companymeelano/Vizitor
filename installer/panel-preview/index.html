@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سامانهٔ ویزیتور — پنل مدیریت (پیش‌نمایش طرح)</title>
+
+<!-- فونت وزیرمتن (SIL OFL 1.1) — به‌صورت محلی، بدون نیاز به اینترنت -->
+<style>
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+  @font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Bold.woff2") format("woff2");font-weight:700;font-display:swap}
+</style>
+
+<style>
+  /* ═══ پالت: پس‌زمینهٔ یکدست سرمه‌ای + کارت‌های شیشه‌ای سرمه‌ای روشن‌تر ═══ */
+  :root{
+    --navy:      #0b2138;   /* پس‌زمینهٔ یکدست صفحه */
+    --navy-soft: #102a45;   /* کارت‌ها */
+    --navy-soft2:#143254;   /* کارت‌های تأکیدی/سرصفحه */
+    --line:      rgba(150,195,240,.20);
+    --line-2:    rgba(224,178,92,.45);
+    --gold:      #e3b967;
+    --ice:       #eef5fc;
+    --ice-2:     #c9dcef;
+    --muted:     #93aec9;
+    --ok:        #4ecb83;
+    --warn:      #e3b967;
+    --err:       #ef7a68;
+    --brand:     #3f8fd8;
+
+    /* مقیاس‌ها: فاصله‌ها و شعاع‌ها یکدست */
+    --s1:6px; --s2:10px; --s3:14px; --s4:20px; --s5:28px; --s6:36px;
+    --r-card:18px; --r-input:12px; --r-chip:11px;
+    --shadow: 0 14px 30px rgba(0,0,0,.42), 0 1px 0 rgba(255,255,255,.05) inset;
+    --shadow-soft: 0 8px 18px rgba(0,0,0,.32);
+    --col: 1180px;
+  }
+  *{box-sizing:border-box}
+  html{background:var(--navy)}
+  body{
+    margin:0; min-height:100vh; direction:rtl;
+    background:var(--navy);                 /* بک‌گراند یکدست سرمه‌ای */
+    color:var(--ice);
+    font-family:"Vazirmatn","Tahoma",system-ui,sans-serif;  /* فونت وزیرمتن */
+    font-weight:400; font-size:14px; line-height:1.9;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{margin:0; font-weight:700; line-height:1.6}
+  p{margin:0}
+  a{color:var(--gold); text-decoration:none}
+
+  /* ═══ چیدمان: یک گرید ۱۲ ستونی با یک عرض بیشینهٔ ثابت ═══ */
+  .container{max-width:var(--col); margin:0 auto; padding:var(--s5) var(--s4) var(--s6)}
+  .grid{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--s4); align-items:start}
+  .c3{grid-column:span 3} .c4{grid-column:span 4} .c6{grid-column:span 6}
+  .c8{grid-column:span 8} .c12{grid-column:span 12}
+  @media (max-width:1080px){
+    .c3{grid-column:span 6} .c4{grid-column:span 6} .c6,.c8{grid-column:span 12}
+  }
+  @media (max-width:660px){
+    .c3,.c4,.c6,.c8{grid-column:span 12}
+    .container{padding:var(--s4) var(--s3) var(--s5)}
+  }
+
+  /* ═══ کارت پایه (شیشه‌ای سرمه‌ای، برجسته) ═══ */
+  .card{
+    position:relative; background:var(--navy-soft); border:1px solid var(--line);
+    border-radius:var(--r-card); padding:var(--s4);
+    box-shadow:var(--shadow);
+  }
+  .card.alt{background:var(--navy-soft2)}
+  .card > h2{
+    display:flex; align-items:center; gap:var(--s2);
+    font-size:15px; margin-bottom:var(--s3); padding-bottom:var(--s2);
+    border-bottom:1px solid var(--line);
+  }
+  .card > h2 .ic{
+    width:30px;height:30px;flex:0 0 auto;border-radius:9px;display:grid;place-items:center;
+    background:rgba(63,143,216,.18); border:1px solid var(--line); font-size:15px
+  }
+  .card > h2 .sp{margin-inline-start:auto; font-size:11.5px; font-weight:500; color:var(--muted)}
+
+  /* ═══ نوار یادآوری ═══ */
+  .warnbar{
+    background:rgba(227,185,103,.12); border:1px solid var(--line-2); color:#ffe7bd;
+    border-radius:var(--r-input); padding:10px 14px; font-size:12.5px; margin-bottom:var(--s4)
+  }
+  .warnbar a{color:#ffe7bd; font-weight:700; text-decoration:underline}
+
+  /* ═══ نوار بالا ═══ */
+  .topbar{
+    display:grid; grid-template-columns:auto 1fr auto; gap:var(--s3); align-items:center;
+    background:var(--navy-soft2); border:1px solid var(--line); border-radius:var(--r-card);
+    padding:var(--s3) var(--s4); box-shadow:var(--shadow); margin-bottom:var(--s4);
+  }
+  .topbar .logo{width:56px;height:56px;display:block}
+  .topbar .title h1{font-size:19px}
+  .topbar .title p{color:var(--muted); font-size:12.5px; margin-top:2px}
+  .pill-row{display:flex; gap:var(--s1); flex-wrap:wrap; justify-content:flex-end}
+  .pill{
+    font-size:11.5px; font-weight:500; padding:5px 11px; border-radius:999px;
+    background:rgba(63,143,216,.16); border:1px solid var(--line); color:var(--ice-2)
+  }
+  .pill.gold{background:rgba(227,185,103,.14); border-color:var(--line-2); color:#ffe6b9}
+  .pill.ok{background:rgba(78,203,131,.14); border-color:rgba(78,203,131,.4); color:#c7f3d8}
+  @media (max-width:760px){ .topbar{grid-template-columns:1fr; text-align:center} .pill-row{justify-content:center} }
+
+  /* ═══ کاشی‌های آماری ═══ */
+  .stat{display:flex; align-items:center; gap:var(--s3)}
+  .stat .val{font-size:26px; font-weight:700; color:var(--gold); line-height:1.2}
+  .stat .lbl{font-size:12.5px; color:var(--muted)}
+  .stat .bar{flex:1; height:6px; border-radius:99px; background:rgba(255,255,255,.10); overflow:hidden}
+  .stat .bar i{display:block; height:100%; background:linear-gradient(90deg,var(--gold),#f3d79a)}
+
+  /* ═══ فرم ═══ */
+  .field{margin-bottom:var(--s3)}
+  .field:last-child{margin-bottom:0}
+  label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:var(--s1); font-weight:500}
+  input,select{
+    width:100%; font-family:inherit; font-size:13.5px; color:var(--ice);
+    padding:10px 13px; border-radius:var(--r-input);
+    background:#0a1e33; border:1px solid var(--line); outline:none;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.45); transition:border-color .18s, box-shadow .18s;
+  }
+  input:focus,select:focus{border-color:rgba(120,190,255,.65); box-shadow:inset 0 2px 6px rgba(0,0,0,.4), 0 0 0 3px rgba(63,143,216,.22)}
+  input[readonly]{color:var(--muted)}
+  .row{display:grid; gap:var(--s3)}
+  .row.two{grid-template-columns:1fr 1fr}
+  .row.host{grid-template-columns:1fr 110px}
+  @media (max-width:520px){ .row.two,.row.host{grid-template-columns:1fr} }
+
+  /* ═══ دکمه‌ها (سه‌بعدی، سه سطح) ═══ */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:var(--s1);
+    font-family:inherit; font-size:13.5px; font-weight:600; color:#fff;
+    padding:11px 18px; border:0; border-radius:var(--r-input); cursor:pointer;
+    background:linear-gradient(180deg,#5aa3e8,var(--brand) 48%,#2a6cae);
+    box-shadow:0 4px 0 #1a4a78, 0 10px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
+    transition:transform .07s ease, box-shadow .12s ease;
+  }
+  .btn:hover{filter:brightness(1.06)}
+  .btn:active{transform:translateY(3px); box-shadow:0 1px 0 #1a4a78, 0 6px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn.gold{background:linear-gradient(180deg,#f2d392,var(--gold) 48%,#b98d2e); color:#2a1c02;
+    box-shadow:0 4px 0 #7a5a17, 0 10px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.5)}
+  .btn.ghost{background:rgba(255,255,255,.06); border:1px solid var(--line); color:var(--ice);
+    box-shadow:0 4px 0 rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.10)}
+  .btn.block{width:100%}
+  .btn[disabled]{opacity:.5; cursor:not-allowed; box-shadow:0 2px 0 rgba(0,0,0,.3)}
+  .btn-row{display:grid; gap:var(--s2); grid-template-columns:1fr auto}
+
+  /* ═══ چیپ‌های دیتابیس ═══ */
+  .chips{display:flex; flex-wrap:wrap; gap:var(--s2); min-height:42px; align-content:flex-start}
+  .chip{
+    font-size:12.5px; font-weight:500; padding:8px 13px; border-radius:var(--r-chip); cursor:pointer;
+    background:rgba(255,255,255,.05); border:1px solid var(--line); color:var(--ice-2);
+    box-shadow:0 3px 0 rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.10);
+    transition:transform .12s ease, background .12s ease, color .12s ease;
+  }
+  .chip:hover{transform:translateY(-2px)}
+  .chip.on{background:linear-gradient(180deg,#f4dba8,var(--gold)); color:#2a1c02; font-weight:700;
+    border-color:#f7e3b6; box-shadow:0 3px 0 #7a5a17, 0 8px 16px rgba(227,185,103,.22)}
+  .chip.more{color:var(--muted); cursor:default}
+  .chip.more:hover{transform:none}
+
+  /* ═══ ردیف وضعیت ═══ */
+  .status{display:flex; align-items:center; gap:var(--s2); font-size:12.5px; margin-top:var(--s3);
+    padding-top:var(--s3); border-top:1px solid var(--line)}
+  .status .dot{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;flex:0 0 auto}
+  .status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.err{color:var(--err)} .status.idle{color:var(--muted)}
+
+  /* ═══ جدول سبک ═══ */
+  .kv{display:grid; grid-template-columns:1fr auto; gap:2px var(--s3); font-size:12.5px}
+  .kv dt{color:var(--muted)} .kv dd{margin:0; font-weight:600; color:var(--ice)}
+  .kv > *{padding:6px 0; border-bottom:1px dashed rgba(150,195,240,.14)}
+  .kv > *:last-child, .kv > *:nth-last-child(2){border-bottom:0}
+
+  /* ═══ حلقهٔ سلامت ═══ */
+  .gauge{display:flex; align-items:center; gap:var(--s4)}
+  .ring{
+    --p:76;
+    width:104px;height:104px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;
+    background:conic-gradient(var(--ok) calc(var(--p) * 1%), rgba(255,255,255,.08) 0);
+    box-shadow:0 10px 22px rgba(0,0,0,.4);
+  }
+  .ring > div{width:80px;height:80px;border-radius:50%;background:var(--navy-soft);
+    display:grid;place-items:center;font-size:19px;font-weight:700;color:#d8f6e4;
+    border:1px solid var(--line)}
+
+  /* ═══ شناسنامه ═══ */
+  .about{display:grid; grid-template-columns:auto 1fr; gap:var(--s4); align-items:center}
+  .about .emblem{width:84px;height:84px}
+  .about h3{font-size:16px; color:#ffe6b9; margin-bottom:var(--s1)}
+  .about p{font-size:13px; color:var(--ice)}
+  .about .line{margin-top:var(--s2); padding-top:var(--s2); border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--muted)}
+  @media (max-width:520px){ .about{grid-template-columns:1fr; text-align:center; justify-items:center} }
+
+  /* ═══ پانوشت ═══ */
+  .foot{
+    margin-top:var(--s5); padding-top:var(--s4); border-top:1px solid var(--line);
+    text-align:center; font-size:12.5px; color:var(--muted)
+  }
+  .foot b{color:var(--gold); font-weight:600}
+  .foot .note{font-size:11.5px; margin-top:var(--s1); color:#7b93ad}
+
+  /* ═══ پیام ═══ */
+  .toast{
+    position:fixed; inset-inline-start:var(--s4); bottom:var(--s4); z-index:9;
+    background:var(--navy-soft2); border:1px solid var(--line-2); border-radius:var(--r-input);
+    padding:12px 16px; font-size:12.5px; box-shadow:var(--shadow); opacity:0; transform:translateY(12px);
+    transition:opacity .25s ease, transform .25s ease; max-width:min(420px,80vw);
+  }
+  .toast.show{opacity:1; transform:translateY(0)}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- ════════ یادآوری: این صفحه پنل است، نه نصب‌کننده ════════ -->
+  <div class="warnbar">
+    این صفحه <b>پیش‌نمایش طرح پنل مدیریت</b> است (داده‌های نمونه، فقط برای بازبینی ظاهر) — نه نصب‌کننده.
+    نصب‌کنندهٔ واقعی فایل <b>Vizitor-Setup-1.0.0.exe</b> است و ظاهر آن را می‌توانید در
+    <a href="wizard.html">پیش‌نمایش ویزارد نصب</a> ببینید.
+  </div>
+
+  <!-- ════════ نوار بالا ════════ -->
+  <header class="topbar">
+    <svg class="logo" viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <radialGradient id="gold" cx="34%" cy="26%">
+          <stop offset="0" stop-color="#ffeec4"/><stop offset="55%" stop-color="#e3b967"/><stop offset="100%" stop-color="#8d6a21"/>
+        </radialGradient>
+        <linearGradient id="disc" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1c5a8e"/><stop offset="100%" stop-color="#07182a"/>
+        </linearGradient>
+      </defs>
+      <circle cx="60" cy="60" r="55" fill="url(#gold)"/>
+      <circle cx="60" cy="60" r="44" fill="url(#disc)" stroke="rgba(150,205,250,.5)" stroke-width="1.6"/>
+      <ellipse cx="45" cy="37" rx="18" ry="9" fill="#fff" opacity=".18"/>
+      <path d="M38 41 L60 83 L82 41" fill="none" stroke="#fffbef" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+    <div class="title">
+      <h1>سامانهٔ ویزیتور — پنل مدیریت</h1>
+      <p>اتصال مستقیم و امن برنامهٔ اندروید به SQL Server، بدون IIS و بدون API میانی</p>
+    </div>
+
+    <div class="pill-row">
+      <span class="pill ok">● سرویس فعال</span>
+      <span class="pill">پورت ۱۴۳۳</span>
+      <span class="pill">پورت ۹۵۹۵ (داخلی)</span>
+      <span class="pill gold">Meelano Studio Design</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ════════ کاشی‌های آماری ════════ -->
+    <section class="card c3">
+      <h2><span class="ic">🗄</span> دیتابیس‌های سرور<span class="sp">sys.databases</span></h2>
+      <div class="stat"><div><div class="val">۶</div><div class="lbl">دیتابیس قابل انتخاب</div></div></div>
+    </section>
+
+    <section class="card c3">
+      <h2><span class="ic">👣</span> ویزیتورها<span class="sp">dbo.sys_users</span></h2>
+      <div class="stat"><div><div class="val">۷</div><div class="lbl">ویزیتور فعال</div></div></div>
+    </section>
+
+    <section class="card c3">
+      <h2><span class="ic">🧾</span> پیش‌فاکتورها<span class="sp">sailfact_pish</span></h2>
+      <div class="stat"><div><div class="val">۱۲۴</div><div class="lbl">ثبت‌شده در این ماه</div></div></div>
+    </section>
+
+    <section class="card c3">
+      <h2><span class="ic">🔑</span> فعال‌سازی<span class="sp">activation</span></h2>
+      <div class="stat"><div><div class="val" style="font-size:19px">فعال</div><div class="lbl">اعتبار بدون محدودیت</div></div></div>
+    </section>
+
+    <!-- ════════ ردیف اصلی: اتصال + انتخاب دیتابیس ════════ -->
+    <section class="card c6">
+      <h2><span class="ic">🔌</span> اتصال به SQL Server<span class="sp">port 1433</span></h2>
+
+      <div class="row host field">
+        <div><label for="h">سرور (آی‌پی یا نام)</label><input id="h" value="192.168.1.150"></div>
+        <div><label for="p">پورت</label><input id="p" value="1433"></div>
+      </div>
+
+      <div class="row two field">
+        <div><label for="u">نام کاربری SQL</label><input id="u" value="vizitor_android"></div>
+        <div><label for="s">کلمهٔ عبور</label><input id="s" type="password" value="password"></div>
+      </div>
+
+      <div class="field">
+        <label for="x">اتصال از بیرون شبکه — آی‌پی اختصاصی (اختیاری)</label>
+        <input id="x" value="37.143.147.19" placeholder="مثلاً 37.143.147.19">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn block" onclick="toast('اتصال برقرار شد — ۶ دیتابیس روی این سرور پیدا شد')">تست اتصال و شمردن دیتابیس‌ها</button>
+        <button class="btn ghost" onclick="toast('رمز به‌صورت رمزنگاری‌شده ذخیره شد')">ذخیرهٔ امن</button>
+      </div>
+
+      <div class="status ok"><span class="dot"></span> اتصال برقرار است — زمان پاسخ ۱۲۰ms</div>
+    </section>
+
+    <section class="card c6">
+      <h2><span class="ic">🗃</span> انتخاب دیتابیس برنامه<span class="sp">هیچ دیتابیسی اجباری نیست</span></h2>
+
+      <div class="field">
+        <label>فهرست دیتابیس‌های روی سرور</label>
+        <div class="chips" id="chips">
+          <span class="chip">master</span>
+          <span class="chip on">Meelano</span>
+          <span class="chip">AtiranUnit1</span>
+          <span class="chip">AtiranUnit2</span>
+          <span class="chip">Report_Archive</span>
+          <span class="chip more">…</span>
+        </div>
+      </div>
+
+      <div class="btn-row field">
+        <button class="btn ghost block" onclick="toast('فهرست دیتابیس‌ها از سرور تازه شد')">دریافت فهرست دیتابیس‌ها</button>
+        <button class="btn gold" onclick="toast('دیتابیس تأیید شد و برای اتصال تنظیم شد')">تأیید نام دیتابیس</button>
+      </div>
+
+      <div class="field">
+        <label for="db">نام دیتابیس انتخاب‌شده (تایپ دستی هم مجاز است)</label>
+        <input id="db" value="Meelano">
+      </div>
+
+      <div class="status ok"><span class="dot"></span> «Meelano» در فهرست همین سرور وجود دارد و تأیید شد.</div>
+    </section>
+
+    <!-- ════════ ردیف دوم: سلامت + فعال‌سازی + ویزیتورها ════════ -->
+    <section class="card c4">
+      <h2><span class="ic">🧪</span> بررسی سلامت<span class="sp">sql_health.json</span></h2>
+      <div class="gauge">
+        <div class="ring" style="--p:76"><div>۷۶٪</div></div>
+        <dl class="kv" style="flex:1;margin:0">
+          <dt>جدول‌های لازم</dt><dd>۱۹ / ۲۵</dd>
+          <dt>کاربران فعال</dt><dd>۴</dd>
+          <dt>پورت ۱۴۳۳</dt><dd>باز</dd>
+          <dt>آخرین بررسی</dt><dd>لحظهٔ قبل</dd>
+        </dl>
+      </div>
+      <div class="btn-row" style="margin-top:var(--s3)">
+        <button class="btn ghost block" onclick="toast('بررسی سلامت دوباره اجرا شد')">اجرای بررسی سلامت</button>
+      </div>
+    </section>
+
+    <section class="card c4">
+      <h2><span class="ic">🔐</span> فعال‌سازی سامانه<span class="sp">VIZ-XXXX</span></h2>
+      <div class="field">
+        <label for="act">کد فعال‌سازی</label>
+        <input id="act" value="VIZ-4K2H-91XA-77QD">
+      </div>
+      <div class="btn-row">
+        <button class="btn block" onclick="toast('کد فعال‌سازی بررسی و ثبت شد')">ثبت کد</button>
+        <button class="btn ghost" onclick="toast('سامانه بدون کد هم نصب می‌شود؛ بعداً فعال کنید')">بعداً</button>
+      </div>
+      <div class="status ok"><span class="dot"></span> فعال — کد فقط در فایل تنظیمات سرور ذخیره می‌شود.</div>
+    </section>
+
+    <section class="card c4">
+      <h2><span class="ic">📋</span> گزارش‌ها و لاگ‌ها<span class="sp">logs</span></h2>
+      <dl class="kv" style="margin:0">
+        <dt>آخرین نصب/تعمیر</dt><dd>امروز</dd>
+        <dt>وضعیت سرویس</dt><dd>در حال اجرا</dd>
+        <dt>قاعدهٔ فایروال</dt><dd>۱۴۳۳ داخلی</dd>
+        <dt>رمزها در لاگ</dt><dd>هرگز</dd>
+      </dl>
+      <div class="btn-row" style="margin-top:var(--s3)">
+        <button class="btn ghost block" onclick="toast('پوشهٔ C:\\ProgramData\\Vizitor باز شد')">باز کردن پوشهٔ لاگ‌ها</button>
+      </div>
+    </section>
+
+    <!-- ════════ شناسنامه ════════ -->
+    <section class="card alt c12">
+      <h2><span class="ic">🏅</span> شناسنامهٔ سامانه</h2>
+      <div class="about">
+        <svg class="emblem" viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="55" fill="url(#gold)"/>
+          <circle cx="60" cy="60" r="44" fill="url(#disc)" stroke="rgba(150,205,250,.5)" stroke-width="1.6"/>
+          <ellipse cx="45" cy="37" rx="18" ry="9" fill="#fff" opacity=".18"/>
+          <path d="M38 41 L60 83 L82 41" fill="none" stroke="#fffbef" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <h3>سامانهٔ ویزیتور — نسخهٔ ۱.۳</h3>
+          <p>طراحی و برنامه‌نویسی: <b>میلاد یقوبی</b> (Milad Yaghoobi)</p>
+          <p>گروه نرم‌افزاری: <b>Meelano Studio Design</b></p>
+          <div class="line">اتصال مستقیم به SQL Server روی پورت ۱۴۳۳ • رمزها فقط رمزنگاری‌شده روی دستگاه ویزیتور • بدون IIS و بدون API میانی</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ════════ پانوشت ════════ -->
+  <footer class="foot">
+    طراحی و برنامه‌نویسی: <b>میلاد یقوبی</b> (Milad Yaghoobi) &nbsp;•&nbsp; گروه نرم‌افزاری: <b>Meelano Studio Design</b>
+    <div class="note">این صفحه یک پیش‌نمایش طرح بصری است؛ اعداد نمونه‌اند و به دیتابیس وصل نیست. فونت: وزیرمتن (SIL OFL 1.1).</div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // انتخاب دیتابیس با چیپ‌ها → به کادر نام منتقل می‌شود
+  var chips = document.getElementById('chips');
+  chips.addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip');
+    if (!chip || chip.classList.contains('more')) return;
+    chips.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('on'); });
+    chip.classList.add('on');
+    document.getElementById('db').value = chip.textContent.trim();
+  });
+
+  var timer;
+  function toast(message) {
+    var el = document.getElementById('toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(timer);
+    timer = setTimeout(function () { el.classList.remove('show'); }, 2600);
+  }
+</script>
+</body>
+</html>

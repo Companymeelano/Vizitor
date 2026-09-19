@@ -1,0 +1,95 @@
+گزارش بررسی فایل‌های راه‌اندازی سرور — ویزیتور (نصب‌کنندهٔ ویندوز ↔ اندروید)
+تاریخ: 2026-09-18 15:24:28 UTC   کامیت: 84a1041bfca10f029819a8797ed47befa89a7bda
+==================================================================================
+
+--- ۱) تحلیل نحوی با خودِ PowerShell (7.6.5) ---
+PowerShell transcript start
+Start time: 20260918152427
+Username: runnervmlun5p\runner
+RunAs User: runnervmlun5p\runner
+Configuration Name: 
+Machine: runnervmlun5p (Unix 6.17.0.1022)
+Host Application: /opt/microsoft/powershell/7/pwsh.dll -command . '/home/runner/work/_temp/52e35fe1-525f-4186-bbc4-6ae9d1e15bc6.ps1'
+Process ID: 2241
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Ubuntu 24.04.5 LTS
+Platform: Unix
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+[OK] install.ps1 — 1427 خط، 42 تابع
+[OK] installer/nsi/preflight.ps1 — 151 خط، 2 تابع
+[OK] تابع موجود: Invoke-AndroidPrep
+[OK] تابع موجود: Test-SqlTcpListener
+[OK] تابع موجود: Enable-SqlTcp
+[OK] تابع موجود: Resolve-SqlInstanceInfo
+[OK] تابع موجود: Provision-SqlServer
+[OK] تابع موجود: Run-Checks
+[OK] تابع موجود: Repair
+نسخهٔ PowerShell: 7.6.5
+BOM (سه بایت اول) install.ps1: ef bb bf
+PowerShell transcript end
+End time: 20260918152428
+
+--- ۲) بررسی قرارداد اتصال (کارت اتصال + دسترسی‌ها + مسیر ۱۴۳۳) ---
+بررسی قرارداد اتصال — ویزیتور مستقیم (سرور ↔ اندروید)
+==========================================================================
+
+الف) کارت اتصال سرور ↔ اپ اندروید
+  [OK]   کلیدهای URI کارت (سرور): H, d, h, p, u
+  [OK]   کلیدهای JSON کارت (سرور): database, host_lan, host_public, login, port
+  [OK]   اپ همان کلیدهای کارت را می‌خواند: h/p/d/u/H
+  [OK]   کلیدهای JSON کارت در اپ خوانده می‌شوند
+  [OK]   پورت کارت روی سرور: 1433
+  [OK]   پورت پیش‌فرض در اپ: 1433
+  [OK]   قاعدهٔ فایروال نصب‌کننده برای پورت 1433
+  [OK]   کارت اتصال از فایل رمز (بدون چاپ رمز) ساخته می‌شود
+
+ب) دسترسی‌های کاربر محدود در برابر SQLهای واقعی اپ
+  [OK]   اپ می‌خواند (13): CUSTOMERS, VW_InventoryAnbars, custgroup, forosh_price, inventory, sailfact_pish, subsailfact_pish, sys_anb, sys_cus, sys_kal, sys_users, sys_vis, visitors
+  [OK]   اپ اجرا می‌کند (1): add_sail_pish
+  [OK]   اپ درج می‌کند (1): subsailtemp_pish
+  [OK]   اپ به‌روزرسانی می‌کند (1): sailfact_pish
+  [OK]   خواندن‌ها با نقش db_datareader پوشش داده می‌شوند (13 شیء)
+  [OK]   هر شیئی که اپ EXEC می‌کند مجوز EXECUTE دارد (1 شیء)
+  [OK]   هر جدولی که اپ در آن INSERT می‌زند مجوز INSERT دارد
+  [تصمیم] تابع retirePreInvoice روی sailfact_pish دستور UPDATE می‌زند؛ کاربر محدود مجوز UPDATE ندارد (عمداً). این مسیر تا تصمیم کارفرما غیرفعال می‌ماند: یا مجوز UPDATE داده شود، یا با امضای تأییدشدهٔ dbo.Edit_sail_pish (که EXECUTE آن همین حالا داده شده) انجام شود.
+  [نکته] توابع مسیر نوشتن که از رابط کاربری صدا زده می‌شوند: preInvoiceHealth
+  [نکته] این مجوزهای EXECUTE در کد فعلی صدا زده نمی‌شوند ولی برای مسیرهای تأییدشدهٔ ERP (و جایگزینِ ویرایش/مشتری جدید) نگه داشته شده‌اند: edit_sail_pish, fixmancustomer, new_cust
+  [OK]   وابستگی‌های مسیر پیش‌فاکتور (سربرگ/سطر میانی) در اپ بررسی می‌شوند
+
+ج) نصب‌کنندهٔ ویندوز: مسیر اتصال اندروید
+  [OK]   تابع بررسی شنوندهٔ TCP (۱۴۳۳)
+  [OK]   بررسی با sys.dm_tcp_listener_states
+  [OK]   تابع فعال‌سازی TCP/IP
+  [OK]   تنظیم پورت TCP/IP
+  [OK]   قاعدهٔ فایروال ۱۴۳۳
+  [OK]   ساخت/بررسی کاربر محدود
+  [OK]   دیتابیس انتخابی کاربر به آماده‌سازی داده می‌شود
+  [OK]   ساخت کارت اتصال اندروید
+  [OK]   کارت QR
+  [OK]   نام کاربر محدود قابل تغییر است
+  [OK]   بررسی شنونده و پیشنهاد فعال‌سازی، داخل جریان آماده‌سازی اتصال است
+  [OK]   تعادل آکولاد/پرانتز/براکت درست است (تحلیل نحوی واقعی هم در CI با PowerShell)
+  [OK]   UTF-8 BOM دارد (اجرای درست فارسی در PowerShell 5.1): install.ps1
+  [OK]   UTF-8 BOM دارد (اجرای درست فارسی در PowerShell 5.1): installer/nsi/preflight.ps1
+  [OK]   هیچ بازماندهٔ IIS در نصب‌کننده نیست
+  [OK]   بررسی شنونده پیش از اعلام «آماده است» انجام می‌شود
+
+==========================================================================
+نتیجه: قرارداد سرور ↔ اندروید کامل و هم‌خوان است ✓
+موارد نیازمند تصمیم کارفرما (1):
+   • تابع retirePreInvoice روی sailfact_pish دستور UPDATE می‌زند؛ کاربر محدود مجوز UPDATE ندارد (عمداً). این مسیر تا تصمیم کارفرما غیرفعال می‌ماند: یا مجوز UPDATE داده شود، یا با امضای تأییدشدهٔ dbo.Edit_sail_pish (که EXECUTE آن همین حالا داده شده) انجام شود.
+نکته‌های اطلاعاتی (2):
+   • توابع مسیر نوشتن که از رابط کاربری صدا زده می‌شوند: preInvoiceHealth
+   • این مجوزهای EXECUTE در کد فعلی صدا زده نمی‌شوند ولی برای مسیرهای تأییدشدهٔ ERP (و جایگزینِ ویرایش/مشتری جدید) نگه داشته شده‌اند: edit_sail_pish, fixmancustomer, new_cust
+
+--- ۳) نتیجه ---
+  همهٔ بررسی‌ها موفق ✓ — قرارداد سرور ↔ اندروید هم‌خوان است.
+
+  سه بایت اول فایل‌های PowerShell (باید ef bb bf باشد):
+    install.ps1                        efbbbf
+    installer/nsi/preflight.ps1        efbbbf
