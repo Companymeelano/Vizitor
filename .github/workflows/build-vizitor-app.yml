@@ -16,7 +16,12 @@ on:
   push:
     branches: [arena/01a0a7c6-vizitor]
     paths:
-      - "vizitor-app/**"
+      # فقط کد و پیکربندی بیلد؛ تغییر README/مستندات نباید APK را بازسازی کند
+      - "vizitor-app/app/**"
+      - "vizitor-app/build.gradle.kts"
+      - "vizitor-app/settings.gradle.kts"
+      - "vizitor-app/gradle.properties"
+      - "vizitor-app/gradle/**"
       - ".github/workflows/build-vizitor-app.yml"
 
 permissions:
@@ -157,6 +162,11 @@ jobs:
               echo "### $(basename "$f")"
               stat -c 'حجم: %s بایت' "$f"
               grep -a "$(basename "$f")" vizitor-app/dist/*.sha256 2>/dev/null
+              echo ""
+              echo "--- مشخصات نسخه و پکیج (aapt2) ---"
+              AAPT2=$(ls -d "$BT"/*/aapt2 2>/dev/null | tail -1)
+              [ -n "$AAPT2" ] && "$AAPT2" dump badging "$f" 2>/dev/null \
+                | grep -E "^package:|^application-label:|sdkVersion|targetSdkVersion|native-code" | head -6
               echo ""
               echo "--- تأیید امضا ---"
               "$APKSIGNER" verify --verbose --print-certs "$f" 2>&1 | head -18
