@@ -75,21 +75,33 @@ jobs:
               tail -120 build.log
             } > build-failure.txt
             cat build-failure.txt
+            # خطاهای اصلی به‌صورت annotation ثبت می‌شوند تا از API قابل خواندن باشند
+            grep -aE "^e: |error:|FAILURE|Execution failed|What went wrong|Caused by|Unresolved" build.log | head -8 | while IFS= read -r ln; do
+              echo "::error::$(printf '%s' "$ln" | tr '\r\n' '  ' | cut -c1-900)"
+            done
+            # ثبت لاگ در مخزن (مسیرها نسبت به ریشهٔ مخزن محاسبه می‌شوند)
+            cd "$GITHUB_WORKSPACE"
             git config user.name "vizitor-ci"
             git config user.email "ci@vizitor.local"
             rm -rf /tmp/cargo && mkdir -p /tmp/cargo
-            cp build-failure.txt /tmp/cargo/
+            cp vizitor-app/build-failure.txt /tmp/cargo/
             URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            pushed=0
             for try in 1 2 3; do
-              git fetch -q "$URL" "${GITHUB_REF_NAME}"
+              git fetch -q "$URL" "refs/heads/${GITHUB_REF_NAME}" || true
               git reset --hard FETCH_HEAD
               cp /tmp/cargo/build-failure.txt vizitor-app/build-failure.txt
               git add -f vizitor-app/build-failure.txt
-              git diff --cached --quiet && break
+              if git diff --cached --quiet; then
+                echo "::warning::چیزی برای ثبت نبود (مرحلهٔ add چیزی برنگرداند)"
+                break
+              fi
               git commit -q -m "chore(ci): vizitor-app build failure log [skip ci]"
-              if git push "$URL" "HEAD:${GITHUB_REF_NAME}"; then break; fi
+              if git push "$URL" "HEAD:refs/heads/${GITHUB_REF_NAME}"; then pushed=1; break; fi
+              echo "پوش رد شد (تلاش $try)"
               sleep 4
             done
+            [ "$pushed" = "1" ] && echo "لاگ خطا در مخزن ثبت شد ✓" || echo "::warning::لاگ خطا در مخزن ثبت نشد"
             exit "$rc"
           fi
 
