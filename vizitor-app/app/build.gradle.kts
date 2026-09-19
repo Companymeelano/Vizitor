@@ -23,8 +23,11 @@ android {
         applicationId = "ir.atiran.vizitor"
         minSdk = 24
         targetSdk = 35
-        versionCode = 29
-        versionName = "2.13.5"
+        // نسخهٔ «اتصال مستقیم» روی سورس ۲٫۱۳٫۵ ساخته شده؛ شمارهٔ ساخت بالاتر از
+        // APK آپلودی (۲۱۷۰۱) گرفته شده تا نصب/به‌روزرسانی روی گوشی‌ها بدون خطای
+        // «نسخهٔ قدیمی‌تر» انجام شود. نام قابل‌مشاهده صادقانه می‌گوید سورس ۲٫۱۳٫۵ است.
+        versionCode = 21800
+        versionName = "2.13.5-direct"
         vectorDrawables { useSupportLibrary = true }
     }
 
