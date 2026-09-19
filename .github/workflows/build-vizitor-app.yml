@@ -45,15 +45,33 @@ jobs:
           echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" || true
 
-      - name: ساخت کلید امضا برای این بیلد (نصب مستقیم روی گوشی‌ها)
+      - name: آماده‌سازی کلید امضای پایدار
         working-directory: vizitor-app
+        env:
+          KEY_B64: ${{ secrets.VIZITOR_APP_KEY_B64 }}
+          KEY_PASS: ${{ secrets.VIZITOR_APP_KEY_PASS }}
         run: |
-          keytool -genkeypair -v \
-            -keystore vizitor-app-ci.jks -storepass vizitorappci -keypass vizitorappci \
-            -alias vizitorapp -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Vizitor App Direct, OU=Meelano Studio Design, O=Meelano, L=Tehran, C=IR"
-          printf 'storeFile=vizitor-app-ci.jks\nstorePassword=vizitorappci\nkeyAlias=vizitorapp\nkeyPassword=vizitorappci\n' > keystore.properties
-          ls -l vizitor-app-ci.jks keystore.properties
+          set -e
+          PASS="${KEY_PASS:-vizitorappci}"
+          if [ -n "${KEY_B64}" ]; then
+            echo "کلید اختصاصی از Secret مخزن خوانده شد ✓"
+            printf '%s' "${KEY_B64}" | base64 -d > app-key.p12
+            SRC=app-key.p12
+          else
+            echo "کلید امضای پایدار مخزن استفاده می‌شود (vizitor-app/vizitor-app-signing.p12)"
+            SRC=vizitor-app-signing.p12
+          fi
+          keytool -list -keystore "$SRC" -storetype PKCS12 -storepass "$PASS" | head -6
+          ALIAS=$(keytool -list -keystore "$SRC" -storetype PKCS12 -storepass "$PASS" \
+                    | grep -m1 "PrivateKeyEntry" | cut -d, -f1 | tr -d ' \r')
+          echo "alias=$ALIAS"
+          keytool -importkeystore -noprompt \
+            -srckeystore "$SRC" -srcstoretype PKCS12 -srcstorepass "$PASS" \
+            -destkeystore vizitor-app-ci.jks -deststoretype JKS -deststorepass "$PASS" -destkeypass "$PASS"
+          printf 'storeFile=vizitor-app-ci.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$PASS" "$ALIAS" "$PASS" > keystore.properties
+          cat keystore.properties
+          ls -l vizitor-app-ci.jks
 
       - name: ساخت APK (debug و release)
         working-directory: vizitor-app
@@ -130,6 +148,10 @@ jobs:
             echo ""
             echo "--- خروجی بیلد (Gradle) ---"
             tail -12 vizitor-app/build.log
+            echo ""
+            echo "### اثر انگشت گواهی امضا (ثابت بین بیلدها)"
+            keytool -list -v -keystore vizitor-app/vizitor-app-signing.p12 -storetype PKCS12 \
+              -storepass "${KEY_PASS:-vizitorappci}" 2>/dev/null | grep -E "Alias name|Valid from|SHA256:" | head -4
             echo ""
             for f in vizitor-app/dist/*.apk; do
               echo "### $(basename "$f")"
