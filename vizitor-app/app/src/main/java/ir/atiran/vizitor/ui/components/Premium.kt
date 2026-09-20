@@ -645,6 +645,8 @@ fun OrbIconButton(
         label = "orbSink"
     )
     val depthPx = with(LocalDensity.current) { (size * 0.09f).toPx() }
+    // جابه‌جایی کلید = بلندی لبه (پیکسل) + فرورفتن هنگام لمس (پیکسل)
+    val liftPx = depthPx
     Box(
         modifier = modifier
             .size(size + size * 0.09f)
@@ -654,7 +656,7 @@ fun OrbIconButton(
         Box(
             Modifier
                 .size(size)
-                .graphicsLayer { translationY = size * 0.09f + sink * depthPx }
+                .graphicsLayer { translationY = liftPx + sink * depthPx }
                 .clip(RoundedCornerShape(size * 0.34f))
                 .background(
                     Brush.verticalGradient(

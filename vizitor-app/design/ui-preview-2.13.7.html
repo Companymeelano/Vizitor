@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>آتیران ویزیتور ۲٫۱۳٫۷ — پیش‌نمای طراحی (ماکاپ)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B0E13; --surface:#12161D; --deep:#07090C;
+    --purple:#B04BF8; --purple-dark:#7A2FB8; --purple-top:#B06CFF; --purple-bot:#4A1799;
+    --green:#2BFF88; --green-dark:#0FBF62; --green-top:#8CFFCB; --green-bot:#0CB35C;
+    --gold:#FFD166; --gold-dark:#C99B2E; --gold-hi:#FFF7CF;
+    --text:#F2F4F8; --muted:#9AA3B2; --danger:#FF4D6D; --violet-text:#E3BFFF;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:28px 18px 60px;
+    background:
+      radial-gradient(900px 500px at 12% -5%, rgba(176,75,248,.22), transparent 60%),
+      radial-gradient(700px 420px at 92% 12%, rgba(255,209,102,.14), transparent 60%),
+      linear-gradient(180deg,#0B0E13,#07090C);
+    color:var(--text);
+    font-family:'Vazirmatn', Tahoma, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .banner{
+    max-width:1180px; margin:0 auto 22px; padding:14px 18px;
+    border:1px solid rgba(255,209,102,.45); border-radius:18px;
+    background:linear-gradient(90deg, rgba(255,209,102,.13), rgba(176,75,248,.10));
+    font-size:14px; line-height:2; color:#FFE9B0;
+  }
+  .banner b{color:#fff}
+  h1{
+    max-width:1180px; margin:0 auto 6px; font-size:30px; font-weight:900;
+    background:linear-gradient(90deg,#C99B2E,#FFD166,#FFF7CF,#FFD166);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub{max-width:1180px; margin:0 auto 26px; color:var(--muted); font-size:14px}
+  .stage{max-width:1180px; margin:0 auto; display:flex; gap:30px; flex-wrap:wrap; justify-content:center; align-items:flex-start}
+  .phone-wrap{flex:0 0 auto}
+  .phone-label{
+    text-align:center; margin-bottom:10px; font-size:13px; color:var(--gold);
+    font-weight:800; letter-spacing:0
+  }
+  .phone{
+    position:relative; width:392px; height:824px; border-radius:46px;
+    padding:12px; background:linear-gradient(160deg,#2A2F3A,#0D1016);
+    box-shadow:0 30px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.10);
+  }
+  .screen{
+    position:relative; width:100%; height:100%; border-radius:36px; overflow:hidden;
+    background:linear-gradient(180deg,#0B0E13 0%,#0B0E13 55%,#07090C 100%);
+  }
+  .screen::before{
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(520px 320px at 18% 0%, rgba(176,75,248,.30), transparent 62%),
+      radial-gradient(420px 300px at 96% 26%, rgba(255,209,102,.16), transparent 60%);
+    pointer-events:none;
+  }
+  .scroll{position:relative; height:100%; overflow:auto; padding:16px 14px 22px; scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+  .notch{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    width:120px; height:22px; border-radius:0 0 16px 16px; background:#05070A; z-index:5;
+  }
+  .statusbar{
+    display:flex; justify-content:space-between; padding:2px 8px 0; font-size:11px; color:#93A0B4; position:relative; z-index:6
+  }
+
+  /* ══ کارت شیشه‌ای ══ */
+  .panel{
+    position:relative; border-radius:24px; padding:15px;
+    background:linear-gradient(180deg, rgba(176,75,248,.13), rgba(18,22,29,.55) 46%, rgba(7,9,12,.42));
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 10px 24px rgba(0,0,0,.35);
+  }
+  .panel.gold-accent{border-color:rgba(255,209,102,.55)}
+  .panel.green-accent{border-color:rgba(43,255,136,.45)}
+  .panel + .panel{margin-top:12px}
+  .row{display:flex; align-items:center; gap:10px}
+  .row.between{justify-content:space-between}
+  .grow{flex:1; min-width:0}
+
+  /* ══ گوی سه‌بعدی آیکن ══ */
+  .orb{
+    flex:0 0 auto; display:grid; place-items:center; border-radius:50%;
+    background:
+      radial-gradient(60% 50% at 32% 24%, rgba(255,255,255,.45), transparent 60%),
+      linear-gradient(180deg, #B06CFF, #B04BF8 55%, #7A2FB8);
+    border:1.4px solid transparent;
+    box-shadow:inset 0 -6px 10px rgba(0,0,0,.35), 0 0 18px rgba(176,75,248,.45);
+    position:relative;
+  }
+  .orb.gold{background:
+      radial-gradient(60% 50% at 32% 24%, rgba(255,255,255,.6), transparent 60%),
+      linear-gradient(180deg,#FFF7CF,#FFD166 55%,#C99B2E)}
+  .orb.green{background:
+      radial-gradient(60% 50% at 32% 24%, rgba(255,255,255,.55), transparent 60%),
+      linear-gradient(180deg,#8CFFCB,#2BFF88 55%,#0CB35C)}
+  .orb.small{width:32px;height:32px;font-size:15px}
+  .orb.mid{width:38px;height:38px;font-size:18px}
+  .orb.big{width:60px;height:60px;font-size:28px}
+  .orb .glyph{filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
+
+  /* ══ تیترهای گرادیانی ══ */
+  .grad-title{
+    font-weight:900; font-size:20px; line-height:1.45;
+    background:linear-gradient(90deg,#C99B2E,#FFD166,#FFF7CF,#FFD166);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 1px 2px rgba(0,0,0,.35);
+  }
+  .sub-line{font-size:10.5px; color:var(--muted); margin-top:3px}
+
+  /* ══ چیپ وضعیت ══ */
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+    font-size:10.5px; font-weight:800; white-space:nowrap;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%}
+  .chip.red{color:var(--danger); background:rgba(255,77,109,.14); border:1px solid rgba(255,77,109,.45)}
+  .chip.red .dot{background:var(--danger); box-shadow:0 0 10px var(--danger)}
+  .chip.gold{color:var(--gold); background:rgba(255,209,102,.14); border:1px solid rgba(255,209,102,.5)}
+  .chip.gold .dot{background:var(--gold); box-shadow:0 0 10px var(--gold)}
+  .chip.green{color:var(--green); background:rgba(43,255,136,.14); border:1px solid rgba(43,255,136,.45)}
+  .chip.green .dot{background:var(--green); box-shadow:0 0 10px var(--green)}
+
+  /* ══ نشان شمارهٔ طلایی ══ */
+  .step{
+    flex:0 0 auto; width:28px; height:28px; border-radius:50%; display:grid; place-items:center;
+    font-weight:900; font-size:13px; color:#20160A;
+    background:linear-gradient(180deg,#FFF7CF,#FFD166 60%,#C99B2E);
+    box-shadow:0 0 14px rgba(255,209,102,.45), inset 0 -2px 3px rgba(0,0,0,.25);
+  }
+
+  /* ══ کلید سه‌بعدی ══ */
+  .btn{
+    position:relative; border-radius:999px; border:none; cursor:default;
+    font-family:inherit; font-weight:900; color:#fff;
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    padding:0 16px; height:58px; font-size:15px;
+    background:linear-gradient(180deg,#B06CFF,#B04BF8 45%,#4A1799);
+    box-shadow:0 6px 0 #2E0F5E, 0 10px 22px rgba(176,75,248,.42),
+               inset 0 1px 0 rgba(255,255,255,.55), inset 0 0 0 1.5px rgba(255,247,207,.55);
+  }
+  .btn .ic{
+    width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:16px;
+    background:rgba(255,255,255,.20); box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)
+  }
+  .btn.gold{
+    color:#241A02;
+    background:linear-gradient(180deg,#FFF7CF,#FFD166 48%,#C99B2E);
+    box-shadow:0 6px 0 #7C5A12, 0 10px 22px rgba(255,209,102,.35),
+               inset 0 1px 0 rgba(255,255,255,.85), inset 0 0 0 1.5px rgba(255,255,255,.6);
+  }
+  .btn.green{
+    color:#04150C;
+    background:linear-gradient(180deg,#8CFFCB,#2BFF88 48%,#0CB35C);
+    box-shadow:0 6px 0 #0A7A43, 0 10px 22px rgba(43,255,136,.32),
+               inset 0 1px 0 rgba(255,255,255,.75), inset 0 0 0 1.5px rgba(255,255,255,.5);
+  }
+  .btn.glass{
+    color:var(--text); font-size:12.5px; height:48px;
+    background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(18,22,29,.75));
+    box-shadow:0 4px 0 #05070A, inset 0 0 0 1.3px rgba(255,209,102,.55);
+  }
+  .btn.sm{height:50px; font-size:13px}
+  .btn .sub{font-size:10px; font-weight:600; opacity:.85; display:block; margin-top:1px}
+
+  /* ══ کلید گوی‌دار (تنظیمات) ══ */
+  .orb-btn{
+    flex:0 0 auto; width:58px;height:58px;border-radius:19px;display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(180deg,#B06CFF,#B04BF8 50%,#7A2FB8);
+    box-shadow:0 6px 0 #2E0F5E, inset 0 0 0 1.4px rgba(255,247,207,.6);
+  }
+
+  /* ══ سطر کلید/مقدار ══ */
+  .krow{
+    display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:12px;
+    background:rgba(255,255,255,.035); font-size:11px; margin-top:5px
+  }
+  .krow .k{color:var(--muted)}
+  .krow .v{margin-inline-start:auto; font-weight:700; color:var(--gold-hi)}
+
+  /* ══ فیلد ورودی ══ */
+  .field{margin-top:10px}
+  .field .lbl{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); font-weight:700}
+  .field .lbl .fi{font-size:12px}
+  .field .box{
+    margin-top:6px; height:58px; border-radius:18px; display:flex; align-items:center; gap:9px;
+    padding:0 12px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(7,9,12,.35));
+    border:1.3px solid rgba(255,255,255,.16); color:#7E8898; font-size:13.5px
+  }
+  .field .box.focus{border-color:var(--gold); background:rgba(176,75,248,.07); color:var(--text)}
+  .field .box .eye{margin-inline-start:auto; opacity:.8}
+
+  /* ══ کلید روشن/خاموش ══ */
+  .toggle{
+    display:flex; align-items:center; gap:11px; margin-top:10px; padding:10px 12px;
+    border-radius:16px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12)
+  }
+  .toggle .sw{
+    margin-inline-start:auto; width:46px; height:26px; border-radius:999px; position:relative; flex:0 0 auto;
+    background:rgba(255,255,255,.14); box-shadow:inset 0 1px 3px rgba(0,0,0,.5)
+  }
+  .toggle .sw.on{background:linear-gradient(180deg,#8CFFCB,#0CB35C)}
+  .toggle .sw i{position:absolute; top:3px; right:3px; width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+  .toggle .sw.on i{right:23px}
+  .toggle .tt{font-size:13.5px; font-weight:800}
+  .toggle .th{font-size:10.5px; color:var(--muted); margin-top:2px}
+
+  /* ══ کاشی نقش ══ */
+  .roles{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
+  .tile{
+    border-radius:22px; padding:12px 8px; text-align:center;
+    background:linear-gradient(180deg, rgba(255,255,255,.115), rgba(18,22,29,.55) 55%, rgba(7,9,12,.35));
+    border:1.1px solid rgba(255,209,102,.42);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16)
+  }
+  .tile.locked{border-color:rgba(255,255,255,.16); opacity:.85}
+  .tile .avatar{position:relative; display:inline-block}
+  .tile .badge{
+    position:absolute; bottom:-2px; inset-inline-start:-4px; width:20px;height:20px;border-radius:50%;
+    display:grid; place-items:center; font-size:10px; background:var(--green-dark); border:1px solid rgba(255,255,255,.6)
+  }
+  .tile.locked .badge{background:rgba(7,9,12,.92); border-color:rgba(255,255,255,.25)}
+  .tile .name{margin-top:8px; font-size:12.5px; font-weight:900}
+  .tile .desc{font-size:9.5px; color:var(--muted); margin-top:2px}
+  .tile .tag{
+    display:inline-block; margin-top:7px; padding:2.5px 9px; border-radius:999px; font-size:9.5px; font-weight:800;
+    color:var(--gold-hi); background:rgba(255,209,102,.16); border:1px solid rgba(255,209,102,.45)
+  }
+  .tile.locked .tag{color:var(--muted); background:rgba(154,163,178,.12); border-color:transparent}
+
+  /* ══ سرصفحهٔ بخش ══ */
+  .section{display:flex; align-items:center; gap:8px; margin:16px 2px 0}
+  .section .line{flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(255,209,102,.55))}
+  .section .line.r{background:linear-gradient(90deg,rgba(255,209,102,.55),transparent)}
+  .section .t{font-size:13px; font-weight:900; color:var(--gold-hi)}
+  .section-hint{text-align:center; font-size:10px; color:var(--muted); margin-top:5px}
+
+  /* ══ پانل اتصال (صفحهٔ اول) ══ */
+  .conn .head{gap:9px}
+  .conn .hint{font-size:10.5px; color:var(--muted); line-height:1.7}
+  .conn .title{font-size:14.5px; font-weight:900}
+  .stats{display:flex; gap:6px; margin-top:10px}
+  .stat{
+    flex:1; border-radius:14px; padding:6px 8px; display:flex; align-items:center; gap:5px;
+    background:rgba(255,209,102,.12); border:1px solid rgba(255,209,102,.35); font-size:10px; color:var(--muted)
+  }
+  .stat b{color:var(--text); font-size:13px; font-weight:900}
+  .stat.p{background:rgba(176,75,248,.14); border-color:rgba(176,75,248,.4)}
+  .stat.g{background:rgba(43,255,136,.13); border-color:rgba(43,255,136,.35)}
+
+  /* ══ فوتر ══ */
+  .divider{height:1px; margin:18px 0 12px; background:linear-gradient(90deg,transparent,rgba(255,209,102,.75),transparent)}
+  .footer{text-align:center; font-size:10px; color:var(--muted); line-height:1.9}
+  .footer .brand{font-size:10.5px; font-weight:800; color:var(--gold-hi)}
+  .note{
+    display:flex; gap:9px; align-items:center; font-size:10.5px; color:var(--muted); line-height:1.75;
+    margin-top:14px
+  }
+  .modalish{
+    border:1px dashed rgba(255,209,102,.5); border-radius:14px; padding:10px 12px; font-size:10.5px;
+    color:#FFE9B0; background:rgba(255,209,102,.08); margin-top:12px; line-height:1.8
+  }
+  .icon-strip{margin-top:26px; max-width:1180px; margin-inline:auto}
+  .icon-strip img{width:100%; border-radius:20px; border:1px solid rgba(255,255,255,.12)}
+  @media (max-width:880px){ .phone{width:min(392px, 92vw); height:auto; min-height:760px} }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <b>پیش‌نمای طراحی (ماکاپ) — نسخهٔ ۲٫۱۳٫۷</b><br>
+  این صفحه فقط برای <b>بازبینی ظاهر</b> است و خودِ برنامه نیست؛ ظاهر نهایی روی گوشیِ اندروید دقیقاً همین اجزا را با فونت وزیرمتن،
+  شیشه‌های تم‌دار و کلیدهای سه‌بعدی نشان می‌دهد. فایل نصب واقعی همان <b>Vizitor-2.13.7-direct.apk</b> است.
+</div>
+
+<h1>آتیران ویزیتور — بازطراحی لاکچری ۲٫۱۳٫۷</h1>
+<div class="sub">صفحهٔ اول (گام ۱ اتصال ← گام ۲ نقش) و بخش «تنظیمات ورود» (سه گام) — ابعاد واکنشی و حاشیهٔ امن برای همهٔ گوشی‌ها</div>
+
+<div class="stage">
+
+  <!-- ══════════════ صفحهٔ اول ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label">صفحهٔ اول (انتخاب نقش)</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="statusbar"><span>۹:۴۱</span><span>۴G &nbsp; ۸۷٪</span></div>
+        <div class="scroll">
+
+          <!-- سرصفحهٔ برند -->
+          <div class="row">
+            <div class="orb big"><span class="glyph">ℳ</span></div>
+            <div class="grow">
+              <div class="grad-title" style="font-size:19px">آتیران ویزیتور</div>
+              <div class="sub-line">سامانهٔ هوشمند ویزیت، ویترین و سفارش‌گیری</div>
+            </div>
+            <div class="orb mid gold"><span class="glyph">🛡</span></div>
+          </div>
+
+          <!-- کارت هیرو -->
+          <div class="panel" style="margin-top:14px; border-color:rgba(255,209,102,.55)">
+            <div class="row" style="justify-content:center; gap:7px">
+              <div class="orb small gold"><span class="glyph">🛒</span></div>
+              <span style="font-size:11.5px;font-weight:900;color:var(--violet-text)">فروش عمدهٔ آجیل و خشکبار</span>
+              <div class="orb small gold"><span class="glyph">🏅</span></div>
+            </div>
+            <div class="grad-title" style="text-align:center;font-size:20px;margin-top:8px">پخش عمدهٔ آجیل و خشکبار درخشان</div>
+            <div class="row" style="justify-content:center;gap:7px;margin-top:8px">
+              <div class="orb small gold"><span class="glyph">✔</span></div>
+              <span style="font-size:12px;font-weight:800;color:var(--violet-text)">با مدیریت سرکار خانم حمدانی</span>
+            </div>
+          </div>
+
+          <!-- گام ۱ — اتصال سرور -->
+          <div class="panel conn" style="margin-top:14px; border-color:rgba(255,77,109,.55)">
+            <div class="row head">
+              <div class="step">۱</div>
+              <div class="orb mid" style="border-radius:13px"><span class="glyph">🖧</span></div>
+              <div class="grow">
+                <div class="title">گام ۱ — اتصال به سرور آتیران</div>
+                <div class="hint">کارت اتصال نصب‌کننده یا ورود دستی — یک‌بار برای همیشه</div>
+              </div>
+              <span class="chip red"><i class="dot"></i>تنظیم نشده</span>
+            </div>
+            <div class="krow"><span class="k">🖧 سرور</span><span class="v">—</span></div>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+              <button class="btn" style="flex:1">
+                <span class="ic">🖧</span><span>تنظیم اتصال سرور</span>
+              </button>
+              <div class="orb-btn">⚙️</div>
+            </div>
+          </div>
+
+          <!-- گام ۲ — نقش -->
+          <div class="section">
+            <span class="line"></span>
+            <span class="t">🏅 گام ۲ — انتخاب نقش ورود</span>
+            <span class="line r"></span>
+          </div>
+          <div class="section-hint">نقش «مامور فروش» فعال است؛ بقیهٔ نقش‌ها به‌زودی فعال می‌شوند</div>
+
+          <div class="roles">
+            <div class="tile">
+              <div class="avatar">
+                <div class="orb big"><span class="glyph">🧑‍💼</span></div>
+                <span class="badge">➜</span>
+              </div>
+              <div class="name">مامور فروش</div>
+              <div class="desc">ویزیتور سیار</div>
+              <div class="tag">ورود</div>
+            </div>
+            <div class="tile locked">
+              <div class="avatar"><div class="orb big" style="filter:grayscale(.35)"><span class="glyph">👔</span></div><span class="badge">🔒</span></div>
+              <div class="name" style="color:var(--muted)">مدیریت</div>
+              <div class="desc">نظارت کل</div>
+              <div class="tag">به‌زودی</div>
+            </div>
+            <div class="tile locked">
+              <div class="avatar"><div class="orb big" style="filter:grayscale(.35)"><span class="glyph">📊</span></div><span class="badge">🔒</span></div>
+              <div class="name" style="color:var(--muted)">مدیر فروش</div>
+              <div class="desc">تیم فروش</div>
+              <div class="tag">به‌زودی</div>
+            </div>
+            <div class="tile locked">
+              <div class="avatar"><div class="orb big" style="filter:grayscale(.35)"><span class="glyph">🧾</span></div><span class="badge">🔒</span></div>
+              <div class="name" style="color:var(--muted)">حسابداری</div>
+              <div class="desc">مالی و اسناد</div>
+              <div class="tag">به‌زودی</div>
+            </div>
+            <div class="tile locked">
+              <div class="avatar"><div class="orb big" style="filter:grayscale(.35)"><span class="glyph">📦</span></div><span class="badge">🔒</span></div>
+              <div class="name" style="color:var(--muted)">انبار و پخش</div>
+              <div class="desc">موجودی و ارسال</div>
+              <div class="tag">به‌زودی</div>
+            </div>
+            <div class="tile locked">
+              <div class="avatar"><div class="orb big" style="filter:grayscale(.35)"><span class="glyph">🏪</span></div><span class="badge">🔒</span></div>
+              <div class="name" style="color:var(--muted)">کاربر فروشگاه</div>
+              <div class="desc">فروش حضوری</div>
+              <div class="tag">به‌زودی</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="footer">
+            <div class="row" style="justify-content:center;gap:7px">
+              <div class="orb small gold"><span class="glyph">✔</span></div>
+              <span class="brand">طراحی و توسعه: گروه فنی و مهندسی میلانو</span>
+            </div>
+            <div>ایده‌پرداز و نویسنده: Milad Yaghoobi • Meelano Studio Design</div>
+            <div style="color:var(--gold)">نسخهٔ ۲٫۱۳٫۷ — اتصال مستقیم SQL Server (پورت ۱۴۳۳)</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ تنظیمات ورود ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label">بخش «تنظیمات ورود» (اتصال به سرور آتیران)</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="statusbar"><span>۹:۴۱</span><span>۴G &nbsp; ۸۷٪</span></div>
+        <div class="scroll">
+
+          <!-- نوار بالا -->
+          <div class="row">
+            <div class="orb-btn" style="width:44px;height:44px;border-radius:15px;font-size:18px">↩</div>
+            <div class="grow" style="padding-inline-start:11px">
+              <div class="grad-title" style="font-size:17px">اتصال به سرور آتیران</div>
+              <div class="sub-line">پورت ۱۴۳۳ — اتصال مستقیم، بدون IIS و بدون سرویس میانی</div>
+            </div>
+            <div class="orb mid gold"><span class="glyph">🛡</span></div>
+          </div>
+
+          <!-- خلاصهٔ وضعیت -->
+          <div class="panel" style="margin-top:13px; border-color:rgba(255,77,109,.5)">
+            <div class="row">
+              <div class="orb mid" style="border-radius:13px"><span class="glyph">🖧</span></div>
+              <div class="grow" style="padding-inline-start:10px">
+                <div style="font-size:14px;font-weight:900">وضعیت اتصال</div>
+                <div class="hint" style="font-size:10.5px;color:var(--muted)">برای کار با سرویس‌ها ابتدا وصل شوید</div>
+              </div>
+              <span class="chip red"><i class="dot"></i>تنظیم نشده</span>
+            </div>
+            <div class="krow"><span class="k">🖧 سرور</span><span class="v">—</span></div>
+            <div class="krow"><span class="k">🗄 دیتابیس</span><span class="v">—</span></div>
+            <div class="krow"><span class="k">👤 کاربر سامانه</span><span class="v">وارد نشده</span></div>
+            <div class="krow"><span class="k">🔄 آخرین همگام‌سازی</span><span class="v">انجام نشده</span></div>
+            <div style="display:flex;gap:9px;margin-top:14px">
+              <button class="btn" style="flex:1"><span class="ic">➜</span><span>تنظیم اتصال</span></button>
+              <button class="btn green" style="flex:1"><span class="ic">🔄</span><span>همگام‌سازی</span></button>
+            </div>
+          </div>
+
+          <!-- گام ۱ (بسته) -->
+          <div class="panel" style="margin-top:12px">
+            <div class="row">
+              <div class="step">۱</div>
+              <div class="orb mid" style="border-radius:13px"><span class="glyph">▣</span></div>
+              <div class="grow" style="padding-inline-start:10px">
+                <div style="font-size:14px;font-weight:900">کارت اتصال نصب‌کننده</div>
+                <div class="hint" style="font-size:10.5px;color:var(--muted)">از فایل setup\android-connect.txt یا اسکن QR</div>
+              </div>
+              <span style="color:var(--gold);font-size:18px">⌄</span>
+            </div>
+          </div>
+
+          <!-- گام ۲ (باز) -->
+          <div class="panel gold-accent" style="margin-top:12px">
+            <div class="row">
+              <div class="step">۲</div>
+              <div class="orb mid gold" style="border-radius:13px"><span class="glyph">🖧</span></div>
+              <div class="grow" style="padding-inline-start:10px">
+                <div style="font-size:14px;font-weight:900">سرور، دیتابیس و کاربر محدود</div>
+                <div class="hint" style="font-size:10.5px;color:var(--muted)">ATIRAN — vizitor_android</div>
+              </div>
+              <span style="color:var(--gold);font-size:18px">˄</span>
+            </div>
+
+            <div style="display:flex;gap:9px">
+              <div class="field" style="flex:1">
+                <div class="lbl"><span class="fi">🖧</span>آدرس سرور (شبکهٔ داخلی)</div>
+                <div class="box">192.168.1.150</div>
+              </div>
+              <div class="field" style="width:112px">
+                <div class="lbl"><span class="fi">🔌</span>پورت</div>
+                <div class="box">۱۴۳۳</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="lbl"><span class="fi">🌐</span>آی‌پی اختصاصی/اینترنتی (اختیاری)</div>
+              <div class="box focus">برای اتصال از بیرون شبکه — <span style="margin-inline-start:auto;opacity:.7">✎</span></div>
+            </div>
+
+            <div class="toggle">
+              <div class="orb small"><span class="glyph">🌐</span></div>
+              <div><div class="tt">اتصال از بیرون شبکه</div><div class="th">استفاده از آی‌پی عمومی به‌جای آی‌پی داخلی</div></div>
+              <div class="sw on"><i></i></div>
+            </div>
+            <div class="toggle">
+              <div class="orb small"><span class="glyph">🛡</span></div>
+              <div><div class="tt">رمزنگاری TLS</div><div class="th">برای سرورهای قدیمی خاموش بماند</div></div>
+              <div class="sw"><i></i></div>
+            </div>
+
+            <div class="field">
+              <div class="lbl"><span class="fi">🗄</span>نام دیتابیس (قابل تایپ دستی)</div>
+              <div class="box focus">ATIRAN<span style="margin-inline-start:auto;opacity:.85">☰</span></div>
+            </div>
+            <div class="field">
+              <div class="lbl"><span class="fi">👤</span>نام کاربر دیتابیس</div>
+              <div class="box">vizitor_android</div>
+            </div>
+            <div class="field">
+              <div class="lbl"><span class="fi">🔑</span>رمز کاربر دیتابیس</div>
+              <div class="box">••••••••••••<span class="eye">👁</span></div>
+            </div>
+
+            <div style="display:flex;gap:9px;margin-top:14px">
+              <button class="btn green sm" style="flex:1"><span class="ic" style="width:28px;height:28px;font-size:13px">🖧</span><span>تست اتصال</span></button>
+              <button class="btn gold sm" style="flex:1"><span class="ic" style="width:28px;height:28px;font-size:13px">🔑</span><span>ذخیرهٔ امن</span></button>
+            </div>
+            <button class="btn glass" style="width:100%;margin-top:10px"><span>⚠ پاک کردن تنظیمات و رمزهای ذخیره‌شده</span></button>
+          </div>
+
+          <!-- گام ۳ (باز) -->
+          <div class="panel" style="margin-top:12px; border-color:rgba(43,255,136,.35)">
+            <div class="row">
+              <div class="step">۳</div>
+              <div class="orb mid" style="border-radius:13px"><span class="glyph">👤</span></div>
+              <div class="grow" style="padding-inline-start:10px">
+                <div style="font-size:14px;font-weight:900">ورود ویزیتور</div>
+                <div class="hint" style="font-size:10.5px;color:var(--muted)">با حساب خودتان در سامانهٔ آتیران</div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.9;margin-top:10px">
+              همان نام کاربری و کلمهٔ عبوری که با آن به سامانه وارد می‌شوید (جدول واقعی dbo.sys_users).
+            </div>
+            <div class="field">
+              <div class="lbl"><span class="fi">👤</span>نام کاربری شما در سامانه</div>
+              <div class="box">m.yaghoobi</div>
+            </div>
+            <div class="field">
+              <div class="lbl"><span class="fi">🔑</span>کلمهٔ عبور شما</div>
+              <div class="box">••••••••<span class="eye">👁</span></div>
+            </div>
+            <div class="toggle">
+              <div class="orb small gold"><span class="glyph">🔑</span></div>
+              <div><div class="tt">به‌خاطر سپردن</div><div class="th">ورود سریع در اجرای بعدی — بدون تایپ مجدد</div></div>
+              <div class="sw on"><i></i></div>
+            </div>
+            <button class="btn" style="width:100%;margin-top:14px">
+              <span class="ic">➜</span>
+              <span>ورود و همگام‌سازی<span class="sub">اتصال + ورود + دریافت کالا، مشتری و فاکتور</span></span>
+            </button>
+            <button class="btn glass" style="width:100%;margin-top:10px"><span>🗄 اتصال دیتابیس</span></button>
+          </div>
+
+          <div class="note">
+            <div class="orb small gold" style="border-radius:11px"><span class="glyph">🔒</span></div>
+            <div>رمزها فقط رمزنگاری‌شده (AES-GCM + Android Keystore) روی همین گوشی می‌مانند و هیچ‌گاه در متن یا گزارش چاپ نمی‌شوند.</div>
+          </div>
+
+          <div class="modalish">این صفحهٔ پیش‌نما فقط ظاهر را نشان می‌دهد؛ ترتیب واقعی کار و پیام‌ها دقیقاً همین است.</div>
+
+          <div class="divider"></div>
+          <div class="footer">
+            <div class="brand">گروه فنی و مهندسی میلانو — Milad Yaghoobi</div>
+            <div>Meelano Studio Design</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="icon-strip">
+  <h1 style="font-size:22px;margin-top:34px">آیکن سه‌بعدی تازهٔ برنامه</h1>
+  <div class="sub" style="margin-bottom:14px">پلاک جواهری بنفش + حلقهٔ طلایی + هالهٔ نور + نشان طلایی M با مغز پسته — همهٔ چگالی‌ها، دایره‌ای، تطبیقی و تک‌رنگ</div>
+  <img src="icon-board-2.13.7.png" alt="تختهٔ طراحی آیکن ۲٫۱۳٫۷" />
+</div>
+
+</body>
+</html>

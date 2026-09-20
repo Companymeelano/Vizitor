@@ -184,18 +184,19 @@ fun VizitorRoot(
     // وضعیت اتصال/ورود (منبع واحد) — صفحهٔ اول و تنظیمات از همین می‌خوانند
     val serverSession by ir.atiran.vizitor.sqldirect.VizitorSession.state.collectAsState()
 
-    // بازگشت هوشمند: اگر جایی برای بازگشت هست برگرد، وگرنه به پنل
-    val settingsBack: () -> Unit = {
-        if (navController.previousBackStackEntry != null) navController.popBackStack()
-        else enterPanel()
-    }
-
     // ورود به پنل: از هر جای برنامه (صفحهٔ اول، تنظیمات، …)
     val enterPanel: () -> Unit = {
         navController.navigate(Routes.DASHBOARD) {
             popUpTo(Routes.SPLASH) { inclusive = true }
             launchSingleTop = true
         }
+    }
+
+    // بازگشت هوشمند: اگر جایی برای بازگشت هست برگرد، وگرنه به پنل
+    // (صفحهٔ اول ← برمی‌گردد به صفحهٔ اول؛ تنظیمات ← برمی‌گردد به تنظیمات)
+    val settingsBack: () -> Unit = {
+        if (navController.previousBackStackEntry != null) navController.popBackStack()
+        else enterPanel()
     }
 
     // اگر «ورود سریع» از صفحهٔ اول انجام شد و ورود کامل شد → خودکار به پنل

@@ -164,15 +164,13 @@ for d, sz in DENS.items():
 for d, sz in FG.items():
     run(f"{TMP}/fg_master.png", "-resize", f"{sz}x{sz}", "-strip",
         f"{RES}/mipmap-{d}/ic_launcher_foreground.png")
-    # لایهٔ تک‌رنگ اندروید ۱۳+ (تم‌شده): سیلوئت سفید با آلفای نشان
-    half = int(sz * 0.50)
-    run(f"{TMP}/art.png", "-resize", f"{half}x{half}", f"{TMP}/mono_a.png")
-    run("-size", f"{sz}x{sz}", "xc:none", f"{TMP}/mono_bg.png")
-    run(f"{TMP}/mono_bg.png", f"{TMP}/mono_a.png", "-gravity", "center",
-        "-alpha", "off", "-compose", "CopyOpacity", "-composite", f"{TMP}/mono_b.png")
-    run("-size", f"{sz}x{sz}", "xc:white", f"{TMP}/mono_w.png")
-    run(f"{TMP}/mono_w.png", f"{TMP}/mono_b.png", "-alpha", "off",
-        "-compose", "CopyOpacity", "-composite", "-strip",
+    # لایهٔ تک‌رنگ اندروید ۱۳+ (تم‌شده): سیلوئت سفیدِ نشان با آلفای خود نشان
+    # idiom مستند: تصویر سفید + ماسک خاکستری، خودِ شدت ماسک به آلفا تبدیل می‌شود
+    half = int(sz * 0.52)
+    run("-size", f"{sz}x{sz}", "xc:white",
+        "(", f"{TMP}/art.png", "-resize", f"{half}x{half}", "-alpha", "extract",
+        "-gravity", "center", "-background", "black", "-extent", f"{sz}x{sz}", ")",
+        "-alpha", "off", "-compose", "CopyOpacity", "-composite", "-strip",
         f"{RES}/mipmap-{d}/ic_launcher_monochrome.png")
 
 # لایهٔ تطبیقی + نشان درون‌برنامه‌ای (drawable-nodpi)
