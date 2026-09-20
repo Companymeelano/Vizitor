@@ -896,6 +896,51 @@ function Enable-SqlTcp {
     }
 }
 
+function Get-SqlAuthMode {
+    <#
+      فقط خواندن: آیا سرور ورود با کاربر SQL را می‌پذیرد؟
+      اگر سرور «فقط ویندوزی» باشد، هیچ کاربر SQL (از جمله کاربری که همین نصب‌کننده
+      می‌سازد) نمی‌تواند از گوشی وارد شود، هرچند پورت ۱۴۳۳ باز و سبز باشد.
+    #>
+    if ($script:DbEngine -ne "sqlserver") { return $null }
+    $out = Join-Path $script:DataDir "sql_authmode.json"
+    try {
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        & $script:PyExe "$script:AppHome\api\sql_admin_tools.py" authmode --config "$script:ConfigFile" --out "$out" 2>&1 | Out-Null
+        $ErrorActionPreference = $prevEap
+    } catch { return $null }
+    if (-not (Test-Path $out)) { return $null }
+    try { return (Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { return $null }
+}
+
+function Enable-SqlMixedMode {
+    <#
+      حالت احراز هویت را به «SQL Server and Windows» تغییر می‌دهد (LoginMode=2 در
+      رجیستری همان نسخهٔ SQL Server) و سرویس را یک‌بار ری‌استارت می‌کند.
+      هیچ تغییری در دیتابیس‌ها و کاربران داده نمی‌شود.
+    #>
+    if (-not $script:SqlInstanceRegPath) { return $false }
+    try {
+        $key = "HKLM:\$($script:SqlInstanceRegPath)"
+        if (-not (Test-Path $key)) { Write-Warn "کلید رجیستری سرور پیدا نشد: $key"; return $false }
+        New-ItemProperty -Path $key -Name "LoginMode" -Value 2 -PropertyType DWord -Force | Out-Null
+        Write-Ok "حالت احراز هویت سرور به «SQL Server and Windows» تغییر کرد (LoginMode=2)"
+        $svc = if ($script:SqlServiceName) { $script:SqlServiceName } else { "MSSQLSERVER" }
+        Write-Info "ری‌استارت سرویس $svc برای اعمال تغییر ..."
+        try { Restart-Service -Name $svc -Force -ErrorAction Stop; Write-Ok "سرویس $svc ری‌استارت شد." }
+        catch {
+            try { & net stop $svc /y | Out-Null; & net start $svc | Out-Null; Write-Ok "سرویس $svc ری‌استارت شد (net)." }
+            catch { Write-Warn "ری‌استارت خودکار ممکن نشد؛ دستی: Restart-Service $svc" }
+        }
+        Start-Sleep -Seconds 3
+        return $true
+    } catch {
+        Write-Warn "تغییر حالت احراز هویت ناموفق بود: $($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Invoke-AndroidPrep {
     if ($script:DbEngine -ne "sqlserver") {
         Write-Warn "اتصال مستقیم اندروید فقط برای SQL Server معنا دارد (دیتابیس فعلی: $script:DbEngine) — رد شد"
@@ -922,13 +967,42 @@ function Invoke-AndroidPrep {
         $generated = $true
     }
 
+    # ---- حالت احراز هویت سرور: شرط اول ورود از گوشی --------------------------
+    Write-Step "بررسی حالت احراز هویت SQL Server (ورود با کاربر SQL)"
+    $auth = Get-SqlAuthMode
+    if ($null -eq $auth) {
+        Write-Info "این بررسی ممکن نشد (اتصال مدیر به سرور برقرار نشد) — ادامه می‌دهیم."
+    } elseif ($auth.windows_only) {
+        Write-Warn "سرور فقط ورود «ویندوزی» را می‌پذیرد — با این حالت هیچ کاربر SQL نمی‌تواند از گوشی وارد شود."
+        $answer = "n"
+        if (-not $Unattended) {
+            $answer = Read-Prompt "حالت احراز هویت را به «SQL + ویندوز» تغییر دهم و سرویس SQL را یک‌بار ری‌استارت کنم؟ (بله/n)" "بله"
+        }
+        if ($answer -match "^(بله|yes|y|ب)$") {
+            if (Enable-SqlMixedMode) {
+                $auth = Get-SqlAuthMode
+                if ($auth -and (-not $auth.windows_only)) {
+                    Write-Ok "اکنون ورود با کاربر SQL هم ممکن است ✓"
+                } else {
+                    Write-Warn "تغییر اعمال شد ولی تأیید نشد؛ اگر سرویس ری‌استارت نشده، دستی ری‌استارت کنید."
+                }
+            }
+        } else {
+            Write-Warn "بدون این تغییر، برنامهٔ اندروید «نام کاربری یا رمز اشتباه» می‌گیرد (خطای 18456)."
+            Write-Info "دستی: SSMS → راست‌کلیک سرور → Properties → Security → «SQL Server and Windows Authentication mode» → OK"
+            Write-Info "      سپس:  Restart-Service $($script:SqlServiceName)"
+        }
+    } else {
+        Write-Ok "سرور ورود با کاربر SQL را می‌پذیرد (Mixed Mode) ✓"
+    }
+
     Write-Info "کاربر محدود ($login) روی دیتابیس [$erp] بررسی/ساخته می‌شود ..."
     $script:AndroidOk = $false
     try {
         if ($pw) { $env:VIZ_ANDROID_SQL_PASSWORD = $pw }
         $prevEap = $ErrorActionPreference
         $ErrorActionPreference = "Continue"     # خروجی stderr پایتون نباید نصب را متوقف کند
-        $out = & $script:PyExe "$script:AppHome\api\provision_android_sql.py" --config "$script:ConfigFile" --erp-db $erp --login $login --json-out $jsonOut 2>&1
+        $out = & $script:PyExe "$script:AppHome\api\provision_android_sql.py" --config "$script:ConfigFile" --erp-db $erp --login $login --json-out $jsonOut --enable-sql-auth --self-test 2>&1
         $rc = $LASTEXITCODE
         $ErrorActionPreference = $prevEap
         foreach ($l in $out) { Write-Info $l }
@@ -952,6 +1026,35 @@ function Invoke-AndroidPrep {
     } else {
         Write-Ok "رمز کاربر دیتابیس از قبل موجود بود (تغییر داده نشد)."
         Write-Info "   محل نگه‌داری رمز: $pwFile"
+    }
+
+    # ---- خودآزمایی: دقیقاً همان کاری که گوشی می‌کند -------------------------
+    $info = $null
+    if (Test-Path $jsonOut) {
+        try { $info = Get-Content $jsonOut -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $info = $null }
+    }
+    if ($info) {
+        if ($info.restart_needed) {
+            Write-Warn "برای اعمال حالت احراز هویت، SQL Server باید یک‌بار ری‌استارت شود."
+            $answer = "n"
+            if (-not $Unattended) {
+                $answer = Read-Prompt "همین حالا سرویس SQL را ری‌استارت کنم؟ (بله/n)" "بله"
+            }
+            if ($answer -match "^(بله|yes|y|ب)$") {
+                $svc = if ($script:SqlServiceName) { $script:SqlServiceName } else { "MSSQLSERVER" }
+                try { Restart-Service -Name $svc -Force -ErrorAction Stop; Write-Ok "سرویس $svc ری‌استارت شد." } catch { Write-Warn "ری‌استارت خودکار ممکن نشد؛ دستی: Restart-Service $svc" }
+                Start-Sleep -Seconds 3
+            }
+        }
+        $st = [string]$info.self_test
+        if ($st -eq "ok") {
+            Write-Ok "خودآزمایی ورود: کاربر «$login» با موفقیت وارد دیتابیس [$erp] شد ✓ (همان کاری که برنامهٔ اندروید می‌کند)"
+        } elseif ($st -eq "no-access") {
+            Write-Warn "خودآزمایی: ورود انجام شد ولی این کاربر به دیتابیس [$erp] دسترسی ندارد."
+        } elseif ($st -like "failed*") {
+            Write-Warn "خودآزمایی ورود ناموفق بود — جزئیات در $jsonOut"
+            Write-Info "   $st"
+        }
     }
 
     if ($script:AndroidFirewall) {

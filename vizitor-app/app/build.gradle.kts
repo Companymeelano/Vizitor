@@ -67,6 +67,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // درایور رسمی مایکروسافت (mssql-jdbc) از java.time استفاده می‌کند که در
+        // اندروید ۷/۸ (API 24/25) وجود ندارد. desugaring آن را برای همهٔ نسخه‌ها می‌آورد
+        // تا روی گوشی قدیمی هم اتصال مستقیم بدون NoClassDefFoundError کار کند.
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions { jvmTarget = "17" }
 
@@ -131,6 +135,7 @@ dependencies {
     //    (همان کاری که Vizitor Direct انجام می‌دهد و در CI روی SQL Server واقعی آزموده شد)
     implementation("com.microsoft.sqlserver:mssql-jdbc:9.4.1.jre8")
     implementation("net.sourceforge.jtds:jtds:1.3.1")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 
     // ── CameraX + ML Kit (Barcode Scanner) ────────────────────────────────
     implementation("androidx.camera:camera-core:1.3.4")

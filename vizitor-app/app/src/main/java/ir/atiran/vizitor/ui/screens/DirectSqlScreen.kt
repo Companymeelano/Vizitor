@@ -67,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ir.atiran.vizitor.sqldirect.DirectSqlViewModel
@@ -303,6 +304,53 @@ fun DirectSqlScreen(
                 }
             }
 
+            // ── عیب‌یابی گام‌به‌گام (وقتی اتصال برقرار نمی‌شود) ─────────────
+            item {
+                CardBlock("عیب‌یابی اتصال (گام‌به‌گام)", icon = Icons.Filled.Dns) {
+                    Text(
+                        "این بررسی، همان طور که گوشی به سرور وصل می‌شود را مرحله‌به‌مرحله آزمایش می‌کند: " +
+                            "نشانی، پورت، درایورها، ورود واقعی و دسترسی به دیتابیس — و می‌گوید کجا گیر کرده. " +
+                            "«سبز بودن پورت در ping.eu» فقط یعنی پورت باز است؛ با این بررسی معلوم می‌شود چرا ورود انجام نمی‌شود.",
+                        style = MaterialTheme.typography.bodySmall, color = palette.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = viewModel::runDiagnostics, modifier = Modifier.fillMaxWidth()) {
+                        Text("عیب‌یابی اتصال (۶ بررسی)")
+                    }
+                    if (state.diag.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        state.diag.forEach { row ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                Text(if (row.ok) "✔" else "✖",
+                                    color = if (row.ok) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                    style = MaterialTheme.typography.bodyMedium)
+                                Spacer(Modifier.width(6.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(row.title, style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold)
+                                    Text(row.detail, style = MaterialTheme.typography.bodySmall,
+                                        color = palette.onSurfaceVariant)
+                                    if (row.hint.isNotBlank()) {
+                                        Text("↳ ${row.hint}", style = MaterialTheme.typography.bodySmall,
+                                            color = palette.primary)
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        val context = LocalContext.current
+                        TextButtonLike("کپی گزارش عیب‌یابی (بدون رمز)") {
+                            val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                                as android.content.ClipboardManager
+                            cm.setPrimaryClip(
+                                android.content.ClipData.newPlainText("Vizitor SQL diagnostics", state.diagText)
+                            )
+                            viewModel.noteCopied()
+                        }
+                    }
+                }
+            }
+
             item { StatusCard(state) }
 
             // ── ویزیتورها ───────────────────────────────────────────────────
@@ -428,6 +476,15 @@ private fun StatusCard(state: DirectUiState) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (state.statusKind == 0) MaterialTheme.colorScheme.onSurface else color,
             )
+            if (state.driverLabel.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "درایور فعال: ${state.driverLabel}" +
+                        if (state.connected) " — اتصال برقرار است" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (state.serverInfo.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(state.serverInfo, style = MaterialTheme.typography.bodySmall,

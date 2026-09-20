@@ -448,6 +448,56 @@ def cmd_health(args):
     return emit(res, args.out)
 
 
+def cmd_authmode(args):
+    """آیا سرور ورود با کاربر SQL را می‌پذیرد؟ (فقط خواندن)
+
+    اگر `IsIntegratedSecurityOnly = 1` باشد، سرور فقط ورود ویندوزی را می‌پذیرد و
+    هیچ کاربر SQL — از جمله کاربری که نصب‌کننده می‌سازد — نمی‌تواند از گوشی وارد
+    شود؛ هرچند پورت ۱۴۳۳ باز و سبز باشد. این بررسی همان چیزی است که «ping.eu سبز»
+    نمی‌گوید.
+    """
+    res = {"ok": False, "at": now()}
+    pyodbc = load_pyodbc(res)
+    if not pyodbc:
+        return emit(res, args.out)
+    driver = pick_driver(pyodbc)
+    if not driver:
+        res["error"] = "no_sql_driver"
+        return emit(res, args.out)
+    host, port, user, password = creds_from(args)
+    try:
+        cn = connect(pyodbc, driver, host, port, "master", user, password)
+    except Exception as exc:
+        res["error"] = "connect_failed"
+        res["detail"] = str(exc)
+        return emit(res, args.out)
+    try:
+        cur = cn.cursor()
+        row = cur.execute(
+            "SELECT CAST(SERVERPROPERTY('IsIntegratedSecurityOnly') AS int), "
+            "       CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(64)), "
+            "       CONVERT(nvarchar(400), @@SERVERNAME)").fetchone()
+        windows_only = (row[0] == 1)
+        res["windows_only"] = windows_only
+        res["mixed_mode"] = (not windows_only)
+        res["product_version"] = str(row[1]) if row[1] else ""
+        res["server_name"] = str(row[2]) if row[2] else ""
+        res["ok"] = True
+        res["verdict"] = "windows_only" if windows_only else "mixed_mode"
+        if windows_only:
+            res["warn"] = ("سرور فقط ورود ویندوزی را می‌پذیرد؛ تا حالت Mixed Mode فعال نشود، "
+                           "برنامهٔ اندروید نمی‌تواند با کاربر SQL وارد شود (هرچند پورت ۱۴۳۳ باز است).")
+    except Exception as exc:
+        res["error"] = "query_failed"
+        res["detail"] = str(exc)
+    finally:
+        try:
+            cn.close()
+        except Exception:
+            pass
+    return emit(res, args.out)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Vizitor SQL admin helpers (read only)")
     sub = ap.add_subparsers(dest="cmd")
@@ -467,6 +517,7 @@ def main():
     dbs.add_argument("--out-ini", default="",
                      help="also write the list as an INI file (for the NSIS installer)")
     common(sub.add_parser("probe"), need_db=True)
+    common(sub.add_parser("authmode"))
     hp = sub.add_parser("health")
     common(hp)
     hp.add_argument("--db", default="", help="database to check (default: config name)")
@@ -478,6 +529,10 @@ def main():
             write_list_ini(args.out_ini, LAST_RESULT or {"ok": False, "databases": [],
                                                          "error": "no_result"})
         return rc
+    if args.cmd == "listener":
+        return cmd_listener(args)
+    if args.cmd == "authmode":
+        return cmd_authmode(args)
     if args.cmd == "probe":
         return cmd_probe(args)
     if args.cmd == "health":

@@ -60,6 +60,10 @@ data class DirectUiState(
     val allowedProducts: Int = 0,
     val allowedWarehouses: Int = 0,
     val visitorsOfUser: Int = 0,
+    // عیب‌یابی
+    val diag: List<DiagRow> = emptyList(),
+    val diagText: String = "",
+    val driverLabel: String = "",
 )
 
 class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
@@ -140,6 +144,25 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
         if (_state.value.usePublicHost && _state.value.publicHost.isNotBlank()) _state.value.publicHost
         else _state.value.host
 
+    /**
+     * اگر نشانی فعال از این شبکه در دسترس نباشد ولی نشانی دیگر (داخلی/اختصاصی) باز باشد،
+     * خودکار همان انتخاب می‌شود. علت: کاربر بیرون از فروشگاه، آی‌پی داخلی را در فرم دارد و
+     * پورت هم از بیرون «سبز» است، ولی اتصال از آی‌پی داخلی هرگز برقرار نمی‌شود.
+     * خروجی: توضیح فارسی برای نمایش (یا رشتهٔ خالی اگر تغییری لازم نبود).
+     */
+    private fun preferReachableHost(): String {
+        val st = _state.value
+        val port = st.port.toIntOrNull() ?: 1433
+        val current = sanitizeHost(if (st.usePublicHost) st.publicHost else st.host)
+        val otherIsPublic = !st.usePublicHost
+        val other = sanitizeHost(if (otherIsPublic) st.publicHost else st.host)
+        if (current.isBlank() || other.isBlank() || other == current) return ""
+        if (SqlDiagnostics.tcpReachable(current, port)) return ""      // نشانی فعلی سالم است
+        if (!SqlDiagnostics.tcpReachable(other, port)) return ""       // هیچ‌کدام باز نیست؛ پیام خطا خودش گویاست
+        _state.update { it.copy(usePublicHost = otherIsPublic) }
+        return "نشانی «$current» از این شبکه در دسترس نبود؛ به‌طور خودکار از «$other» استفاده شد."
+    }
+
     private fun settings(database: String? = null): DbSettings {
         val s = _state.value
         return DbSettings(
@@ -213,8 +236,9 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             _state.update {
-                it.copy(busy = true, status = "در حال اتصال به دیتابیس ${s.database} …", statusKind = 0)
+                it.copy(busy = true, status = "در حال بررسی دسترسی و اتصال به دیتابیس ${s.database} …", statusKind = 0)
             }
+            val hostNote = preferReachableHost()
             val cfg = settings()
             if (!SqlConnectionManager.connect(cfg)) {
                 val message = (SqlConnectionManager.state.value as? ConnectionState.Error)?.message
@@ -236,11 +260,13 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
                 it.copy(
                     busy = false,
                     connected = true,
+                    driverLabel = DirectSql.displayName(SqlConnectionManager.activeDriver),
                     serverInfo = info?.let { t ->
                         "دیتابیس ${t.first} — نسخهٔ SQL Server ${t.second} — ${t.third} مشتری"
                     }.orEmpty(),
                     health = health,
-                    status = "اتصال برقرار و تنظیمات ذخیره شد ✅ — " +
+                    status = (if (hostNote.isNotBlank()) hostNote + "\n" else "") +
+                        "اتصال برقرار و تنظیمات ذخیره شد ✅ — " +
                         "حالا نام کاربری و کلمهٔ عبور خودتان را وارد کنید و «ورود و بارگذاری ویزیتورها» را بزنید.",
                     statusKind = 1,
                 )
@@ -274,6 +300,7 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
 
             // اگر هنوز کانکشن باز نشده، اول وصل شو (بعد از بستن اپ، همان‌جا وصل می‌شود)
             if (!_state.value.connected) {
+                preferReachableHost()
                 val cfg = settings()
                 if (!SqlConnectionManager.connect(cfg)) {
                     val message = (SqlConnectionManager.state.value as? ConnectionState.Error)?.message
@@ -375,6 +402,54 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
         }
+    }
+
+    /**
+     * عیب‌یابی گام‌به‌گام: نشانی → پورت (هر دو نشانی) → درایورها → ورود واقعی →
+     * دسترسی به دیتابیس حسابداری. نتیجه هم به‌صورت سطرهای ✔/✖ در UI می‌آید و هم
+     * به‌صورت متن قابل‌کپی (بدون رمز) تا برای پشتیبانی فرستاده شود.
+     */
+    fun runDiagnostics() {
+        val s = _state.value
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, status = "در حال عیب‌یابی اتصال …", statusKind = 0) }
+            val cfg = settings()
+            val rows = ArrayList<DiagRow>()
+            try {
+                rows += SqlDiagnostics.run(cfg)
+            } catch (t: Throwable) {
+                rows += DiagRow("عیب‌یابی", false, SqlConnectionManager.describeThrowable(t))
+            }
+
+            // هر دو نشانی (داخلی و اختصاصی) از همین گوشی آزمایش می‌شوند تا معلوم شود
+            // الان کدام‌یک در دسترس است — همان چیزی که «ping.eu سبز» نمی‌گوید.
+            val hosts = ArrayList<String>()
+            if (s.host.isNotBlank()) hosts += s.host
+            if (s.publicHost.isNotBlank() && sanitizeHost(s.publicHost) != sanitizeHost(s.host)) hosts += s.publicHost
+            hosts.forEach { h ->
+                rows += SqlDiagnostics.tcpCheck("دسترسی به نشانی $h", sanitizeHost(h), s.port.toIntOrNull() ?: 1433)
+            }
+
+            val report = SqlDiagnostics.buildReport(cfg, rows)
+            val failed = rows.count { !it.ok }
+            _state.update {
+                it.copy(
+                    busy = false,
+                    diag = rows,
+                    diagText = report,
+                    status = if (failed == 0)
+                        "عیب‌یابی تمام شد ✅ — همهٔ ${rows.size} بررسی موفق بودند. اگر باز هم ورود نشد، دکمهٔ «ورود و بارگذاری ویزیتورها» را بزنید."
+                    else
+                        "عیب‌یابی تمام شد — $failed مورد از ${rows.size} بررسی ناموفق بود. متن قرمز/زرد پایین دقیقاً می‌گوید کجا گیر کرده است.",
+                    statusKind = if (failed == 0) 1 else 2,
+                )
+            }
+        }
+    }
+
+    /** پیام کوچک پس از کپی گزارش عیب‌یابی در کلیپ‌بورد. */
+    fun noteCopied() = _state.update {
+        it.copy(status = "گزارش عیب‌یابی کپی شد — می‌توانید آن را برای پشتیبانی بفرستید (هیچ رمزی داخل آن نیست).", statusKind = 1)
     }
 
     fun disconnect() {

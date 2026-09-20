@@ -93,6 +93,12 @@ def main():
     ap.add_argument("--erp-db", required=True, help="ERP database that the Android app talks to (e.g. Meelano)")
     ap.add_argument("--login", default="vizitor_android", help="application SQL login (created if missing)")
     ap.add_argument("--json-out", default="", help="write a summary (no secrets) to this file")
+    ap.add_argument("--enable-sql-auth", action="store_true",
+                    help="if the server only accepts Windows logins, switch it to mixed mode "
+                         "(the caller must restart the SQL Server service afterwards)")
+    ap.add_argument("--self-test", action="store_true",
+                    help="after the grants, log in with the application login to prove the "
+                         "credential works from outside (what the phone does)")
     args = ap.parse_args()
 
     out = {
@@ -104,6 +110,9 @@ def main():
         "skipped": [],
         "ok": False,
         "error": "",
+        "mixed_mode_enabled": False,
+        "restart_needed": False,
+        "self_test": "",
     }
 
     def finish(rc, msg=""):
@@ -185,6 +194,47 @@ def main():
             out["created_login"] = True
             print("11|OK|login [%s] created." % args.login)
 
+        # ---- 1b) حالت احراز هویت سرور -------------------------------------
+        # SQL Server می‌تواند «فقط ویندوزی» باشد؛ در آن حالت هیچ کاربر SQL
+        # (از جمله همین کاربر) نمی‌تواند از گوشی وارد شود، هرچند پورت ۱۴۳۳ باز
+        # باشد. این تنها جایی است که این موضوع دیده و (با اجازهٔ نصب‌کننده) رفع می‌شود.
+        win_only = cur.execute(
+            "SELECT CAST(SERVERPROPERTY('IsIntegratedSecurityOnly') AS int)"
+        ).fetchval()
+        out["windows_only"] = (win_only == 1)
+        if win_only == 1:
+            print("11b|WARN|server accepts WINDOWS logins only - the Android app cannot log in yet")
+            if args.enable_sql_auth:
+                try:
+                    cur.execute("EXEC sp_configure 'show advanced options', 1; RECONFIGURE;")
+                    cur.execute(
+                        "EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', "
+                        "N'Software\\Microsoft\\MSSQLServer\\MSSQLServer', N'LoginMode', REG_DWORD, 2"
+                    )
+                    out["mixed_mode_enabled"] = True
+                    out["restart_needed"] = True
+                    print("11c|OK|mixed mode (SQL + Windows) enabled - SQL Server must be restarted to apply")
+                except Exception as exc:
+                    print("11c|FAILED|could not enable mixed mode: %s" % exc)
+                    print("11d|HINT|SSMS -> Server Properties -> Security -> 'SQL Server and Windows Authentication mode'")
+            else:
+                print("11c|FAILED|mixed mode not enabled (installer was not allowed to change it)")
+                print("11d|HINT|SSMS -> Server Properties -> Security -> 'SQL Server and Windows Authentication mode' + restart")
+        else:
+            print("11b|OK|server accepts SQL logins (mixed mode already active)")
+
+        # ---- 1c) حالت حساب و اجازه‌های سروری ------------------------------
+        cur.execute("ALTER LOGIN [%s] ENABLE" % args.login.replace("]", "]]"))
+        cur.execute("GRANT CONNECT SQL TO [%s]" % args.login.replace("]", "]]"))
+        print("11e|OK|login enabled and has CONNECT SQL")
+        # بدون این اجازهٔ متادیتا، برنامهٔ اندروید در فهرست دیتابیس‌ها فقط
+        # دیتابیس‌های خودش را می‌بیند و مرحلهٔ «انتخاب دیتابیس» ناقص می‌شود.
+        try:
+            cur.execute("GRANT VIEW ANY DATABASE TO [%s]" % args.login.replace("]", "]]"))
+            print("11f|OK|GRANT VIEW ANY DATABASE (so the app can list databases)")
+        except Exception as exc:
+            print("11f|WARN|could not grant VIEW ANY DATABASE: %s" % exc)
+
         cur.execute("USE [%s]" % args.erp_db.replace("]", "]]"))
         db_user = cur.execute("SELECT COUNT(*) FROM sys.database_principals WHERE name = ?", args.login).fetchval()
         if not db_user:
@@ -228,6 +278,35 @@ def main():
             else:
                 out["skipped"].append(obj)
                 print("19|SKIP|%s does not exist - nothing granted" % obj)
+
+        # ---- 3) خودآزمایی: همان کاری که گوشی می‌کند -----------------------
+        # اگر این مرحله موفق شود، یعنی «پورت باز + کاربر سالم + دسترسی دیتابیس»
+        # هر سه درست است و برنامهٔ اندروید هم باید وصل شود.
+        if args.self_test:
+            if not app_password:
+                print("21|SKIP|self-test needs the application password (login already existed)")
+                out["self_test"] = "skipped (password not available)"
+            else:
+                try:
+                    probe = connect_odbc(pyodbc, driver, server, args.erp_db,
+                                         args.login, app_password, timeout=10)
+                    row = probe.cursor().execute(
+                        "SELECT SUSER_SNAME(), DB_NAME(), HAS_DBACCESS(DB_NAME())"
+                    ).fetchone()
+                    probe.close()
+                    who, dbn, access = row[0], row[1], row[2]
+                    ok_access = (access == 1)
+                    out["self_test"] = "ok" if ok_access else "no-access"
+                    print("21|%s|login [%s] works: user=%s database=%s access=%s"
+                          % ("OK" if ok_access else "FAILED", args.login, who, dbn, access))
+                    if not ok_access:
+                        print("21b|HINT|the login exists but has no access to this database")
+                except Exception as exc:
+                    out["self_test"] = "failed: %s" % str(exc)[:200]
+                    print("21|FAILED|login [%s] could not connect: %s" % (args.login, str(exc)[:200]))
+                    print("21b|HINT|if the message mentions Windows authentication, run this step with --enable-sql-auth and restart SQL Server")
+        else:
+            print("21|SKIP|self-test not requested")
 
         print("20|DONE|direct Android -> SQL Server preparation finished for [%s]" % args.login)
         return finish(0)

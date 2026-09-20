@@ -60,19 +60,20 @@ data class DbSettings(
     val connectTimeoutSec: Int = 10,
     val queryTimeoutSec: Int = 30,
 ) {
-    /** JDBC URL — بدون هیچ مقادیر حساس. */
-    fun jdbcUrl(): String = buildString {
-        append("jdbc:sqlserver://").append(host).append(':').append(port)
-        append(";databaseName=").append(database)
-        append(";encrypt=").append(if (useEncryption) "true" else "false")
-        append(";trustServerCertificate=").append(if (trustServerCert) "true" else "false")
-        append(";loginTimeout=").append(connectTimeoutSec)
-        append(";sendStringParametersAsUnicode=true")
-        append(";applicationName=VizitorAndroid")
-    }
+    /** نشانی سرورِ پاک‌سازی‌شده (بدون http://، بدون اسلش/فاصلهٔ اضافه). */
+    val cleanHost: String get() = sanitizeHost(host)
+
+    /** پورت معتبر (اگر کاربر چیز عجیبی وارد کرد، ۱۴۳۳). */
+    val cleanPort: Int get() = if (port in 1..65535) port else 1433
+
+    /** JDBC URL درایور مایکروسافت — بدون هیچ مقدار حساس. */
+    fun jdbcUrl(): String = DirectSql.url(this, DirectSql.MSSQL)
+
+    /** نشانی jTDS (درایور اول روی اندروید). */
+    fun jtdsUrl(): String = DirectSql.url(this, DirectSql.JTDS)
 
     /** نمایش امن (برای UI و لاگ): بدون رمز. */
-    fun masked(): String = "$username@$host:$port/$database"
+    fun masked(): String = "$username@$cleanHost:$cleanPort/$database"
 }
 
 /**
@@ -103,30 +104,45 @@ object SqlConnectionManager {
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val state: StateFlow<ConnectionState> = _state.asStateFlow()
 
+    /** درایوری که اتصال فعلی با آن برقرار شده (برای نمایش در کارت وضعیت). */
+    @Volatile
+    var activeDriver: String? = null
+        private set
+
     /** برقراری اتصال + اعتبارسنجی با SELECT 1. (هرگز دو اتصال هم‌زمان ساخته نمی‌شود) */
     suspend fun connect(s: DbSettings): Boolean = withContext(Dispatchers.IO) {
         if (connecting) return@withContext false
         connecting = true
         try {
-        if (s.host.isBlank() || s.database.isBlank() || s.username.isBlank()) {
-            _state.value = ConnectionState.Error("آدرس سرور دیتابیس، نام دیتابیس یا نام کاربری خالی است.")
-            return@withContext false
-        }
-        _state.value = ConnectionState.Connecting
-        try {
-            val c = openOne(s)
-            ping(c)
-            pool.offer(c)
-            settings = s
-            _state.value = ConnectionState.Ready(0)
-            true
-        } catch (e: SQLException) {
-            _state.value = ConnectionState.Error(friendlyError(e))
-            false
-        } catch (e: Exception) {
-            _state.value = ConnectionState.Error("خطای غیرمنتظره در اتصال: ${e.javaClass.simpleName}")
-            false
-        }
+            if (s.cleanHost.isBlank() || s.database.isBlank() || s.username.isBlank()) {
+                _state.value = ConnectionState.Error("آدرس سرور دیتابیس، نام دیتابیس یا نام کاربری خالی است.")
+                return@withContext false
+            }
+            _state.value = ConnectionState.Connecting
+            try {
+                val opened = openOne(s)
+                val c = opened.connection
+                ping(c)
+                pool.offer(c)
+                settings = s
+                activeDriver = opened.driver
+                _state.value = ConnectionState.Ready(0)
+                true
+            } catch (e: SqlConnectFailure) {
+                activeDriver = null
+                _state.value = ConnectionState.Error(e.faMessage)
+                false
+            } catch (e: SQLException) {
+                activeDriver = null
+                _state.value = ConnectionState.Error(friendlyError(e))
+                false
+            } catch (t: Throwable) {
+                // NoClassDefFoundError و مانند آن «Error» هستند نه Exception؛ اگر این‌جا
+                // گرفته نشوند برنامه بسته می‌شود (کرش) — دقیقاً همان چیزی که نباید رخ دهد.
+                activeDriver = null
+                _state.value = ConnectionState.Error(describeThrowable(t))
+                false
+            }
         } finally {
             connecting = false
         }
@@ -146,9 +162,10 @@ object SqlConnectionManager {
         }
         var c: Connection? = null
         try {
-            val kind = DirectSql.detect()                // درایور قابل استفاده روی این دستگاه
             val master = s.copy(database = "master")     // master در همهٔ نصب‌ها وجود دارد
-            c = java.sql.DriverManager.getConnection(DirectSql.url(master, kind), master.username, master.password)
+            val opened = openOne(master)                 // با درایور جایگزین هم تلاش می‌شود
+            c = opened.connection
+            activeDriver = opened.driver
             val out = mutableListOf<String>()
             c.createStatement().use { st ->
                 st.queryTimeout = s.queryTimeoutSec
@@ -160,12 +177,14 @@ object SqlConnectionManager {
                 }
             }
             Result.success(out)
+        } catch (e: SqlConnectFailure) {
+            Result.failure(IllegalStateException(e.faMessage, e))
         } catch (e: SQLException) {
             Result.failure(IllegalStateException(friendlyError(e), e))
-        } catch (e: Exception) {
-            Result.failure(IllegalStateException("گرفتن لیست دیتابیس‌ها ناموفق بود: ${e.javaClass.simpleName}", e))
+        } catch (t: Throwable) {
+            Result.failure(IllegalStateException(describeThrowable(t), t))
         } finally {
-            try { c?.close() } catch (_: Exception) {}
+            try { c?.close() } catch (_: Throwable) {}
         }
     }
 
@@ -264,11 +283,53 @@ object SqlConnectionManager {
         }
     }
 
-    private fun openOne(s: DbSettings): Connection {
-        val kind = DirectSql.detect()                                  // درایور قابل استفاده روی این دستگاه
-        val c = java.sql.DriverManager.getConnection(DirectSql.url(s, kind), s.username, s.password)
-        c.transactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED
-        return c
+    /**
+     * یک اتصال تازه می‌سازد و در صورت لازم، درایور دیگر را امتحان می‌کند.
+     *
+     * قاعده: درایور دوم فقط وقتی امتحان می‌شود که خطای اول «مربوط به خود درایور»
+     * باشد (مثل NoClassDefFoundError روی اندروید، یا خطای پروتکل/TLS). خطای
+     * روشنِ رمز عبور یا دست‌نبودن دیتابیس دوباره تکرار نمی‌شود تا حساب SQL قفل نشود.
+     */
+    private fun openOne(s: DbSettings): Opened {
+        val attempts = mutableListOf<String>()
+        var firstRealSqlError: SQLException? = null
+        for (kind in DirectSql.order()) {
+            try {
+                val c = java.sql.DriverManager.getConnection(DirectSql.url(s, kind), s.username, s.password)
+                c.transactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED
+                activeDriver = kind
+                return Opened(c, kind)
+            } catch (e: SQLException) {
+                if (firstRealSqlError == null) firstRealSqlError = e
+                attempts += "${DirectSql.displayName(kind)} → ${firstLine(e)}"
+                if (!isDriverLevelFailure(e, kind)) break     // خطای واقعی دیتابیس؛ سراغ درایور بعدی نرو
+            } catch (t: Throwable) {
+                // Error مثل NoClassDefFoundError: این درایور روی این دستگاه/سرور کار نمی‌کند
+                attempts += "${DirectSql.displayName(kind)} → ${describeThrowable(t)}"
+            }
+        }
+        // اگر همهٔ درایورها به خطای دیتابیس خوردند، همان خطای واقعی را بالا بفرست
+        firstRealSqlError?.let { throw it }
+        throw SqlConnectFailure(
+            faMessage = "هیچ‌کدام از دو درایور نتوانستند اتصال را باز کنند:\n" +
+                attempts.joinToString("\n") + "\n" +
+                "اگر پیام مربوط به بار نشدن درایور است، همین گزارش را بفرستید.",
+            details = attempts.joinToString(" | "),
+        )
+    }
+
+    /** آیا خطا به خود درایور مربوط است (نه رمز/دیتابیس)؟ */
+    private fun isDriverLevelFailure(e: SQLException, kind: String): Boolean {
+        val code = e.errorCode
+        val msg = (e.message ?: "").lowercase()
+        // رمز/دسترسی: قطعاً خطای دیتابیس است، نه درایور
+        val authLike = code in setOf(18456, 18452, 4060, 916, 40197) ||
+            msg.contains("login failed") || msg.contains("cannot open database")
+        if (authLike) return false
+        // خطای شماره‌دارِ سرور = پاسخ واقعی دیتابیس
+        if (code != 0) return false
+        // کد صفر با پیام درایور/پروتکل/TLS = ارزش امتحان درایور بعدی را دارد
+        return true
     }
 
     private fun borrow(): Connection {
@@ -282,7 +343,7 @@ object SqlConnectionManager {
         }
         // استخر خالی: اتصال تازه (تا سقف POOL_MAX ساختن هم‌زمان محدود می‌شود)
         val s = requireNotNull(settings) { "اتصال فعالی وجود ندارد" }
-        val fresh = openOne(s)
+        val fresh = openOne(s).connection
         ping(fresh)
         return fresh
     }
@@ -294,7 +355,7 @@ object SqlConnectionManager {
     private fun killQuietly(c: Connection) {
         try {
             if (!c.isClosed) c.close()
-        } catch (_: SQLException) {
+        } catch (_: Throwable) {
         }
     }
 
@@ -325,19 +386,72 @@ object SqlConnectionManager {
     internal fun friendlyError(e: SQLException): String {
         val code = e.errorCode
         val state = e.sqlState
+        val msg = (e.message ?: "")
+        val lower = msg.lowercase()
         return when {
-            code == 18456 -> "ورود به دیتابیس ناموفق بود — نام کاربری/رمز را بررسی کنید (SQL $code، دلایل: ${e.message?.lines()?.firstOrNull()})"
-            code == 4060 -> "دیتابیس با نام واردشده پیدا نشد یا دسترسی ندارید (SQL $code)"
+            // ── احراز هویت ────────────────────────────────────────────────────
+            code == 18456 -> {
+                val reason = msg.lines().firstOrNull().orEmpty()
+                when {
+                    lower.contains("windows authentication") || lower.contains("integrated") ->
+                        "ورود SQL رد شد: سرور در حالت «فقط احراز هویت ویندوز» است و کاربران SQL اجازهٔ ورود ندارند (SQL $code).\n" +
+                            "راه‌حل: نصب‌کننده را با گزینهٔ فعال‌کردن حالت Mixed Mode اجرا کنید (یا در SSMS: Properties → Security → «SQL Server and Windows Authentication mode») و سرویس SQL را ری‌استارت کنید."
+                    lower.contains("password did not match") || lower.contains("state: 8") || lower.contains("state 8") ->
+                        "نام کاربری درست است ولی رمز اشتباه است (SQL $code). رمز همان «کاربر محدود دیتابیس» است که نصب‌کننده ساخته — در فایل کارت نیست."
+                    lower.contains("not enabled") || lower.contains("disabled") ->
+                        "این کاربر SQL غیرفعال است (SQL $code). در SSMS: Security → Logins → کاربر → Status → Login: Enabled."
+                    lower.contains("not associated with a trusted") || lower.contains("not trusted") ->
+                        "این حساب روی آن سرور وجود ندارد یا مخصوص دامنهٔ دیگری است (SQL $code)."
+                    else ->
+                        "ورود به دیتابیس ناموفق بود (SQL $code). نام کاربری/رمز یا حالت احراز هویت سرور را بررسی کنید.\nپیام سرور: $reason"
+                }
+            }
+            code == 4060 -> "دیتابیس با نام واردشده پیدا نشد یا این کاربر به آن دسترسی ندارد (SQL $code). نام دیتابیس را دقیق بنویسید (مثلاً atiran2)."
+            code == 916 -> "کاربر به این دیتابیس دسترسی ندارد (SQL $code) — نصب‌کننده باید کاربر را در همان دیتابیس بسازد."
             code == 40197 -> "این حساب اجازهٔ اتصال به این دیتابیس را ندارد (SQL $code)"
-            code == 53 -> "به سرور دیتابیس نمی‌توان رسید — IP/پورت را بررسی کنید یا مطمئن شوید فایروال سرور باز است (SQL $code)"
+            code == 53 -> "به سرور دیتابیس نمی‌توان رسید — آی‌پی/پورت را بررسی کنید یا مطمئن شوید فایروال سرور باز است (SQL $code)"
             code == 10053 || code == 10054 -> "اتصال در حین کار قطع شد — شبکهٔ موبایل/وای‌فای را چک کنید (SQL $code)"
             code == 1205 -> "درگیری موقت با یک تراکنش دیگر (deadlock) — دوباره تلاش کنید (SQL $code)"
-            state == "08S01" || state?.startsWith("08") == true -> "خطای ارتباطی با سرور دیتابیس (SQLState $state)"
-            state?.startsWith("28") == true -> "احراز هویت ناموفق (SQLState $state)"
+            // ── TLS / پروتکل (شایع روی سرورهای قدیمی) ─────────────────────────
+            lower.contains("tls") || lower.contains("ssl") || lower.contains("protocol version") ->
+                "سرور با رمزنگاری TLS موردنظر برنامه توافق نکرد (${e.javaClass.simpleName}).\n" +
+                    "کلید «رمزنگاری TLS» را در همین صفحه خاموش کنید و دوباره امتحان کنید."
+            // ── شبکه/زمان ─────────────────────────────────────────────────────
+            lower.contains("connection refused") || lower.contains("refused") ->
+                "سرور روی این نشانی/پورت اتصال را نپذیرفت (Connection refused). اگر بیرون از شبکه هستید، کلید «اتصال از بیرون» باید روشن و آی‌پی اختصاصی درست باشد."
+            lower.contains("timed out") || lower.contains("timeout") ->
+                "زمان اتصال تمام شد — یا سرور در دسترس نیست، یا فایروال اجازه نمی‌دهد (پورت ۱۴۳۳)."
+            lower.contains("unknown host") || lower.contains("no address") ->
+                "نشانی سرور پیدا نشد — آی‌پی را بررسی کنید."
+            lower.contains("no suitable driver") ->
+                "درایور JDBC بارگذاری نشد (No suitable driver) — نسخهٔ کامل برنامه را نصب کنید."
+            state == "08S01" || state?.startsWith("08") == true -> "خطای ارتباطی با سرور دیتابیس (SQLState $state): ${firstLine(e)}"
+            state?.startsWith("28") == true -> "احراز هویت ناموفق (SQLState $state): ${firstLine(e)}"
             else -> "خطای دیتابیس (کد ${code ?: "—"}): ${firstLine(e)}"
         }
+    }
+
+    /** توصیف امن هر Throwable — مخصوص Error هایی مثل NoClassDefFoundError که SQLException نیستند. */
+    internal fun describeThrowable(t: Throwable): String = when (t) {
+        is NoClassDefFoundError ->
+            "درایور روی این گوشی بار نشد (${t.message?.take(90) ?: "NoClassDefFoundError"}) — برنامه درایور جایگزین را امتحان می‌کند."
+        is SQLException -> friendlyError(t)
+        else -> "${t.javaClass.simpleName}: ${t.message?.take(120) ?: "—"}"
     }
 
     private fun firstLine(e: SQLException): String =
         e.message?.lines()?.firstOrNull()?.take(160) ?: "نامشخص"
 }
+
+/** یک اتصال بازشده به‌همراه درایوری که با آن ساخته شد. */
+internal class Opened(val connection: Connection, val driver: String)
+
+/**
+ * شکست اتصال در سطح «همهٔ درایورها».
+ * پیام فارسی آمادهٔ نمایش است و جزئیات فنی هم برای گزارش عیب‌یابی نگه داشته می‌شود
+ * (هیچ‌کدام رمز ندارند).
+ */
+class SqlConnectFailure(
+    val faMessage: String,
+    val details: String,
+) : Exception(details)
