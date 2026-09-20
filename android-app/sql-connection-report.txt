@@ -1,5 +1,5 @@
 گزارش آزمون اتصال به SQL Server — ویزیتور مستقیم (پورت ۱۴۳۳)
-تاریخ: 2026-09-20 11:19:34 UTC   کامیت: 677356dd08755a89d188ed2a6939f21839449f1c
+تاریخ: 2026-09-20 12:14:22 UTC   کامیت: 5f18d0581f7318372633f7e69bc38af4e29260d4
 SQL Server: mcr.microsoft.com/mssql/server:2019-latest (کانتینر CI، شبیه‌سازی مسیر گوشی→سرور)
 ==================================================================================
 
@@ -38,7 +38,7 @@ ir.atiran.vizitor.data.RealSqlConnectionTest > ٥- مشتریان، گروه ه�
 ir.atiran.vizitor.data.RealSqlConnectionTest > ٢- اتصال با کاربر محدود به master و فهرست دیتابیس ها PASSED
 ir.atiran.vizitor.data.RealSqlConnectionTest > ٣- اتصال به دیتابیس انتخاب شده و خواندن مشخصات سرور PASSED
 ir.atiran.vizitor.data.RealSqlConnectionTest > ۸- ثبت پیش‌فاکتور با کاربر محدود (EXEC + INSERT + تریگر) PASSED
-BUILD SUCCESSFUL in 1m 45s
+BUILD SUCCESSFUL in 1m 40s
 
 --- ۵) اگر آزمونی رد شد: پیام خطاها ---
   (همهٔ آزمون‌ها موفق بودند یا لاگ شکست ساخته نشد)
