@@ -77,6 +77,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.HealthUiState
 import ir.atiran.vizitor.VizitorViewModel
 import ir.atiran.vizitor.data.local.InvoiceEntity
@@ -86,6 +87,8 @@ import ir.atiran.vizitor.data.repository.ServerConfig
 import ir.atiran.vizitor.ui.components.GlassCard
 import ir.atiran.vizitor.ui.components.MilanoFooter
 import ir.atiran.vizitor.ui.components.NeonGreenButton
+import ir.atiran.vizitor.ui.components.GlowChip
+import ir.atiran.vizitor.ui.components.IconOrb3D
 import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.SectionTitle
 import ir.atiran.vizitor.ui.components.StatusChip
@@ -173,34 +176,36 @@ fun SettingsScreen(
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(palette.primary.copy(alpha = 0.16f))
-                                .border(1.dp, palette.primary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Filled.Dns, contentDescription = null,
-                                    tint = palette.gold, modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    okText,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = okColor
-                                )
-                            }
+                        IconOrb3D(
+                            icon = Icons.Filled.Dns,
+                            size = 38.dp,
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            glowColor = okColor
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "اتصال سرور آتیران (پورت ۱۴۳۳)",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp
+                                ),
+                                color = palette.textPrimary
+                            )
+                            Text(
+                                "یک مسیر واحد — همان صفحهٔ اتصال روی صفحهٔ اول",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = TextSecondary
+                            )
                         }
-                        Spacer(Modifier.weight(1f))
                         if (serverSession.syncing) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = palette.gold
                             )
+                        } else {
+                            GlowChip(text = okText, color = okColor)
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
                     Text(
                         if (serverSession.serverLabel.isBlank())
                             "هنوز اتصالی تنظیم نشده — با یک ضربه تنظیمش کنید (کارت اتصال نصب‌کننده یا تایپ دستی)."

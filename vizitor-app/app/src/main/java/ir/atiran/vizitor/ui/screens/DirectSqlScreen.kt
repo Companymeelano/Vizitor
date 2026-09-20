@@ -39,11 +39,11 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
@@ -54,8 +54,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -70,16 +68,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import ir.atiran.vizitor.ui.components.BrandOrb
 import ir.atiran.vizitor.ui.components.GlassCard
+import ir.atiran.vizitor.ui.components.GlowChip
+import ir.atiran.vizitor.ui.components.GoldDivider
+import ir.atiran.vizitor.ui.components.GradientTitle
+import ir.atiran.vizitor.ui.components.IconOrb3D
+import ir.atiran.vizitor.ui.components.MilanoFooter
+import ir.atiran.vizitor.ui.components.VizitorField
 import ir.atiran.vizitor.ui.components.NeonGreenButton
 import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.ui.components.SectionTitle
 import ir.atiran.vizitor.ui.components.StatusChip
+import ir.atiran.vizitor.ui.components.press3D
 import ir.atiran.vizitor.ui.theme.TextSecondary
 import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.sqldirect.DirectSqlViewModel
@@ -105,17 +116,34 @@ fun DirectSqlScreen(
         // ── نوار بالا ───────────────────────────────────────────────────────
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "بازگشت", tint = p.textPrimary)
+                Box(
+                    modifier = Modifier
+                        .press3D(depth = 3.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(p.textPrimary.copy(alpha = 0.08f))
+                        .border(1.dp, p.gold.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                        .clickable(onClick = onBack)
+                        .padding(7.dp)
+                ) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "بازگشت", tint = p.gold, modifier = Modifier.size(20.dp))
                 }
-                Text(
-                    "اتصال به سرور آتیران",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                    color = p.textPrimary,
-                    modifier = Modifier.weight(1f),
-                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    GradientTitle(
+                        text = "اتصال به سرور آتیران",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                        textAlign = TextAlign.Start
+                    )
+                    Text(
+                        "پورت ۱۴۳۳ — اتصال مستقیم، بدون IIS و بدون سرویس میانی",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                        color = TextSecondary,
+                    )
+                }
                 if (state.busy || session.syncing) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = p.gold)
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.4.dp, color = p.gold)
+                } else {
+                    BrandOrb(size = 38.dp)
                 }
             }
         }
@@ -158,11 +186,22 @@ fun DirectSqlScreen(
             item { DetailsCard(state, viewModel) }
         }
 
-        item { Text(
-            "رمز کاربر دیتابیس فقط رمزنگاری‌شده (AES-GCM + Android Keystore) روی همین گوشی می‌ماند؛ " +
-                "رمز حساب خودتان تنها با انتخاب «به‌خاطر سپردن» ذخیره می‌شود و هیچ‌گاه در متن یا گزارش چاپ نمی‌گردد.",
-            style = MaterialTheme.typography.bodySmall, color = TextSecondary,
-        ) }
+        item {
+            Column(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconOrb3D(icon = Icons.Filled.Lock, size = 30.dp, cornerRadius = 10.dp)
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        "رمزها فقط رمزنگاری‌شده (AES-GCM + Android Keystore) روی همین گوشی می‌مانند " +
+                            "و هیچ‌گاه در متن یا گزارش چاپ نمی‌شوند.",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp, lineHeight = 17.sp),
+                        color = TextSecondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                MilanoFooter()
+            }
+        }
     }
 }
 
@@ -192,16 +231,33 @@ private fun StatusSummary(
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusChip(statusText, statusColor)
-                Spacer(Modifier.weight(1f))
-                if (state.loggedIn) {
+                IconOrb3D(
+                    icon = if (state.loggedIn) Icons.Filled.CheckCircle else Icons.Filled.Dns,
+                    size = 38.dp,
+                    tint = Color.White,
+                    glowColor = statusColor
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
                     Text(
-                        state.loggedInName.ifBlank { state.loggedInUser },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = p.accentText,
+                        if (state.loggedIn) state.loggedInName.ifBlank { state.loggedInUser } else "وضعیت اتصال",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp
+                        ),
+                        color = p.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        if (state.loggedIn) "کاربر سامانهٔ آتیران" else "برای کار با سرویس‌ها ابتدا وصل شوید",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                        color = TextSecondary,
                     )
                 }
+                GlowChip(text = statusText, color = statusColor, pulse = state.busy || session.syncing)
             }
+            Spacer(Modifier.height(12.dp))
+            GoldDivider()
             Spacer(Modifier.height(10.dp))
 
             InfoRow(Icons.Filled.Dns, "سرور", session.serverLabel.ifBlank { "—" })
@@ -282,13 +338,14 @@ private fun ConnectionCard(state: DirectUiState, viewModel: DirectSqlViewModel) 
             style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
+        VizitorField(
             value = state.cardText,
             onValueChange = viewModel::onCardText,
-            label = { Text("vizitor://c?h=…&p=1433&d=…&u=…") },
-            modifier = Modifier.fillMaxWidth().height(92.dp),
+            label = "vizitor://c?h=…&p=1433&d=…&u=…",
+            icon = Icons.Filled.QrCodeScanner,
+            modifier = Modifier.fillMaxWidth().height(98.dp),
+            singleLine = false,
             maxLines = 4,
-            colors = fieldColors(),
         )
         Spacer(Modifier.height(8.dp))
         NeonGreenButton(
@@ -314,33 +371,30 @@ private fun ServerCard(state: DirectUiState, viewModel: DirectSqlViewModel) {
         onToggle = viewModel::toggleSettings,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
+            VizitorField(
                 value = state.host,
                 onValueChange = viewModel::onHost,
-                label = { Text("آدرس سرور (داخلی)") },
+                label = "آدرس سرور (داخلی)",
+                icon = Icons.Filled.Dns,
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-                colors = fieldColors(),
             )
             Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
+            VizitorField(
                 value = state.port,
                 onValueChange = viewModel::onPort,
-                label = { Text("پورت") },
-                modifier = Modifier.width(92.dp),
-                singleLine = true,
+                label = "پورت",
+                icon = Icons.Filled.SettingsEthernet,
+                modifier = Modifier.width(104.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = fieldColors(),
             )
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
+        VizitorField(
             value = state.publicHost,
             onValueChange = viewModel::onPublicHost,
-            label = { Text("آی‌پی اختصاصی/اینترنتی (اختیاری)") },
+            label = "آی‌پی اختصاصی/اینترنتی (اختیاری)",
+            icon = Icons.Filled.Public,
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            colors = fieldColors(),
         )
         ThemeSwitch("اتصال از بیرون شبکه", state.usePublicHost, viewModel::onUsePublicHost)
         ThemeSwitch("رمزنگاری TLS (برای سرور قدیمی خاموش کنید)", state.useEncryption, viewModel::onUseEncryption)
@@ -348,13 +402,12 @@ private fun ServerCard(state: DirectUiState, viewModel: DirectSqlViewModel) {
         Spacer(Modifier.height(4.dp))
         var dbMenu by remember { mutableStateOf(false) }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
+            VizitorField(
                 value = state.database,
                 onValueChange = viewModel::onDatabase,
-                label = { Text("نام دیتابیس (قابل تایپ دستی)") },
+                label = "نام دیتابیس (قابل تایپ دستی)",
+                icon = Icons.Filled.Storage,
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-                colors = fieldColors(),
             )
             if (state.databases.isNotEmpty()) {
                 Spacer(Modifier.width(6.dp))
@@ -378,32 +431,30 @@ private fun ServerCard(state: DirectUiState, viewModel: DirectSqlViewModel) {
             style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
         )
         Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
+        VizitorField(
             value = state.dbUser,
             onValueChange = viewModel::onDbUser,
-            label = { Text("نام کاربر دیتابیس") },
+            label = "نام کاربر دیتابیس",
+            icon = Icons.Filled.Person,
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            colors = fieldColors(),
         )
         Spacer(Modifier.height(8.dp))
         var showDbPass by remember { mutableStateOf(false) }
-        OutlinedTextField(
+        VizitorField(
             value = state.dbPassword,
             onValueChange = viewModel::onDbPassword,
-            label = { Text("رمز کاربر دیتابیس") },
+            label = "رمز کاربر دیتابیس",
+            icon = Icons.Filled.Key,
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
             visualTransformation = if (showDbPass) VisualTransformation.None else PasswordVisualTransformation(),
-            leadingIcon = {
+            trailing = {
                 IconButton(onClick = { showDbPass = !showDbPass }) {
                     Icon(
-                        if (showDbPass) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                        if (showDbPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                         contentDescription = "نمایش/پنهان رمز", tint = p.gold,
                     )
                 }
             },
-            colors = fieldColors(),
         )
 
         Spacer(Modifier.height(12.dp))
@@ -451,32 +502,30 @@ private fun LoginCard(
             style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
+        VizitorField(
             value = state.erpUser,
             onValueChange = viewModel::onErpUser,
-            label = { Text("نام کاربری شما") },
+            label = "نام کاربری شما در سامانه",
+            icon = Icons.Filled.Person,
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            colors = fieldColors(),
         )
         Spacer(Modifier.height(8.dp))
         var showPass by remember { mutableStateOf(false) }
-        OutlinedTextField(
+        VizitorField(
             value = state.erpPassword,
             onValueChange = viewModel::onErpPassword,
-            label = { Text("کلمهٔ عبور شما") },
+            label = "کلمهٔ عبور شما",
+            icon = Icons.Filled.Key,
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
             visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
-            leadingIcon = {
+            trailing = {
                 IconButton(onClick = { showPass = !showPass }) {
                     Icon(
-                        if (showPass) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                        if (showPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                         contentDescription = "نمایش/پنهان رمز", tint = p.gold,
                     )
                 }
             },
-            colors = fieldColors(),
         )
         ThemeSwitch("به‌خاطر سپردن (ورود سریع در اجرای بعدی)", state.rememberMe, viewModel::onRememberMe)
 
@@ -593,17 +642,13 @@ private fun AccordionCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().clickable { onToggle() },
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(p.primary.copy(alpha = 0.16f))
-                        .border(1.dp, p.primary.copy(alpha = 0.45f), RoundedCornerShape(12.dp)),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Icon(icon, contentDescription = null, tint = p.gold, modifier = Modifier.size(18.dp))
-                }
+                IconOrb3D(
+                    icon = icon,
+                    size = 38.dp,
+                    cornerRadius = 13.dp,
+                    tint = Color.White,
+                    glowColor = p.primary
+                )
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -695,20 +740,5 @@ private fun ThemeSwitch(label: String, checked: Boolean, onCheckedChange: (Boole
             ),
         )
     }
-}
-
-/** رنگ فیلدهای متنی هم‌رنگ تم (طلایی در فوکوس). */
-@Composable
-private fun fieldColors() = run {
-    val p = vizitorPalette
-    OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = p.gold,
-        unfocusedBorderColor = p.glassBorder,
-        focusedLabelColor = p.gold,
-        unfocusedLabelColor = p.textSecondary,
-        focusedTextColor = p.textPrimary,
-        unfocusedTextColor = p.textPrimary,
-        cursorColor = p.gold,
-    )
 }
 

@@ -133,9 +133,9 @@ jobs:
         run: |
           set -e
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk "dist/Vizitor-2.13.5-direct.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-2.13.5-direct-debug.apk"
-          cd dist && sha256sum *.apk > Vizitor-2.13.5-direct.apk.sha256
+          cp app/build/outputs/apk/release/app-release.apk "dist/Vizitor-2.13.6-direct.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Vizitor-2.13.6-direct-debug.apk"
+          cd dist && sha256sum *.apk > Vizitor-2.13.6-direct.apk.sha256
           ls -l
 
       - name: گزارش بازرسی APK (در مخزن ثبت می‌شود)
@@ -211,8 +211,8 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: vizitor-app-direct-2.13.5
-          name: "آتیران ویزیتور — نسخه ۲٫۱۳٫۵ با اتصال مستقیم SQL Server (پورت ۱۴۳۳)"
+          tag_name: vizitor-app-direct-2.13.6
+          name: "آتیران ویزیتور — نسخه ۲٫۱۳٫۶ با اتصال مستقیم SQL Server (پورت ۱۴۳۳)"
           body: |
             برنامهٔ اندروید **آتیران ویزیتور** (همان اپ کامل ویزیتور: پیشخوان، ویترین، مشتریان،
             گزارشات، گفتگو) که این بار **مستقیم** به SQL Server روی پورت **۱۴۳۳** وصل می‌شود —
@@ -220,8 +220,8 @@ jobs:
 
             | فایل | توضیح |
             |---|---|
-            | `Vizitor-2.13.5-direct.apk` | نسخهٔ امضاشده (این را روی گوشی‌ها نصب کنید) — شناخته‌شده به `2.13.5-direct` (شمارهٔ ساخت ۲۱۸۰۰) |
-            | `Vizitor-2.13.5-direct-debug.apk` | نسخهٔ آزمون (در کنار نسخهٔ اصلی نصب می‌شود) |
+            | `Vizitor-2.13.6-direct.apk` | نسخهٔ امضاشده (این را روی گوشی‌ها نصب کنید) — شناخته‌شده به `2.13.6-direct` (شمارهٔ ساخت ۲۱۸۰۱) |
+            | `Vizitor-2.13.6-direct-debug.apk` | نسخهٔ آزمون (در کنار نسخهٔ اصلی نصب می‌شود) |
 
             **چه چیزی اضافه شده است**
             * لایهٔ اتصال مستقیم JDBC (mssql-jdbc + jTDS) روی پورت ۱۴۳۳ با همان کاربر محدودی که
@@ -233,6 +233,11 @@ jobs:
             * **دو مرحلهٔ اعتبارنامه** (مثل خودِ سامانه): اول رمز «کاربر محدود دیتابیس» که نصب‌کننده
               می‌سازد، بعد نام کاربری و کلمهٔ عبور خودِ ویزیتور.
             * ورود با **جدول واقعی کاربران ERP** (`dbo.sys_users`، رمز `varbinary`، بررسی فعال/قفل).
+            * **بازطراحی کامل رابط کاربری (این نسخه)**: صفحهٔ اول و کاشی‌های نقش با گوی‌های
+              سه‌بعدی و ابعاد واکنشی (مناسب گوشی کوچک تا پرچمدار)، پنل اتصال روی صفحهٔ اول،
+              صفحهٔ «اتصال به سرور آتیران» با فیلدهای شیشه‌ای و کارت‌های بازشو، **آیکن
+              سه‌بعدی تازه** (مارک طلایی M + مغز پسته روی پلاک بنفش) و **فونت فارسی
+              وزیرمتن (شش وزن)** روی تمام بخش‌های برنامه — از جمله متن‌های گرافیکی.
             * **خواندن جدول و ستون‌های ویزیتورها**: `dbo.sys_vis → dbo.visitors` با ستون‌های واقعی
               (نام، موبایل، تلفن، نشانی، منطقه، شهر، فعال/غیرفعال، سرپرست، اعتبار، درصد نقدی/چک،
               فاکتور مجاز مانده) + شمارش دامنهٔ دسترسی (مشتری/کالا/انبار) + فهرست کامل ستون‌های
@@ -240,6 +245,6 @@ jobs:
 
             طراحی و برنامه‌نویسی: **میلاد یقوبی** — گروه نرم‌افزاری **Meelano Studio Design**.
           files: |
-            vizitor-app/dist/Vizitor-2.13.5-direct.apk
-            vizitor-app/dist/Vizitor-2.13.5-direct.apk.sha256
-            vizitor-app/dist/Vizitor-2.13.5-direct-debug.apk
+            vizitor-app/dist/Vizitor-2.13.6-direct.apk
+            vizitor-app/dist/Vizitor-2.13.6-direct.apk.sha256
+            vizitor-app/dist/Vizitor-2.13.6-direct-debug.apk

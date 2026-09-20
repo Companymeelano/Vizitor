@@ -54,6 +54,8 @@ fun MiniRouteMap(
     myLng: Double,
     modifier: Modifier = Modifier
 ) {
+    // فونت فارسی روی شماره‌های ترتیب بازدید (Canvas بومی)
+    val faTypeface = rememberFaTypeface()
 
     // رنگ‌های تم — خوانده شده در کانتکست کامپوزبل پیش از ورود به Canvas
     val mapBg = DarkSlateDeep
@@ -122,7 +124,7 @@ fun MiniRouteMap(
                     drawCircle(credit, radius = 8f, center = p)
                     drawCircle(cGold, radius = 8f, center = p, style = Stroke(2f))
                     // شماره ترتیب بازدید
-                    val label = Paint_label(cLabelArgb)
+                    val label = Paint_label(cLabelArgb, faTypeface)
                     drawContext.canvas.nativeCanvas.drawText(
                         (route.indexOf(c) + 1).toString(),
                         p.x + 14f, p.y - 12f, label
@@ -155,8 +157,12 @@ private fun LegendDot(color: Color, text: String) {
     }
 }
 
-private fun Paint_label(argb: Int) = android.graphics.Paint().apply {
+private fun Paint_label(
+    argb: Int,
+    typeface: android.graphics.Typeface? = null
+) = android.graphics.Paint().apply {
     color = argb
+    this.typeface = typeface
     textSize = 26f
     isAntiAlias = true
     textAlign = android.graphics.Paint.Align.LEFT

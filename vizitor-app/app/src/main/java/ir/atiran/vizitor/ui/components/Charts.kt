@@ -209,6 +209,8 @@ fun RoyalBarChart(
     val cBarTop = vizitorPalette.accentText
     val cLabelArgb = TextSecondary.toArgb()
     val cValueArgb = Gold.toArgb()
+    // فونت فارسی روی برچسب‌های گرافیکی (Canvas بومی) — یکدست با کل برنامه
+    val faTypeface = ir.atiran.vizitor.ui.components.rememberFaTypeface()
     // رشد فنری ستون‌ها هنگام ورود 🌱 (یک‌بار — در حالت «سبک» بدون انیمیشن)
     val grow = remember { androidx.compose.animation.core.Animatable(if (VizitorPerf.entranceFx) 0f else 1f) }
     LaunchedEffect(Unit) {
@@ -293,6 +295,7 @@ fun RoyalBarChart(
                         y - 16f,
                         android.graphics.Paint().apply {
                             color = cValueArgb
+                            typeface = faTypeface
                             textSize = 24f
                             textAlign = android.graphics.Paint.Align.CENTER
                             isAntiAlias = true
@@ -308,6 +311,7 @@ fun RoyalBarChart(
                 h - 12f,
                 android.graphics.Paint().apply {
                     color = cLabelArgb
+                    typeface = faTypeface
                     textSize = 26f
                     textAlign = android.graphics.Paint.Align.CENTER
                     isAntiAlias = true

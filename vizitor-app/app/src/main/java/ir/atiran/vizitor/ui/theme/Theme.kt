@@ -10,30 +10,14 @@
 package ir.atiran.vizitor.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 
-private val PremiumTypography = Typography(
-    displaySmall = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 30.sp, lineHeight = 38.sp),
-    headlineMedium = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp),
-    headlineSmall = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp),
-    titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
-    titleMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp),
-    titleSmall = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp),
-    bodyLarge = TextStyle(fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontWeight = FontWeight.Normal, fontSize = 13.5.sp, lineHeight = 21.sp),
-    bodySmall = TextStyle(fontWeight = FontWeight.Normal, fontSize = 12.sp),
-    labelLarge = TextStyle(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-    labelMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.5.sp),
-    labelSmall = TextStyle(fontWeight = FontWeight.Medium, fontSize = 11.sp)
-)
+// تایپوگرافی و فونت اختصاصی فارسی در VizitorFonts.kt تعریف شده‌اند
+// (وزیرمتن با شش وزن واقعی — روی همهٔ گوشی‌ها یکسان و زیبا)
 
 /**
  * ترکیب‌بندی تم بر اساس شناسه انتخابی کاربر.
@@ -85,7 +69,7 @@ fun VizitorTheme(
     CompositionLocalProvider(LocalVizitorPalette provides palette) {
         MaterialTheme(
             colorScheme = scheme,
-            typography = PremiumTypography,
+            typography = VizitorTypography,
             content = content
         )
     }

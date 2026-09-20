@@ -36,14 +36,25 @@ object InvoiceShare {
     private val MUTED = Color.parseColor("#9AA3B2")
 
     /** رندر فاکتور به بیت‌مپ لاکچری (تم تیره با طلایی). */
-    fun renderBitmap(invoice: InvoiceEntity, items: List<InvoiceItemEntity>): Bitmap {
+    /** فونت فارسی برنامه برای متن‌های گرافیکی فاکتور (هم‌رنگ و هم‌فونت با کل اپ). */
+    private fun faFace(ctx: Context): android.graphics.Typeface? =
+        androidx.core.content.res.ResourcesCompat.getFont(ctx, ir.atiran.vizitor.R.font.vazirmatn_bold)
+
+    fun renderBitmap(
+        invoice: InvoiceEntity,
+        items: List<InvoiceItemEntity>,
+        typeface: android.graphics.Typeface? = null
+    ): Bitmap {
         val rowH = 92
         val height = 620 + items.size.coerceAtLeast(1) * rowH + 640
         val bmp = Bitmap.createBitmap(W, height, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawColor(BG)
 
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = TEXT }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = TEXT
+            this.typeface = typeface
+        }
         val right = Paint(paint).apply { textAlign = Paint.Align.RIGHT }
         val left = Paint(paint).apply { textAlign = Paint.Align.LEFT }
 
@@ -120,7 +131,7 @@ object InvoiceShare {
 
     /** 📷 اشتراک به‌صورت تصویر PNG. */
     fun shareImage(ctx: Context, invoice: InvoiceEntity, items: List<InvoiceItemEntity>) {
-        val bmp = renderBitmap(invoice, items)
+        val bmp = renderBitmap(invoice, items, faFace(ctx))
         val file = File(sharedDir(ctx), "invoice-${invoice.id}.png")
         FileOutputStream(file).use { bmp.compress(Bitmap.CompressFormat.PNG, 95, it) }
         shareFile(ctx, file, "image/png", "فاکتور تصویری")
@@ -128,7 +139,7 @@ object InvoiceShare {
 
     /** 📄 اشتراک به‌صورت PDF (با PdfDocument خود اندروید). */
     fun sharePdf(ctx: Context, invoice: InvoiceEntity, items: List<InvoiceItemEntity>) {
-        val bmp = renderBitmap(invoice, items)
+        val bmp = renderBitmap(invoice, items, faFace(ctx))
         val doc = PdfDocument()
         val pageW = 595; val pageH = 842
         var pageNo = 1
