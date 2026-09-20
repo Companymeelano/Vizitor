@@ -99,7 +99,7 @@ import ir.atiran.vizitor.util.toFaNumber
 // ═══════════════════════ اندازهٔ واکنشی صفحه (همهٔ گوشی‌ها) ═══════════════════════
 
 /** ردهٔ اندازهٔ دستگاه — از گوشی کوچک اقتصادی تا گوشی بزرگ و تبلت. */
-enum class FitTier { COMPACT, REGULAR, LARGE, TABLET }
+enum class FitTier { MINI, COMPACT, REGULAR, LARGE, TABLET }
 
 /**
  * اندازه‌های کالیبره‌شدهٔ یک صفحه بر پایهٔ ابعاد واقعی دستگاه (dp).
@@ -112,9 +112,19 @@ class ScreenFit(val width: Dp, val height: Dp) {
     val tier: FitTier = when {
         width >= 600.dp -> FitTier.TABLET
         width >= 430.dp -> FitTier.LARGE
+        width < 340.dp || height < 620.dp -> FitTier.MINI
         width < 360.dp -> FitTier.COMPACT
         else -> FitTier.REGULAR
     }
+
+    /** صفحهٔ خوابیده (افقی) — چیدمان باید کوتاه و فشرده شود. */
+    val landscape: Boolean = width > height
+
+    /** گوشی خیلی کوچک یا صفحهٔ کوتاه — لمس‌پذیر ولی جمع‌وجور. */
+    val tiny: Boolean = width < 360.dp || height < 640.dp
+
+    /** حالت فشرده: کوتاه، کوچک یا خوابیده — همهٔ فاصله‌های عمودی جمع می‌شوند. */
+    val dense: Boolean = short || tiny || landscape
 
     /** گوشی باریک (مثل ۳۲۰dp) — متن‌ها یک پله کوچک‌تر می‌شوند. */
     val narrow: Boolean = width < 360.dp
@@ -127,6 +137,7 @@ class ScreenFit(val width: Dp, val height: Dp) {
 
     /** حاشیهٔ افقی محتوا. */
     val pad: Dp = when (tier) {
+        FitTier.MINI -> 12.dp
         FitTier.COMPACT -> 14.dp
         FitTier.REGULAR -> 18.dp
         FitTier.LARGE -> 22.dp
@@ -135,13 +146,14 @@ class ScreenFit(val width: Dp, val height: Dp) {
 
     /** فاصلهٔ بین بلوک‌های اصلی صفحه. */
     val gap: Dp = when {
-        short -> 12.dp
+        dense -> 10.dp
         tall -> 20.dp
         else -> 16.dp
     }
 
     /** فاصلهٔ داخلی کارت‌ها. */
     val inner: Dp = when (tier) {
+        FitTier.MINI -> 11.dp
         FitTier.COMPACT -> 12.dp
         else -> 15.dp
     }
@@ -151,6 +163,7 @@ class ScreenFit(val width: Dp, val height: Dp) {
 
     /** گوی نشان برند در سرصفحه. */
     val brandOrb: Dp = when (tier) {
+        FitTier.MINI -> 46.dp
         FitTier.COMPACT -> 52.dp
         FitTier.REGULAR -> 62.dp
         FitTier.LARGE -> 70.dp
@@ -159,6 +172,7 @@ class ScreenFit(val width: Dp, val height: Dp) {
 
     /** قطر گوی آواتار نقش‌ها. */
     val roleAvatar: Dp = when (tier) {
+        FitTier.MINI -> 46.dp
         FitTier.COMPACT -> 54.dp
         FitTier.REGULAR -> 64.dp
         FitTier.LARGE -> 72.dp
@@ -166,20 +180,22 @@ class ScreenFit(val width: Dp, val height: Dp) {
     }
 
     /** ردیف‌های شبکهٔ نقش‌ها — دو ستون تا عرض ۶۰۰dp، سپس سه ستون. */
-    val roleColumns: Int = if (width >= 600.dp) 3 else 2
+    val roleColumns: Int = if (width >= 600.dp || (landscape && width >= 480.dp)) 3 else 2
 
     /** ارتفاع کلید اصلی. */
     val buttonHeight: Dp = when {
+        dense -> 52.dp
         short -> 54.dp
         tier == FitTier.TABLET || tier == FitTier.LARGE -> 64.dp
         else -> 60.dp
     }
 
     /** کمینهٔ ارتفاع فیلد ورودی (برای لمس راحت روی همهٔ گوشی‌ها). */
-    val fieldHeight: Dp = if (short) 54.dp else 58.dp
+    val fieldHeight: Dp = if (dense) 52.dp else 58.dp
 
     /** اندازهٔ تیتر نام سامانه. */
     val titleSize: TextUnit = when (tier) {
+        FitTier.MINI -> 17.5.sp
         FitTier.COMPACT -> 19.sp
         FitTier.REGULAR -> 22.sp
         FitTier.LARGE -> 24.sp
@@ -188,6 +204,7 @@ class ScreenFit(val width: Dp, val height: Dp) {
 
     /** اندازهٔ تیتر کارت هیرو. */
     val heroSize: TextUnit = when (tier) {
+        FitTier.MINI -> 15.5.sp
         FitTier.COMPACT -> 17.sp
         FitTier.REGULAR -> 20.sp
         FitTier.LARGE -> 22.sp
@@ -195,10 +212,16 @@ class ScreenFit(val width: Dp, val height: Dp) {
     }
 
     /** اندازهٔ متن دکمه‌های اصلی. */
-    val buttonText: TextUnit = if (narrow) 14.sp else 15.5.sp
+    val buttonText: TextUnit = if (narrow) 13.5.sp else 15.5.sp
 
     /** اندازهٔ عنوان کارت‌ها. */
-    val cardTitle: TextUnit = if (narrow) 14.sp else 15.5.sp
+    val cardTitle: TextUnit = if (narrow) 13.5.sp else 15.5.sp
+
+    /** متن ریز (چیپ هویت، زیرنویس، امضای فوتر). */
+    val microText: TextUnit = if (narrow) 8.5.sp else 9.5.sp
+
+    /** بلندی سرصفحهٔ برند — روی صفحهٔ کوتاه جمع می‌شود. */
+    val heroInner: Dp = if (dense) 13.dp else 16.dp
 
     /** جاروب نور و حرکت‌های تکرارشونده — روی دستگاه ضعیف خاموش. */
     val animated: Boolean = VizitorPerf.screenFx

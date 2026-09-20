@@ -30,8 +30,8 @@ android {
         //  ۲٫۱۳٫۷ : لاکچری‌سازی نهایی — اندازه‌های واکنشی برای همهٔ گوشی‌ها،
         //           حاشیهٔ امن نوار سیستم/بریدگی، کلیدهای سه‌بعدی با عمق واقعی،
         //           گام‌بندی ۱/۲/۳ تنظیمات ورود و آیکن جواهری تازه (M + پسته)
-        versionCode = 21802
-        versionName = "2.13.7-direct"
+        versionCode = 21803
+        versionName = "2.13.8-direct"
         vectorDrawables { useSupportLibrary = true }
     }
 

@@ -21,6 +21,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,6 +34,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,6 +58,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -179,7 +184,15 @@ fun VizitorRoot(
     }
 
     val navBackStack by navController.currentBackStackEntryAsState()
-    val isSplash = navBackStack?.destination?.route == Routes.SPLASH
+    val currentRoute = navBackStack?.destination?.route
+    val isSplash = currentRoute == Routes.SPLASH
+    // صفحه‌های تمام‌صفحه (تنظیم اتصال/ورود) نوار پایین ندارند و حاشیهٔ نوار
+    // سیستم را خودشان (screenSafePadding) مدیریت می‌کنند؛ پس Scaffold نباید
+    // دوباره حاشیه بدهد تا هیچ صفحه‌ای فاصلهٔ اضافه/بریدگی نداشته باشد.
+    val isSetupScreen = currentRoute == Routes.WELCOME || currentRoute == Routes.DIRECT_SQL
+    val isFullScreen = isSplash || isSetupScreen
+    // مدت انیمیشن جابه‌جایی صفحه‌ها — روی گوشی ضعیف صفر می‌شود (ضد لگ)
+    val routeAnim = if (VizitorPerf.entranceFx) 260 else 0
 
     // وضعیت اتصال/ورود (منبع واحد) — صفحهٔ اول و تنظیمات از همین می‌خوانند
     val serverSession by ir.atiran.vizitor.sqldirect.VizitorSession.state.collectAsState()
@@ -211,8 +224,10 @@ fun VizitorRoot(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = if (isFullScreen) WindowInsets(0, 0, 0, 0)
+        else ScaffoldDefaults.contentWindowInsets,
         bottomBar = {
-            if (isSplash) return@Scaffold
+            if (isFullScreen) return@Scaffold
             VizitorBottomBar(
                 navController = navController,
                 onFabClick = {
@@ -237,7 +252,16 @@ fun VizitorRoot(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .dashboardBackdrop()
+                .dashboardBackdrop(),
+            // جابه‌جایی نرم صفحه‌ها (روی گوشی ضعیف بدون انیمیشن)
+            enterTransition = {
+                fadeIn(tween(routeAnim)) + slideInHorizontally(tween(routeAnim)) { it / 14 }
+            },
+            exitTransition = { fadeOut(tween(if (routeAnim > 0) 150 else 0)) },
+            popEnterTransition = {
+                fadeIn(tween(routeAnim)) + slideInHorizontally(tween(routeAnim)) { -it / 14 }
+            },
+            popExitTransition = { fadeOut(tween(if (routeAnim > 0) 150 else 0)) }
         ) {
             // صفحه ورود لوکس — نام پخش + مدیریت + دکمه ورود تم‌دار (v2.5.0)
             composable(Routes.SPLASH) {

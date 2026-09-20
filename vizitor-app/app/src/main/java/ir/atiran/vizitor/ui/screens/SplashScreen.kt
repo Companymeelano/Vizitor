@@ -76,6 +76,14 @@ import ir.atiran.vizitor.ui.components.BrandOrb
 import ir.atiran.vizitor.ui.components.BtnTone
 import ir.atiran.vizitor.ui.components.GlowChip
 import ir.atiran.vizitor.ui.components.GoldDivider
+import ir.atiran.vizitor.ui.components.GoldFlourish
+import ir.atiran.vizitor.ui.components.LuxBanner
+import ir.atiran.vizitor.ui.components.LuxChip
+import ir.atiran.vizitor.ui.components.LuxTone
+import ir.atiran.vizitor.ui.components.glassRelief
+import ir.atiran.vizitor.ui.components.luxFrame
+import ir.atiran.vizitor.ui.components.ornaments
+import ir.atiran.vizitor.ui.components.shimmerSweep
 import ir.atiran.vizitor.ui.components.GradientTitle
 import ir.atiran.vizitor.ui.components.IconOrb3D
 import ir.atiran.vizitor.ui.components.KeyRow
@@ -234,33 +242,33 @@ fun SplashScreen(
                         .fillMaxWidth()
                         .alpha(footA)
                 ) {
-                    GoldDivider()
-                    Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconOrb3D(icon = Icons.Filled.Verified, size = 22.dp, cornerRadius = 8.dp)
-                        Spacer(Modifier.width(7.dp))
-                        Text(
-                            "طراحی و توسعه: گروه فنی و مهندسی میلانو",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = if (fit.narrow) 9.5.sp else 10.5.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = p.goldHighlight
+                    GoldFlourish(height = if (fit.dense) 14.dp else 18.dp)
+                    Spacer(Modifier.height(if (fit.dense) 8.dp else 11.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LuxChip(
+                            "گروه فنی و مهندسی میلانو",
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Filled.Verified,
+                            textSize = fit.microText
+                        )
+                        LuxChip(
+                            "Milad Yaghoobi",
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Filled.WorkspacePremium,
+                            tint = p.primary,
+                            textSize = fit.microText
                         )
                     }
-                    Spacer(Modifier.height(5.dp))
-                    Text(
-                        "ایده‌پرداز و نویسنده: Milad Yaghoobi • Meelano Studio Design",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = if (fit.narrow) 8.5.sp else 9.5.sp),
-                        color = TextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "نسخهٔ ۲٫۱۳٫۷ — اتصال مستقیم SQL Server (پورت ۱۴۳۳)",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = if (fit.narrow) 8.5.sp else 9.5.sp),
-                        color = p.gold.copy(alpha = 0.9f),
-                        textAlign = TextAlign.Center
+                    Spacer(Modifier.height(6.dp))
+                    LuxChip(
+                        "Meelano Studio Design • نسخهٔ ۲٫۱۳٫۸ — اتصال مستقیم SQL (پورت ۱۴۳۳)",
+                        icon = Icons.Filled.Shield,
+                        tint = p.gold,
+                        textSize = fit.microText
                     )
                 }
             }
@@ -364,24 +372,17 @@ private fun HeroCard(fit: ScreenFit, alpha: Float) {
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        p.primary.copy(alpha = 0.18f),
-                        p.surface.copy(alpha = 0.34f),
+                        p.primary.copy(alpha = 0.22f),
+                        p.surface.copy(alpha = 0.36f),
                         Color.Transparent
                     )
                 )
             )
-            .border(
-                1.2.dp,
-                Brush.linearGradient(
-                    listOf(
-                        p.gold.copy(alpha = 0.60f),
-                        p.primary.copy(alpha = 0.32f),
-                        p.goldDark.copy(alpha = 0.28f)
-                    )
-                ),
-                RoundedCornerShape(24.dp)
-            )
-            .padding(horizontal = 14.dp, vertical = if (fit.short) 10.dp else 14.dp)
+            .shimmerSweep(color = p.goldHighlight.copy(alpha = 0.10f))
+            .luxFrame(RoundedCornerShape(24.dp), p.gold, 0.62f, 1.2.dp)
+            .ornaments(color = p.gold, alpha = 0.42f)
+            .glassRelief(RoundedCornerShape(24.dp))
+            .padding(horizontal = 14.dp, vertical = if (fit.dense) 10.dp else 15.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconOrb3D(icon = Icons.Filled.ShoppingCart, size = 26.dp, cornerRadius = 9.dp)
@@ -420,6 +421,34 @@ private fun HeroCard(fit: ScreenFit, alpha: Float) {
                 color = p.accentText
             )
         }
+        Spacer(Modifier.height(if (fit.dense) 7.dp else 10.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LuxChip(
+                "اتصال مستقیم SQL",
+                modifier = Modifier.weight(1f),
+                icon = Icons.Filled.Dns,
+                textSize = fit.microText
+            )
+            LuxChip(
+                "پورت ۱۴۳۳",
+                modifier = Modifier.weight(1f),
+                icon = Icons.Filled.Sync,
+                textSize = fit.microText
+            )
+            if (!fit.narrow) {
+                LuxChip(
+                    "دیتابیس آتیران",
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Filled.Verified,
+                    tint = p.primary,
+                    textSize = fit.microText
+                )
+            }
+        }
     }
 }
 
@@ -439,7 +468,11 @@ private fun RoleTile(
 
     LuxuryTile(
         onClick = onClick,
-        modifier = modifier,
+        modifier = if (role.active) {
+            modifier
+                .clip(RoundedCornerShape(22.dp))
+                .shimmerSweep(color = p.goldHighlight.copy(alpha = 0.09f), periodMillis = 3400)
+        } else modifier,
         accent = accent,
         shape = RoundedCornerShape(22.dp)
     ) {
@@ -647,16 +680,19 @@ private fun ServerConnectPanel(
         // ── پیام آخرین عملیات (فارسی و رنگی) ──
         if (session.message.isNotBlank()) {
             Spacer(Modifier.height(10.dp))
-            Text(
-                session.message,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
-                color = when (session.messageKind) {
-                    1 -> p.accent
-                    2 -> p.danger
-                    else -> p.accentText
+            LuxBanner(
+                tone = when (session.messageKind) {
+                    1 -> LuxTone.SUCCESS
+                    2 -> LuxTone.DANGER
+                    else -> LuxTone.INFO
                 },
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                title = when (session.messageKind) {
+                    1 -> "انجام شد"
+                    2 -> "نیازمند رسیدگی"
+                    else -> "اطلاع"
+                },
+                message = session.message,
+                compact = fit.dense
             )
         }
 

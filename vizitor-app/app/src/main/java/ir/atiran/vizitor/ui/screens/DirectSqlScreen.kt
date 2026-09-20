@@ -75,6 +75,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -94,6 +95,15 @@ import ir.atiran.vizitor.ui.components.BtnTone
 import ir.atiran.vizitor.ui.components.GlowChip
 import ir.atiran.vizitor.ui.components.dashboardBackdrop
 import ir.atiran.vizitor.ui.components.GoldDivider
+import ir.atiran.vizitor.ui.components.GoldFlourish
+import ir.atiran.vizitor.ui.components.LuxBanner
+import ir.atiran.vizitor.ui.components.LuxChip
+import ir.atiran.vizitor.ui.components.LuxTone
+import ir.atiran.vizitor.ui.components.StepRail
+import ir.atiran.vizitor.ui.components.glassRelief
+import ir.atiran.vizitor.ui.components.luxFrame
+import ir.atiran.vizitor.ui.components.ornaments
+import ir.atiran.vizitor.ui.components.shimmerSweep
 import ir.atiran.vizitor.ui.components.GradientTitle
 import ir.atiran.vizitor.ui.components.IconOrb3D
 import ir.atiran.vizitor.ui.components.KeyRow
@@ -187,6 +197,36 @@ fun DirectSqlScreen(
                 }
             }
 
+            // ── ریل گام‌ها: کارت اتصال ← سرور/دیتابیس ← ورود ویزیتور ────────
+            item {
+                val step = when {
+                    state.loggedIn -> 2
+                    session.configured -> 1
+                    else -> 0
+                }
+                Column(
+                    modifier = contentMod
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(p.surface.copy(alpha = 0.55f), p.background.copy(alpha = 0.30f))
+                            )
+                        )
+                        .shimmerSweep(color = p.goldHighlight.copy(alpha = 0.07f), periodMillis = 3600)
+                        .luxFrame(RoundedCornerShape(20.dp), p.gold, 0.48f)
+                        .ornaments(color = p.gold, alpha = 0.34f, inset = 7.dp, len = 11.dp)
+                        .glassRelief(RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = if (fit.dense) 9.dp else 12.dp)
+                ) {
+                    StepRail(
+                        current = step,
+                        steps = listOf("کارت اتصال", "سرور و دیتابیس", "ورود ویزیتور"),
+                        labelSize = fit.microText,
+                        nodeSize = if (fit.dense) 27.dp else 30.dp
+                    )
+                }
+            }
+
             // ── کارت خلاصهٔ وضعیت (نمای اصلی و کوتاه) ───────────────────────
             item { StatusSummary(state, session, viewModel, onEnterPanel, fit, contentMod) }
 
@@ -208,6 +248,28 @@ fun DirectSqlScreen(
             // ── یادآوری امنیت + امضای برند ──────────────────────────────────
             item {
                 Column(contentMod) {
+                    GoldFlourish(height = if (fit.dense) 14.dp else 18.dp)
+                    Spacer(Modifier.height(if (fit.dense) 8.dp else 11.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LuxChip(
+                            "اتصال مستقیم SQL — پورت ۱۴۳۳",
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Filled.Dns,
+                            textSize = fit.microText
+                        )
+                        LuxChip(
+                            "ذخیرهٔ امن رمزها",
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Filled.Lock,
+                            tint = p.accent,
+                            textSize = fit.microText
+                        )
+                    }
+                    Spacer(Modifier.height(if (fit.dense) 8.dp else 10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconOrb3D(icon = Icons.Filled.Lock, size = 32.dp, cornerRadius = 11.dp)
                         Spacer(Modifier.width(9.dp))
@@ -261,7 +323,9 @@ private fun StatusSummary(
         icon = if (state.loggedIn) Icons.Filled.Verified else Icons.Filled.Dns,
         accent = statusColor,
         inner = fit.inner,
-        modifier = modifier,
+        modifier = modifier
+            .shimmerSweep(color = p.goldHighlight.copy(alpha = 0.07f), periodMillis = 3200)
+            .ornaments(color = p.gold, alpha = 0.30f, inset = 8.dp, len = 12.dp),
         trailing = { GlowChip(text = statusText, color = statusColor, pulse = state.busy || session.syncing) }
     ) {
         KeyRow(label = "سرور", value = session.serverLabel, icon = Icons.Filled.Dns)
@@ -328,16 +392,19 @@ private fun StatusSummary(
 
         if (state.status.isNotBlank()) {
             Spacer(Modifier.height(10.dp))
-            Text(
-                state.status,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
-                color = when (state.statusKind) {
-                    1 -> p.accent
-                    2 -> p.danger
-                    else -> p.accentText
+            LuxBanner(
+                tone = when (state.statusKind) {
+                    1 -> LuxTone.SUCCESS
+                    2 -> LuxTone.DANGER
+                    else -> LuxTone.INFO
                 },
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                title = when (state.statusKind) {
+                    1 -> "انجام شد"
+                    2 -> "نیازمند رسیدگی"
+                    else -> "اطلاع"
+                },
+                message = state.status,
+                compact = fit.dense
             )
         }
     }

@@ -20,6 +20,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import ir.atiran.vizitor.ui.navigation.VizitorRoot
@@ -46,8 +48,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
             VizitorTheme(themeId) {
-                // راست‌چین کامل رابط کاربری فارسی
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                // راست‌چین کامل رابط کاربری فارسی + مهار مقیاس فونت سیستم
+                // (فونت‌های خیلی بزرگ دسترس‌پذیری چیدمان را روی گوشی کوچک نمی‌شکند)
+                val baseDensity = LocalDensity.current
+                val safeFontScale = baseDensity.fontScale.coerceIn(0.90f, 1.20f)
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides LayoutDirection.Rtl,
+                    LocalDensity provides Density(baseDensity.density, safeFontScale)
+                ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
