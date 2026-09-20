@@ -128,6 +128,9 @@ object Routes {
     const val SCANNER = "scanner"
     // صفحهٔ اتصال مستقیم به SQL Server (پورت ۱۴۳۳) — همان چیزی که نصب‌کننده آماده می‌کند
     const val DIRECT_SQL = "directsql"
+    // صفحهٔ «تنظیمات ورود» — همان صفحهٔ اتصال در حالت تمام‌صفحه با بازگشت هوشمند
+    // (از صفحهٔ اول ← برمی‌گردد به صفحهٔ اول؛ از تنظیمات ← برمی‌گردد به تنظیمات)
+    const val WELCOME = "welcome"
 }
 
 data class TabItem(val route: String, val label: String, val icon: ImageVector, val iconRes: Int)
@@ -180,6 +183,12 @@ fun VizitorRoot(
 
     // وضعیت اتصال/ورود (منبع واحد) — صفحهٔ اول و تنظیمات از همین می‌خوانند
     val serverSession by ir.atiran.vizitor.sqldirect.VizitorSession.state.collectAsState()
+
+    // بازگشت هوشمند: اگر جایی برای بازگشت هست برگرد، وگرنه به پنل
+    val settingsBack: () -> Unit = {
+        if (navController.previousBackStackEntry != null) navController.popBackStack()
+        else enterPanel()
+    }
 
     // ورود به پنل: از هر جای برنامه (صفحهٔ اول، تنظیمات، …)
     val enterPanel: () -> Unit = {
@@ -241,14 +250,14 @@ fun VizitorRoot(
                             sqlViewModel.quickEnter()
                         } else if (!serverSession.configured) {
                             viewModel.showToast("اول اتصال به سرور آتیران را تنظیم کنید ⚙️")
-                            navController.navigate(Routes.DIRECT_SQL)
+                            navController.navigate(Routes.WELCOME)
                         } else {
                             enterPanel()
                         }
                     },
                     onSoon = { viewModel.showToast(it) },
                     serverSession = serverSession,
-                    onOpenServerConfig = { navController.navigate(Routes.DIRECT_SQL) },
+                    onOpenServerConfig = { navController.navigate(Routes.WELCOME) },
                     onQuickEnter = {
                         if (serverSession.loggedIn) {
                             enterPanel()
@@ -277,9 +286,18 @@ fun VizitorRoot(
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     viewModel = viewModel,
-                    onOpenDirectSql = { navController.navigate(Routes.DIRECT_SQL) },
+                    onOpenDirectSql = { navController.navigate(Routes.WELCOME) },
                     serverSession = serverSession,
                     onSyncNow = { sqlViewModel.syncNow() },
+                )
+            }
+            // صفحهٔ «تنظیمات ورود» — سه گام اتصال/سرور/ورود با طراحی لاکچری
+            // (همان پیاده‌سازی صفحهٔ اتصال؛ یک منبع، دو مسیر ورودی)
+            composable(Routes.WELCOME) {
+                DirectSqlScreen(
+                    viewModel = sqlViewModel,
+                    onBack = settingsBack,
+                    onEnterPanel = enterPanel,
                 )
             }
             // اتصال مستقیم به SQL Server روی پورت ۱۴۳۳ (بدون API/IIS)
