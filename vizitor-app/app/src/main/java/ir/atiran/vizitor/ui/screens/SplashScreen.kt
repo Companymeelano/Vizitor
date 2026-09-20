@@ -60,6 +60,7 @@ import ir.atiran.vizitor.R
 import ir.atiran.vizitor.ui.components.NeonGreenButton
 import ir.atiran.vizitor.ui.components.NeonPurpleButton
 import ir.atiran.vizitor.util.toFaDigits
+import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.TextSecondary
 import ir.atiran.vizitor.ui.theme.vizitorPalette
@@ -455,8 +456,8 @@ private fun ServerConnectPanel(
         } else if (session.lastSyncSummary.isNotBlank() && session.loggedIn) {
             Spacer(Modifier.height(6.dp))
             Text(
-                "سرویس‌های داده فعال: ${session.productsCount.toFaDigits()} کالا • " +
-                    "${session.customersCount.toFaDigits()} مشتری • ${session.invoicesCount.toFaDigits()} فاکتور",
+                "سرویس‌های داده فعال: ${session.productsCount.toFaNumber()} کالا • " +
+                    "${session.customersCount.toFaNumber()} مشتری • ${session.invoicesCount.toFaNumber()} فاکتور",
                 style = MaterialTheme.typography.labelSmall,
                 color = p.textSecondary
             )
