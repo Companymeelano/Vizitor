@@ -4,12 +4,12 @@
 به آن اضافه شده تا دقیقاً با **نصب‌کنندهٔ ویندوز** (`release/Vizitor-Setup-1.0.0.exe`) هماهنگ کار کند.
 
 📄 راهنمای کاربری و تحویل: [`../ANDROID-DIRECT-HANDOVER.md`](../ANDROID-DIRECT-HANDOVER.md)
-📦 فایل نصب: ریلیز [`vizitor-app-direct-2.13.5`](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-app-direct-2.13.5)
+📦 فایل نصب: ریلیز [`vizitor-app-direct-2.13.6`](https://github.com/Companymeelano/Vizitor/releases/tag/vizitor-app-direct-2.13.6)
 🤖 بیلد خودکار: `.github/workflows/build-vizitor-app.yml` — گزارش در `vizitor-app/apk-report.txt`
 
 ## مسیر کار در برنامه
 
-**تنظیمات → «اتصال مستقیم به SQL Server» → «ورود به صفحهٔ اتصال مستقیم SQL»**
+**صفحهٔ اول (انتخاب نقش) → پنل «اتصال به سرور آتیران» → «تنظیم اتصال سرور»** — همین صفحه از **تنظیمات** هم باز می‌شود (یک مسیر واحد)
 
 | گام | کار | نتیجه |
 |---|---|---|
@@ -52,7 +52,7 @@ cd vizitor-app
 ./gradlew :app:assembleDebug :app:assembleRelease     # JDK 17 و Android SDK 35
 ```
 
-خروجی: `app/build/outputs/apk/release/app-release.apk` — نسخه `2.13.5-direct` (شمارهٔ ساخت ۲۱۸۰۰).
+خروجی: `app/build/outputs/apk/release/app-release.apk` — نسخه `2.13.6-direct` (شمارهٔ ساخت ۲۱۸۰۱).
 در CI، کلید امضا از `vizitor-app/vizitor-app-signing.p12` خوانده می‌شود (یا از Secretهای
 `VIZITOR_APP_KEY_B64` / `VIZITOR_APP_KEY_PASS`، اگر برای کلید اختصاصی تنظیم شوند) تا همهٔ نسخه‌ها
 یک امضا داشته باشند و به‌روزرسانی روی گوشی بدون حذف/نصب انجام شود.
@@ -61,7 +61,9 @@ cd vizitor-app
 
 * پوشه‌های `server/` (وب‌سرویس PHP) و `worker/` (پراکسی هوش مصنوعی) از شاخهٔ مبدأ آورده **نشدند**؛
   طبق تصمیم کارفرما مسیر محصول «اتصال مستقیم، بدون IIS/API» است.
-* صفحهٔ اتصال مستقیم از داخل **تنظیمات** خود برنامه باز می‌شود؛ طرح و فونت و بقیهٔ صفحات دست‌نخورده است.
+* صفحهٔ اتصال هم از **صفحهٔ اول** و هم از **تنظیمات** باز می‌شود (یک مسیر واحد، بدون بخش تکراری).
+* فونت **وزیرمتن (شش وزن)** در `res/font` بسته‌بندی شده و تایپوگرافی کل برنامه از `ui/theme/VizitorFonts.kt` تغذیه می‌شود؛
+  آیکن تازهٔ سه‌بعدی در `res/mipmap-*` و نشان درون‌برنامه‌ای در `res/drawable-nodpi/brand_mark.png` است.
 * سورس پایه: آخرین سورس موجود در مخزن (۲٫۱۳٫۵). فایل آپلودی ۲٫۱۷٫۱ فقط APK بود (بدون سورس).
 
 طراحی و برنامه‌نویسی: **میلاد یقوبی** — گروه نرم‌افزاری **Meelano Studio Design**
