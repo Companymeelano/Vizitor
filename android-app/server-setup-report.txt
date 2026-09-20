@@ -1,16 +1,16 @@
 گزارش بررسی فایل‌های راه‌اندازی سرور — ویزیتور (نصب‌کنندهٔ ویندوز ↔ اندروید)
-تاریخ: 2026-09-20 11:17:33 UTC   کامیت: 677356dd08755a89d188ed2a6939f21839449f1c
+تاریخ: 2026-09-20 12:12:27 UTC   کامیت: 5f18d0581f7318372633f7e69bc38af4e29260d4
 ==================================================================================
 
 --- ۱) تحلیل نحوی با خودِ PowerShell (7.6.5) ---
 PowerShell transcript start
-Start time: 20260920111732
+Start time: 20260920121226
 Username: runnervmlun5p\runner
 RunAs User: runnervmlun5p\runner
 Configuration Name: 
 Machine: runnervmlun5p (Unix 6.17.0.1022)
-Host Application: /opt/microsoft/powershell/7/pwsh.dll -command . '/home/runner/work/_temp/9f07189e-59b7-4042-a396-8b7b1b2be20c.ps1'
-Process ID: 2221
+Host Application: /opt/microsoft/powershell/7/pwsh.dll -command . '/home/runner/work/_temp/4a2f1a72-2360-4f16-ab76-e7423e75555c.ps1'
+Process ID: 2234
 PSVersion: 7.6.5
 PSEdition: Core
 GitCommitId: 7.6.5
@@ -20,7 +20,7 @@ PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
 PSRemotingProtocolVersion: 2.4
 SerializationVersion: 1.1.0.1
 WSManStackVersion: 3.0
-[OK] install.ps1 — 1530 خط، 44 تابع
+[OK] install.ps1 — 1571 خط، 44 تابع
 [OK] installer/nsi/preflight.ps1 — 151 خط، 2 تابع
 [OK] تابع موجود: Invoke-AndroidPrep
 [OK] تابع موجود: Test-SqlTcpListener
@@ -32,7 +32,7 @@ WSManStackVersion: 3.0
 نسخهٔ PowerShell: 7.6.5
 BOM (سه بایت اول) install.ps1: ef bb bf
 PowerShell transcript end
-End time: 20260920111733
+End time: 20260920121227
 
 --- ۲) بررسی قرارداد اتصال (کارت اتصال + دسترسی‌ها + مسیر ۱۴۳۳) ---
 بررسی قرارداد اتصال — ویزیتور مستقیم (سرور ↔ اندروید)
