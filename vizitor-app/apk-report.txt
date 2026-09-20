@@ -1,5 +1,5 @@
 گزارش ساخت APK برنامهٔ آتیران ویزیتور با اتصال مستقیم SQL Server (پورت ۱۴۳۳)
-تاریخ: 2026-09-20 11:30:25 UTC   کامیت: 88f6a645ea3d73369a54ec9863f19e03717db18e
+تاریخ: 2026-09-20 12:18:45 UTC   کامیت: 5f18d0581f7318372633f7e69bc38af4e29260d4
 ==================================================================================
 
 --- خروجی بیلد (Gradle) ---
@@ -13,7 +13,7 @@
 > Task :app:lintVitalRelease
 > Task :app:assembleRelease
 
-BUILD SUCCESSFUL in 5m 3s
+BUILD SUCCESSFUL in 6m 17s
 93 actionable tasks: 89 executed, 4 from cache
 
 ### اثر انگشت گواهی امضا (ثابت بین بیلدها)
@@ -22,8 +22,8 @@ Valid from: Sat Sep 19 12:14:00 UTC 2026 until: Mon Sep 11 12:14:00 UTC 2056
 	 SHA256: 5C:CA:D3:B6:01:49:6E:69:8B:AE:05:5A:07:29:E1:EF:0B:E5:1F:BA:86:C5:DB:07:54:CA:D0:55:D4:A6:AC:5A
 
 ### Vizitor-2.13.5-direct-debug.apk
-حجم: 47384592 بایت
-4bef52ca92496cb64501fed69a6b04724b011e43436a056608394f7013df4bf6  Vizitor-2.13.5-direct-debug.apk
+حجم: 47433744 بایت
+38e779b87a5e7e867e1ffa5718be43145d49bb60e5d06c1de63cb47e147988b8  Vizitor-2.13.5-direct-debug.apk
 
 --- مشخصات نسخه و پکیج (aapt2) ---
 package: name='ir.atiran.vizitor.debug' versionCode='21800' versionName='2.13.5-direct-debug' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
@@ -42,28 +42,28 @@ Verified using v4 scheme (APK Signature Scheme v4): false
 Verified for SourceStamp: false
 Number of signers: 1
 V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
-V2 Signer: certificate SHA-256 digest: 4cda2ba3e277e328850cd765257085eb8dd89d1167ab1e6e41f0d795c903db00
-V2 Signer: certificate SHA-1 digest: 01922e40c722a2d6bf8deb0dec6f1c3317c7b0bb
-V2 Signer: certificate MD5 digest: 45245177f85157ffb086522bf916afd5
+V2 Signer: certificate SHA-256 digest: d4c5a1e6e9834402f576b12b6bec04e2cafa10572a619a3e2edd3026bfdbbda5
+V2 Signer: certificate SHA-1 digest: ed5457a0609da2b2c808ee1e20f4e10ef0c02c93
+V2 Signer: certificate MD5 digest: d3810f62bda7a9ec9b1274b611aba576
 V2 Signer: key algorithm: RSA
 V2 Signer: key size (bits): 2048
-V2 Signer: public key SHA-256 digest: c15636724533068d845f26cde049e37fdc0635396adf3feb7da69da971454cb6
-V2 Signer: public key SHA-1 digest: 0fcf7ea3451abd19455771e214835c8de3401370
-V2 Signer: public key MD5 digest: e225f6e326d165b7e619d497199808cc
+V2 Signer: public key SHA-256 digest: 1d0bdc3b216fb08ba63b9a1f472a63ea5306140336568471a34d8b990c49cad8
+V2 Signer: public key SHA-1 digest: 2db06d35d9ae4d0ab1e389d80d59809085de905f
+V2 Signer: public key MD5 digest: 7f0375461e55aa941db38df3f16aafb3
 
 --- تعداد dex و حضور درایورهای SQL ---
 13
   com/microsoft/sqlserver/jdbc/SQLServerDriver : 12
   net/sourceforge/jtds/jdbc/Driver : 2
   ir/atiran/vizitor/sqldirect/VisitorRepository : 7
-  ir/atiran/vizitor/ui/screens/DirectSqlScreen : 94
+  ir/atiran/vizitor/ui/screens/DirectSqlScreen : 102
   ir/atiran/vizitor/sqldirect/SqlDiagnostics : 4
   ir/atiran/vizitor/sqldirect/SqlConnectionManager : 12
-  ir/atiran/vizitor/sqldirect/DirectSql : 28
+  ir/atiran/vizitor/sqldirect/DirectSql : 39
   ir/atiran/vizitor/sqldirect/SecureDbStore : 3
 ### Vizitor-2.13.5-direct.apk
-حجم: 39171397 بایت
-3b6b261d8c0767f5658c0cf9c5209ef1945da5c47f2e945c81c204c8a8c6548d  Vizitor-2.13.5-direct.apk
+حجم: 39204165 بایت
+bc74cd6c5c69e2f907ae3ebecf08286e0a3a25ac323b239063aa5bf128af6539  Vizitor-2.13.5-direct.apk
 
 --- مشخصات نسخه و پکیج (aapt2) ---
 package: name='ir.atiran.vizitor' versionCode='21800' versionName='2.13.5-direct' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
@@ -96,8 +96,8 @@ V2 Signer: public key MD5 digest: 1a0fa12aadcd0e00d0cd51e75d5d6774
   com/microsoft/sqlserver/jdbc/SQLServerDriver : 11
   net/sourceforge/jtds/jdbc/Driver : 1
   ir/atiran/vizitor/sqldirect/VisitorRepository : 6
-  ir/atiran/vizitor/ui/screens/DirectSqlScreen : 92
+  ir/atiran/vizitor/ui/screens/DirectSqlScreen : 100
   ir/atiran/vizitor/sqldirect/SqlDiagnostics : 3
   ir/atiran/vizitor/sqldirect/SqlConnectionManager : 11
-  ir/atiran/vizitor/sqldirect/DirectSql : 25
+  ir/atiran/vizitor/sqldirect/DirectSql : 36
   ir/atiran/vizitor/sqldirect/SecureDbStore : 2
