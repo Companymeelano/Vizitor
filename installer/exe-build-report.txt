@@ -1,0 +1,61 @@
+گزارش ساخت نصب‌کنندهٔ ویندوز — ویزیتور (Vizitor-Setup-1.0.0.exe)
+تاریخ: 2026-09-20 12:12:48 UTC   کامیت: 5f18d0581f7318372633f7e69bc38af4e29260d4
+==================================================================================
+
+--- خروجی ساخت (NSIS) ---
+
+Processed 1 file, writing output (x86-unicode):
+
+Output: "/home/runner/work/Vizitor/Vizitor/release/Vizitor-Setup-1.0.0.exe"
+Install: 10 pages (640 bytes), 9 sections (2 required) (37080 bytes), 3318 instructions (92904 bytes), 771 strings (34318 bytes), 1 language table (322 bytes).
+Uninstall: 2 pages (192 bytes), 1 section (4120 bytes), 139 instructions (3892 bytes), 138 strings (5570 bytes), 1 language table (258 bytes).
+Datablock optimizer saved 231514 bytes (~8.6%).
+
+Using lzma (compress whole) compression.
+
+EXE header size:              230912 / 100864 bytes
+Install code:                          (147728 bytes)
+Install data:                          (2090109 bytes)
+Uninstall code+data:                   (175476 bytes)
+Compressed data:              747047 / 2413313 bytes
+CRC (0x5117F9EC):                  4 / 4 bytes
+
+Total size:                   977963 / 2514181 bytes (38.8%)
+[ok] sha256: b4b55aea8a3a60e0b3136f98d15c1db6f146c66603bc911fa78b65bdeaade073  Vizitor-Setup-1.0.0.exe
+total 968
+drwxr-xr-x  2 runner runner   4096 Sep 20 12:12 .
+drwxr-xr-x 13 runner runner   4096 Sep 20 12:12 ..
+-rw-r--r--  1 runner runner 977963 Sep 20 12:12 Vizitor-Setup-1.0.0.exe
+-rw-r--r--  1 runner runner     90 Sep 20 12:12 Vizitor-Setup-1.0.0.exe.sha256
+[ok] فایل نصب ساخته شد.
+
+--- sha256 خروجی ---
+b4b55aea8a3a60e0b3136f98d15c1db6f146c66603bc911fa78b65bdeaade073  release/Vizitor-Setup-1.0.0.exe
+
+--- sha256 فایل‌های مبدأ داخل exe ---
+8f2043043da2bf871eb6492f7bdfe5457ea3f6159a4fe39877c355c203229040  install.ps1
+381d8e3b9b70bbdbcc769a4bea1d816624112247f8121fa609698ff411b7256d  installer/nsi/preflight.ps1
+
+--- نتیجهٔ مقابلهٔ محتوای exe (7-Zip) ---
+[OK] install.ps1 داخل exe دقیقاً همان فایل این کامیت است (8f2043043da2bf871eb6492f7bdfe5457ea3f6159a4fe39877c355c203229040)
+[OK] preflight.ps1 هم یکسان است (381d8e3b9b70bbdbcc769a4bea1d816624112247f8121fa609698ff411b7256d)
+
+--- محتوای exe ---
+2026-09-20 12:12:36 .....        86423               setup/install.ps1
+2026-09-20 12:12:36 .....         5852               $PLUGINSDIR/preflight.ps1
+2026-09-20 12:12:36 .....         5852               setup/preflight.ps1
+2026-09-20 12:12:36 .....        13605               setup/api/android_connect.py
+2026-09-20 12:12:36 .....        17922               setup/api/check_connection_contract.py
+2026-09-20 12:12:36 .....         8416               setup/api/db.py
+2026-09-20 12:12:36 .....        15350               setup/api/provision_android_sql.py
+2026-09-20 12:12:36 .....         5940               setup/api/provision_sqlserver.py
+2026-09-20 12:12:36 .....         2505               setup/api/seed.py
+2026-09-20 12:12:36 .....        29171               setup/api/server.py
+2026-09-20 12:12:36 .....        21909               setup/api/sql_admin_tools.py
+2026-09-20 12:12:36 .....         1115               setup/api/vendor/README.md
+2026-09-20 12:12:36 .....         1503               setup/api/vendor/segno/LICENSE.txt
+2026-09-20 12:12:36 .....        46818               setup/api/vendor/segno/__init__.py
+2026-09-20 12:12:36 .....        34205               setup/api/vendor/segno/consts.py
+
+این exe همان install.ps1 این کامیت را در خود دارد: بررسی شنوندهٔ TCP ۱۴۳۳
+و فعال‌سازی خودکار TCP/IP + BOM برای اجرای درست فارسی در PowerShell 5.1.
