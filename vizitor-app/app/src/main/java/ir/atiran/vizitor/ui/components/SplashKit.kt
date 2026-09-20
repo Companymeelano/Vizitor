@@ -273,8 +273,8 @@ fun IconOrb3D(
     tint: Color = vizitorPalette.gold,
     glowColor: Color = vizitorPalette.primary,
     cornerRadius: Dp = size / 2,
-    content: (@Composable () -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    content: (@Composable () -> Unit)? = null
 ) {
     val p = vizitorPalette
     val shape = RoundedCornerShape(cornerRadius)
@@ -324,18 +324,18 @@ fun IconOrb3D(
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(Color.White.copy(alpha = 0.42f), Color.Transparent),
-                        center = Offset(size.width * 0.32f, size.height * 0.24f),
-                        radius = size.width * 0.55f
+                        center = Offset(sizePx * 0.32f, sizePx * 0.24f),
+                        radius = sizePx * 0.55f
                     ),
-                    radius = size.width * 0.55f,
-                    center = Offset(size.width * 0.32f, size.height * 0.24f)
+                    radius = sizePx * 0.55f,
+                    center = Offset(sizePx * 0.32f, sizePx * 0.24f)
                 )
                 // لبهٔ پایین تیره (حس عمق)
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.28f)),
-                        startY = size.height * 0.55f,
-                        endY = size.height
+                        startY = sizePx * 0.55f,
+                        endY = sizePx
                     )
                 )
             }
