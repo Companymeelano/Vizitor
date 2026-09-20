@@ -63,6 +63,28 @@ data class DbCustomer(
     val visitorRdf: Int,
 )
 
+/** گروه کالا — از dbo.kagroup (ستون‌های ممیزی‌شدهٔ group_rdf و group_name). */
+data class DbProductGroup(
+    val groupRdf: Int,
+    val name: String,
+)
+
+/**
+ * یک فاکتور/پیش‌فاکتور واقعیِ ویزیتور، از جداول خودِ ERP.
+ * همهٔ ستون‌های استفاده‌شده در ممیزی سرور تأیید شده‌اند:
+ *   dbo.sailfact      → shfacfo, date, shmo, all, tafif, vis_rdf, sysid
+ *   dbo.sailfact_pish → shfacfo, date, shmo, all, tafif, vis_rdf, sysid
+ * هیچ ستونی حدس زده نشده و هیچ مقداری ساخته نمی‌شود.
+ */
+data class DbInvoiceRow(
+    val number: String,
+    val dateText: String,
+    val customerCode: String,
+    val total: Long,
+    val discount: Long,
+    val isPreInvoice: Boolean,
+)
+
 /** گروه مشتری + سطح قیمت واقعی (custgroup.price = ستون تیر قیمت). */
 data class DbCustomerGroup(
     val groupRdf: Int,
@@ -302,6 +324,71 @@ class MeelanoDataSource(private val db: SqlConnectionManager) {
         }
 
     /** گروه‌های مشتری + تیر قیمت (پایهٔ کل منطق قیمت Atiran). */
+    /** گروه‌های کالا (dbo.kagroup: group_rdf, group_name) — برای نام گروه هر کالا. */
+    suspend fun productGroups(): List<DbProductGroup> =
+        db.withConnection { c ->
+            c.prepareStatement(
+                "SELECT group_rdf, group_name FROM dbo.kagroup ORDER BY group_name"
+            ).use { ps ->
+                ps.queryTimeout = 20
+                ps.executeQuery().use { rs ->
+                    val out = ArrayList<DbProductGroup>()
+                    while (rs.next()) {
+                        out += DbProductGroup(
+                            groupRdf = rs.getInt("group_rdf"),
+                            name = rs.getString("group_name")?.trim().orEmpty(),
+                        )
+                    }
+                    out
+                }
+            }
+        }
+
+    /**
+     * فاکتورها و پیش‌فاکتورهای یک ویزیتور (برای بخش گزارش‌ها).
+     * فیلترها: vis_rdf = کد ویزیتور، و در صورت مشخص بودن شرکت: sysid.
+     * مرتب‌سازی و محدودسازی در همین تابع (Kotlin) انجام می‌شود تا هیچ تبدیل نوعی
+     * روی ستون‌های تاریخ/مبلغ (که نوع دقیقشان نامعلوم است) صورت نگیرد.
+     */
+    suspend fun invoicesForVisitor(
+        visitorRdf: Int,
+        companyId: Int? = null,
+        limit: Int = 200,
+    ): List<DbInvoiceRow> =
+        db.withConnection { c ->
+            c.prepareStatement(
+                """
+                SELECT p.shfacfo, p.date, p.shmo, p.all, p.tafif, 1 AS is_pre
+                  FROM dbo.sailfact_pish AS p
+                 WHERE p.vis_rdf = ? AND (? = 0 OR p.sysid = ?)
+                UNION ALL
+                SELECT f.shfacfo, f.date, f.shmo, f.all, f.tafif, 0 AS is_pre
+                  FROM dbo.sailfact AS f
+                 WHERE f.vis_rdf = ? AND (? = 0 OR f.sysid = ?)
+                """.trimIndent()
+            ).use { ps ->
+                ps.queryTimeout = 30
+                val company = companyId ?: 0
+                ps.setInt(1, visitorRdf); ps.setInt(2, company); ps.setInt(3, company)
+                ps.setInt(4, visitorRdf); ps.setInt(5, company); ps.setInt(6, company)
+                ps.executeQuery().use { rs ->
+                    val out = ArrayList<DbInvoiceRow>()
+                    while (rs.next()) {
+                        out += DbInvoiceRow(
+                            number = rs.stringLoose("shfacfo"),
+                            dateText = rs.stringLoose("date"),
+                            customerCode = rs.stringLoose("shmo"),
+                            total = rs.longLoose("all"),
+                            discount = rs.longLoose("tafif"),
+                            isPreInvoice = rs.intLoose("is_pre") == 1,
+                        )
+                    }
+                    out.sortedByDescending { it.dateText }
+                        .take(limit.coerceIn(1, 1000))
+                }
+            }
+        }
+
     suspend fun customerGroups(): List<DbCustomerGroup> =
         db.withConnection { c ->
             c.prepareStatement(
@@ -757,6 +844,24 @@ private fun ResultSet.nullableInt(column: String): Int? {
     val v = getInt(column)
     return if (wasNull()) null else v
 }
+
+/** خواندن مقدار به‌صورت متن، بدون توجه به نوع واقعی ستون (varchar/int/date/money). */
+private fun ResultSet.stringLoose(column: String): String = try {
+    (getObject(column) ?: "").toString().trim()
+} catch (_: Exception) {
+    ""
+}
+
+/** خواندن مقدار عددی با تحمل خطا: ستون متنی، اعشاری یا پولی همه پذیرفته می‌شوند. */
+private fun ResultSet.longLoose(column: String): Long = try {
+    getLong(column)
+} catch (_: Exception) {
+    val digits = stringLoose(column).filter { it.isDigit() || it == '-' || it == '.' }
+    val asDouble = digits.toDoubleOrNull() ?: 0.0
+    asDouble.toLong()
+}
+
+private fun ResultSet.intLoose(column: String): Int = longLoose(column).toInt()
 
 private fun readProduct(rs: ResultSet) = DbProduct(
     shka = rs.getLong("shka"),

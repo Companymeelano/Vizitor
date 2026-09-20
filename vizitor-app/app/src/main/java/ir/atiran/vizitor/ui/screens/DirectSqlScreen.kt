@@ -1,19 +1,23 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Vizitor — آتیران ویزیتور | صفحهٔ «اتصال مستقیم SQL Server (۱۴۳۳)»
+ *  Vizitor — آتیران ویزیتور | صفحهٔ «اتصال به سرور آتیران» (SQL Server — ۱۴۳۳)
  *  Developed by Milad Yaghoobi — Meelano Studio Design
  *  ─────────────────────────────────────────────────────────────────────────
- *  همان مسیری که نصب‌کنندهٔ ویندوز آماده کرده، در سه کارت:
- *    ۱) کارت اتصال نصب‌کننده  →  C:\Vizitor\setup\android-connect.txt / .json / QR
- *    ۲) سرور و دیتابیس         →  تست پورت ۱۴۳۳، فهرست دیتابیس‌ها، انتخاب یا تایپ دستی
- *    ۳) ورود ویزیتور           →  جدول واقعی dbo.sys_users + خواندن جدول/ستون ویزیتورها
- *  طرح و فونت، همان طرح خودِ برنامه است (هیچ تغییری در ظاهر بخش‌های دیگر ندادیم).
+ *  طراحی هوشمند و مرتبط با تم برنامه:
+ *    • نمای پیش‌فرض «خلاصه» است: وضعیت اتصال + یک دکمهٔ اصلی + همگام‌سازی
+ *    • همهٔ مراحل فنی داخل کارت‌های بازشو (آکاردئونی) هستند تا صفحه شلوغ نباشد
+ *    • همهٔ رنگ‌ها/آیکن‌ها/دکمه‌ها از تم اصلی (vizitorPalette + اجزای لوکس) می‌آیند
+ *  مسیر کار: کارت اتصال نصب‌کننده → سرور/دیتابیس → ورود ویزیتور → همگام‌سازی
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,34 +29,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -62,501 +67,648 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.sp
+import ir.atiran.vizitor.ui.components.GlassCard
+import ir.atiran.vizitor.ui.components.NeonGreenButton
+import ir.atiran.vizitor.ui.components.NeonPurpleButton
+import ir.atiran.vizitor.ui.components.SectionTitle
+import ir.atiran.vizitor.ui.components.StatusChip
+import ir.atiran.vizitor.ui.theme.TextSecondary
+import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.sqldirect.DirectSqlViewModel
 import ir.atiran.vizitor.sqldirect.DirectUiState
+import ir.atiran.vizitor.sqldirect.ServerSession
+import ir.atiran.vizitor.util.toFaNumber
 
 @Composable
 fun DirectSqlScreen(
+    viewModel: DirectSqlViewModel,
     onBack: () -> Unit,
-    viewModel: DirectSqlViewModel = viewModel(),
+    onEnterPanel: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
-    val palette = MaterialTheme.colorScheme
+    val session by ir.atiran.vizitor.sqldirect.VizitorSession.state.collectAsState()
+    val p = vizitorPalette
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(palette.background)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // ── نوار بالا ───────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "بازگشت", tint = palette.onBackground)
-            }
-            Icon(Icons.Filled.Storage, contentDescription = null, tint = palette.primary)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "اتصال مستقیم SQL Server (پورت ۱۴۳۳)",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = palette.onBackground,
-            )
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            // ── ۱) کارت اتصال نصب‌کننده ─────────────────────────────────────
-            item {
-                CardBlock("کارت اتصال نصب‌کننده", icon = Icons.Filled.Download) {
-                    Text(
-                        "متن کارت را از فایل setup\\android-connect.txt بخوانید و این‌جا بچسبانید؛ " +
-                            "یا محتوای فایل android-connect.json را بچسبانید. " +
-                            "کارت فقط نشانی سرور، پورت، نام دیتابیس و نام کاربر محدود را دارد و رمزی در آن نیست.",
-                        style = MaterialTheme.typography.bodySmall, color = palette.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.cardText,
-                        onValueChange = viewModel::onCardText,
-                        label = { Text("vizitor://c?h=…&p=1433&d=…&u=…") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(96.dp),
-                        maxLines = 4,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = viewModel::applyCard, modifier = Modifier.fillMaxWidth()) {
-                        Text("خواندن کارت اتصال")
-                    }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "بازگشت", tint = p.textPrimary)
                 }
-            }
-
-            // ── ۲) سرور و دیتابیس + کاربر محدود SQL ─────────────────────────
-            item {
-                CardBlock("سرور و دیتابیس", icon = Icons.Filled.Dns) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = state.host,
-                            onValueChange = viewModel::onHost,
-                            label = { Text("آدرس سرور (IP داخلی شبکه)") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        OutlinedTextField(
-                            value = state.port,
-                            onValueChange = viewModel::onPort,
-                            label = { Text("پورت") },
-                            modifier = Modifier.width(96.dp),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.publicHost,
-                        onValueChange = viewModel::onPublicHost,
-                        label = { Text("آی‌پی اختصاصی/اینترنتی (اختیاری)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Switch(checked = state.usePublicHost, onCheckedChange = viewModel::onUsePublicHost)
-                        Spacer(Modifier.width(6.dp))
-                        Text("اتصال از بیرون شبکه (آی‌پی اختصاصی)", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Switch(checked = state.useEncryption, onCheckedChange = viewModel::onUseEncryption)
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "رمزنگاری TLS (اگر سرور قدیمی است خاموش کنید)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = palette.onSurfaceVariant,
-                        )
-                    }
-
-                    var dbMenu by remember { mutableStateOf(false) }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = state.database,
-                            onValueChange = viewModel::onDatabase,
-                            label = { Text("نام دیتابیس حسابداری (قابل تایپ دستی)") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                        )
-                        if (state.databases.isNotEmpty()) {
-                            Spacer(Modifier.width(6.dp))
-                            OutlinedButton(onClick = { dbMenu = true }) { Text("فهرست") }
-                            DropdownMenu(expanded = dbMenu, onDismissRequest = { dbMenu = false }) {
-                                state.databases.forEach { db ->
-                                    DropdownMenuItem(
-                                        text = { Text(db) },
-                                        onClick = { viewModel.onDatabase(db); dbMenu = false },
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        "کاربر محدود دیتابیس (همان که نصب‌کننده ساخته — از کارت اتصال پر می‌شود؛ " +
-                            "رمز آن در کارت نیست و فقط یک‌بار این‌جا وارد می‌شود)",
-                        style = MaterialTheme.typography.bodySmall, color = palette.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = state.dbUser,
-                            onValueChange = viewModel::onDbUser,
-                            label = { Text("نام کاربر دیتابیس") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    var showDbPass by remember { mutableStateOf(false) }
-                    OutlinedTextField(
-                        value = state.dbPassword,
-                        onValueChange = viewModel::onDbPassword,
-                        label = { Text("رمز کاربر دیتابیس") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (showDbPass) VisualTransformation.None else PasswordVisualTransformation(),
-                        leadingIcon = {
-                            IconButton(onClick = { showDbPass = !showDbPass }) {
-                                Icon(
-                                    if (showDbPass) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                                    contentDescription = "نمایش/پنهان رمز",
-                                )
-                            }
-                        },
-                    )
-
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = viewModel::fetchDatabases, modifier = Modifier.weight(1f)) {
-                            Text("تست اتصال و فهرست دیتابیس‌ها")
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = viewModel::connectDatabase, modifier = Modifier.weight(1f)) {
-                            Text(if (state.connected) "اتصال برقرار است ✅" else "اتصال به دیتابیس")
-                        }
-                        OutlinedButton(onClick = viewModel::disconnect) { Text("قطع") }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    TextButtonLike("پاک کردن رمز ذخیره‌شده روی این گوشی") { viewModel.clearStored() }
-                }
-            }
-
-            // ── ۳) ورود ویزیتور با جدول واقعی کاربران ───────────────────────
-            item {
-                CardBlock("ورود ویزیتور (dbo.sys_users)", icon = Icons.Filled.Person) {
-                    Text(
-                        "همان نام کاربری و کلمهٔ عبوری که با آن به سامانهٔ آتیران وارد می‌شوید. " +
-                            "این رمز روی گوشی ذخیره نمی‌شود.",
-                        style = MaterialTheme.typography.bodySmall, color = palette.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.erpUser,
-                        onValueChange = viewModel::onErpUser,
-                        label = { Text("نام کاربری شما در سامانه") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    var showErpPass by remember { mutableStateOf(false) }
-                    OutlinedTextField(
-                        value = state.erpPassword,
-                        onValueChange = viewModel::onErpPassword,
-                        label = { Text("کلمهٔ عبور شما در سامانه") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (showErpPass) VisualTransformation.None else PasswordVisualTransformation(),
-                        leadingIcon = {
-                            IconButton(onClick = { showErpPass = !showErpPass }) {
-                                Icon(
-                                    if (showErpPass) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                                    contentDescription = "نمایش/پنهان رمز",
-                                )
-                            }
-                        },
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = viewModel::loginAndLoad, modifier = Modifier.weight(1f)) {
-                            Text("ورود و بارگذاری ویزیتورها")
-                        }
-                        if (state.loggedIn) {
-                            OutlinedButton(onClick = viewModel::refreshVisitors) { Text("به‌روزرسانی") }
-                        }
-                    }
-                }
-            }
-
-            // ── عیب‌یابی گام‌به‌گام (وقتی اتصال برقرار نمی‌شود) ─────────────
-            item {
-                CardBlock("عیب‌یابی اتصال (گام‌به‌گام)", icon = Icons.Filled.Dns) {
-                    Text(
-                        "این بررسی، همان طور که گوشی به سرور وصل می‌شود را مرحله‌به‌مرحله آزمایش می‌کند: " +
-                            "نشانی، پورت، درایورها، ورود واقعی و دسترسی به دیتابیس — و می‌گوید کجا گیر کرده. " +
-                            "«سبز بودن پورت در ping.eu» فقط یعنی پورت باز است؛ با این بررسی معلوم می‌شود چرا ورود انجام نمی‌شود.",
-                        style = MaterialTheme.typography.bodySmall, color = palette.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = viewModel::runDiagnostics, modifier = Modifier.fillMaxWidth()) {
-                        Text("عیب‌یابی اتصال (۶ بررسی)")
-                    }
-                    if (state.diag.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        state.diag.forEach { row ->
-                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                                Text(if (row.ok) "✔" else "✖",
-                                    color = if (row.ok) Color(0xFF2E7D32) else Color(0xFFC62828),
-                                    style = MaterialTheme.typography.bodyMedium)
-                                Spacer(Modifier.width(6.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(row.title, style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold)
-                                    Text(row.detail, style = MaterialTheme.typography.bodySmall,
-                                        color = palette.onSurfaceVariant)
-                                    if (row.hint.isNotBlank()) {
-                                        Text("↳ ${row.hint}", style = MaterialTheme.typography.bodySmall,
-                                            color = palette.primary)
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        val context = LocalContext.current
-                        TextButtonLike("کپی گزارش عیب‌یابی (بدون رمز)") {
-                            val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
-                                as android.content.ClipboardManager
-                            cm.setPrimaryClip(
-                                android.content.ClipData.newPlainText("Vizitor SQL diagnostics", state.diagText)
-                            )
-                            viewModel.noteCopied()
-                        }
-                    }
-                }
-            }
-
-            item { StatusCard(state) }
-
-            // ── ویزیتورها ───────────────────────────────────────────────────
-            if (state.visitors.isNotEmpty()) {
-                item {
-                    Text(
-                        "ویزیتورهای زیرمجموعهٔ شما (${state.visitorsOfUser} از ${state.visitorCount} ویزیتور سامانه)",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-                items(state.visitors) { v -> VisitorCard(v) }
-            }
-
-            // ── ستون‌های واقعی جدول ─────────────────────────────────────────
-            if (state.columns.isNotEmpty()) {
-                item {
-                    var open by remember { mutableStateOf(false) }
-                    CardBlock("ستون‌های جدول dbo.visitors (${state.columns.size} ستون)", icon = Icons.Filled.Dns) {
-                        Text(
-                            "این فهرست مستقیم از sys.columns خوانده شده (ستون رمز خوانده و نمایش داده نمی‌شود).",
-                            style = MaterialTheme.typography.bodySmall, color = palette.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        TextButtonLike(if (open) "بستن فهرست ستون‌ها" else "نمایش فهرست ستون‌ها") { open = !open }
-                        if (open) {
-                            Spacer(Modifier.height(6.dp))
-                            Column(Modifier.verticalScroll(rememberScrollState())) {
-                                state.columns.forEach { c ->
-                                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                                        Text(c.name, modifier = Modifier.weight(1f),
-                                            style = MaterialTheme.typography.bodySmall)
-                                        Text(
-                                            c.typeName + if (c.maxLength > 0) "(${c.maxLength})" else "",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── بررسی سلامت مسیر پیش‌فاکتور (همان چیزی که نصب‌کننده آماده کرد) ──
-            if (state.health.isNotEmpty()) {
-                item {
-                    CardBlock("بررسی سلامت مسیر پیش‌فاکتور", icon = Icons.Filled.CloudDone) {
-                        state.health.forEach { (key, ok) ->
-                            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                                Text(if (ok) "✔" else "✖",
-                                    color = if (ok) Color(0xFF2E7D32) else Color(0xFFC62828))
-                                Spacer(Modifier.width(8.dp))
-                                Text(key, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-
-            item {
                 Text(
-                    "دسترسی این اتصال همان چیزی است که نصب‌کننده ساخته: خواندن با db_datareader " +
-                        "و ثبت پیش‌فاکتور فقط با پروسیجرهای مجاز. هیچ رمزی در متن یا گزارش چاپ نمی‌شود و " +
-                        "رمز کاربر دیتابیس فقط رمزنگاری‌شده (AES-GCM + Android Keystore) روی همین گوشی می‌ماند.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CardBlock(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, body: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(8.dp))
-            body()
-        }
-    }
-}
-
-@Composable
-private fun StatusCard(state: DirectUiState) {
-    val color = when (state.statusKind) {
-        1 -> Color(0xFF2E7D32)
-        2 -> Color(0xFFC62828)
-        else -> MaterialTheme.colorScheme.primary
-    }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (state.busy) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(
-                        if (state.statusKind == 2) Icons.Filled.CloudOff else Icons.Filled.CloudDone,
-                        contentDescription = null, tint = color,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Text("وضعیت اتصال", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                state.status.ifBlank { "هنوز تلاشی انجام نشده است." },
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (state.statusKind == 0) MaterialTheme.colorScheme.onSurface else color,
-            )
-            if (state.driverLabel.isNotBlank()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "درایور فعال: ${state.driverLabel}" +
-                        if (state.connected) " — اتصال برقرار است" else "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (state.serverInfo.isNotBlank()) {
-                Spacer(Modifier.height(4.dp))
-                Text(state.serverInfo, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (state.loggedInUserId != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "کاربر سامانه: ${state.loggedInName.ifBlank { state.loggedInUser }} " +
-                        "(${state.loggedInUser} — شناسه ${state.loggedInUserId}) — " +
-                        "مجاز: ${state.allowedCustomers} مشتری، ${state.allowedProducts} کالا، " +
-                        "${state.allowedWarehouses} انبار",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun VisitorCard(v: ir.atiran.vizitor.sqldirect.DirectVisitorRow) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    v.name.ifBlank { "ویزیتور #${v.rdf}" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    "اتصال به سرور آتیران",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    color = p.textPrimary,
                     modifier = Modifier.weight(1f),
                 )
-                Text(
-                    if (v.active.equals("t", true)) "فعال" else "غیرفعال",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (v.active.equals("t", true)) Color(0xFF2E7D32) else Color(0xFFC62828),
+                if (state.busy || session.syncing) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = p.gold)
+                }
+            }
+        }
+
+        // ── کارت خلاصهٔ وضعیت (نمای اصلی و کوتاه) ───────────────────────────
+        item { StatusSummary(state, session, viewModel, onEnterPanel) }
+
+        // ── کارت‌های مرحله‌ای (بازشو — پیش‌فرض بسته تا صفحه شلوغ نباشد) ─────
+        item { ConnectionCard(state, viewModel) }
+        item { ServerCard(state, viewModel) }
+        item { LoginCard(state, viewModel, onEnterPanel) }
+
+        // ── سلامت مسیر پیش‌فاکتور (اگر خوانده شده باشد) ─────────────────────
+        if (state.health.isNotEmpty()) {
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        SectionTitle("بررسی سلامت مسیر پیش‌فاکتور", icon = Icons.Filled.CheckCircle)
+                        Spacer(Modifier.height(8.dp))
+                        state.health.forEach { (key, ok) ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (ok) Icons.Filled.CheckCircle else Icons.Filled.Warning,
+                                    contentDescription = null,
+                                    tint = if (ok) p.accent else p.danger,
+                                    modifier = Modifier.size(15.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(key, style = MaterialTheme.typography.bodySmall, color = p.textSecondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── جزئیات ویزیتورها و ستون‌ها (بازشوی اختیاری) ──────────────────────
+        if (state.visitors.isNotEmpty() || state.columns.isNotEmpty()) {
+            item { DetailsCard(state, viewModel) }
+        }
+
+        item { Text(
+            "رمز کاربر دیتابیس فقط رمزنگاری‌شده (AES-GCM + Android Keystore) روی همین گوشی می‌ماند؛ " +
+                "رمز حساب خودتان تنها با انتخاب «به‌خاطر سپردن» ذخیره می‌شود و هیچ‌گاه در متن یا گزارش چاپ نمی‌گردد.",
+            style = MaterialTheme.typography.bodySmall, color = TextSecondary,
+        ) }
+    }
+}
+
+// ═══════════════════════ کارت خلاصه ═══════════════════════
+
+@Composable
+private fun StatusSummary(
+    state: DirectUiState,
+    session: ServerSession,
+    viewModel: DirectSqlViewModel,
+    onEnterPanel: () -> Unit,
+) {
+    val p = vizitorPalette
+    val statusColor = when {
+        state.loggedIn -> p.accent
+        state.connected -> p.gold
+        session.configured -> p.primary
+        else -> p.danger
+    }
+    val statusText = when {
+        state.loggedIn -> "وارد شده"
+        state.connected -> "وصل به دیتابیس"
+        session.configured -> "تنظیم‌شده"
+        else -> "تنظیم نشده"
+    }
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusChip(statusText, statusColor)
+                Spacer(Modifier.weight(1f))
+                if (state.loggedIn) {
+                    Text(
+                        state.loggedInName.ifBlank { state.loggedInUser },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = p.accentText,
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+
+            InfoRow(Icons.Filled.Dns, "سرور", session.serverLabel.ifBlank { "—" })
+            InfoRow(Icons.Filled.Storage, "دیتابیس", state.database.ifBlank { "—" })
+            InfoRow(
+                Icons.Filled.Person,
+                "کاربر سامانه",
+                state.loggedInUser.ifBlank { "وارد نشده" },
+            )
+            InfoRow(
+                Icons.Filled.Sync,
+                "آخرین همگام‌سازی",
+                if (session.lastSyncAt == 0L) "انجام نشده" else session.lastSyncSummary,
+            )
+
+            if (state.loggedIn) {
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MiniChip("کالا", session.productsCount)
+                    MiniChip("مشتری", session.customersCount)
+                    MiniChip("فاکتور", session.invoicesCount)
+                    MiniChip("ویزیتور", state.visitorsOfUser)
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!state.loggedIn) {
+                    NeonPurpleButton(
+                        text = if (session.configured) "ورود سریع" else "تنظیم اتصال",
+                        icon = Icons.Filled.Login,
+                        onClick = {
+                            if (session.configured) viewModel.quickEnter() else viewModel.toggleSettings()
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.busy,
+                    )
+                } else {
+                    NeonPurpleButton(
+                        text = "ورود به پنل",
+                        icon = Icons.Filled.ExitToApp,
+                        onClick = onEnterPanel,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                NeonGreenButton(
+                    text = "همگام‌سازی",
+                    icon = Icons.Filled.Sync,
+                    onClick = { viewModel.syncNow() },
+                    modifier = Modifier.weight(1f),
+                    enabled = state.loggedIn && !state.busy,
                 )
             }
-            Spacer(Modifier.height(4.dp))
-            Text("کد ویزیتور: ${v.rdf}" + (if (v.supervisor) " • سرپرست" else ""),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (v.cell.isNotBlank()) Text("موبایل: ${v.cell}", style = MaterialTheme.typography.bodySmall)
-            if (v.tell.isNotBlank()) Text("تلفن: ${v.tell}", style = MaterialTheme.typography.bodySmall)
-            if (v.address.isNotBlank()) Text("نشانی: ${v.address}", style = MaterialTheme.typography.bodySmall)
-            val geo = listOfNotNull(
-                v.city?.let { "شهر: $it" },
-                v.region?.let { "منطقه: $it" },
-            ).joinToString(" • ")
-            if (geo.isNotBlank()) Text(geo, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            HorizontalDivider(Modifier.padding(vertical = 6.dp))
-            val money = listOfNotNull(
-                v.credit?.let { "اعتبار: $it" },
-                v.percentCash?.let { "٪نقدی: $it" },
-                v.percentCheque?.let { "٪چک: $it" },
-                v.allowedInvoicesLeft?.let { "فاکتور مجاز مانده: $it" },
-            ).joinToString(" • ")
-            if (money.isNotBlank()) Text(money, style = MaterialTheme.typography.bodySmall)
-            Text(
-                "دامنهٔ دسترسی: ${v.allowedCustomers} مشتری • ${v.allowedProducts} کالا • ${v.allowedWarehouses} انبار",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+
+            if (state.status.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                MessageLine(state.status, state.statusKind)
+            }
         }
     }
 }
 
+// ═══════════════════════ مرحله ۱: کارت اتصال نصب‌کننده ═══════════════════════
+
 @Composable
-private fun TextButtonLike(text: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(text) }
+private fun ConnectionCard(state: DirectUiState, viewModel: DirectSqlViewModel) {
+    val p = vizitorPalette
+    AccordionCard(
+        title = "کارت اتصال نصب‌کننده",
+        subtitle = "از فایل setup\\android-connect.txt یا QR",
+        icon = Icons.Filled.QrCodeScanner,
+        expanded = state.cardExpanded,
+        onToggle = viewModel::toggleCard,
+    ) {
+        Text(
+            "متن کارت را بچسبانید یا محتوای android-connect.json را وارد کنید؛ " +
+                "نشانی سرور، پورت ۱۴۳۳، نام دیتابیس و نام کاربر محدود خودکار پر می‌شود (رمز در کارت نیست).",
+            style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = state.cardText,
+            onValueChange = viewModel::onCardText,
+            label = { Text("vizitor://c?h=…&p=1433&d=…&u=…") },
+            modifier = Modifier.fillMaxWidth().height(92.dp),
+            maxLines = 4,
+            colors = fieldColors(),
+        )
+        Spacer(Modifier.height(8.dp))
+        NeonGreenButton(
+            text = "خواندن کارت اتصال",
+            icon = Icons.Filled.QrCodeScanner,
+            onClick = { viewModel.applyCard() },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
+
+// ═══════════════════════ مرحله ۲: سرور و دیتابیس ═══════════════════════
+
+@Composable
+private fun ServerCard(state: DirectUiState, viewModel: DirectSqlViewModel) {
+    val p = vizitorPalette
+    AccordionCard(
+        title = "سرور و دیتابیس",
+        subtitle = if (state.database.isBlank()) "پورت ۱۴۳۳ و کاربر محدود دیتابیس"
+        else "${state.database} — ${state.dbUser.ifBlank { "بدون کاربر" }}",
+        icon = Icons.Filled.Dns,
+        expanded = state.settingsExpanded,
+        onToggle = viewModel::toggleSettings,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = state.host,
+                onValueChange = viewModel::onHost,
+                label = { Text("آدرس سرور (داخلی)") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                colors = fieldColors(),
+            )
+            Spacer(Modifier.width(8.dp))
+            OutlinedTextField(
+                value = state.port,
+                onValueChange = viewModel::onPort,
+                label = { Text("پورت") },
+                modifier = Modifier.width(92.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = fieldColors(),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = state.publicHost,
+            onValueChange = viewModel::onPublicHost,
+            label = { Text("آی‌پی اختصاصی/اینترنتی (اختیاری)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            colors = fieldColors(),
+        )
+        ThemeSwitch("اتصال از بیرون شبکه", state.usePublicHost, viewModel::onUsePublicHost)
+        ThemeSwitch("رمزنگاری TLS (برای سرور قدیمی خاموش کنید)", state.useEncryption, viewModel::onUseEncryption)
+
+        Spacer(Modifier.height(4.dp))
+        var dbMenu by remember { mutableStateOf(false) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = state.database,
+                onValueChange = viewModel::onDatabase,
+                label = { Text("نام دیتابیس (قابل تایپ دستی)") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                colors = fieldColors(),
+            )
+            if (state.databases.isNotEmpty()) {
+                Spacer(Modifier.width(6.dp))
+                IconButton(onClick = { dbMenu = true }) {
+                    Icon(Icons.Filled.ArrowDropDown, contentDescription = "فهرست دیتابیس‌ها", tint = p.gold)
+                }
+                DropdownMenu(expanded = dbMenu, onDismissRequest = { dbMenu = false }) {
+                    state.databases.forEach { db ->
+                        DropdownMenuItem(
+                            text = { Text(db) },
+                            onClick = { viewModel.onDatabase(db); dbMenu = false },
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "کاربر محدود دیتابیس (همان که نصب‌کننده ساخت — نام کاربری از کارت پر می‌شود)",
+            style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
+        )
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(
+            value = state.dbUser,
+            onValueChange = viewModel::onDbUser,
+            label = { Text("نام کاربر دیتابیس") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            colors = fieldColors(),
+        )
+        Spacer(Modifier.height(8.dp))
+        var showDbPass by remember { mutableStateOf(false) }
+        OutlinedTextField(
+            value = state.dbPassword,
+            onValueChange = viewModel::onDbPassword,
+            label = { Text("رمز کاربر دیتابیس") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            visualTransformation = if (showDbPass) VisualTransformation.None else PasswordVisualTransformation(),
+            leadingIcon = {
+                IconButton(onClick = { showDbPass = !showDbPass }) {
+                    Icon(
+                        if (showDbPass) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                        contentDescription = "نمایش/پنهان رمز", tint = p.gold,
+                    )
+                }
+            },
+            colors = fieldColors(),
+        )
+
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NeonGreenButton(
+                text = "تست اتصال",
+                icon = Icons.Filled.Dns,
+                onClick = { viewModel.fetchDatabases() },
+                modifier = Modifier.weight(1f),
+                enabled = !state.busy,
+            )
+            NeonPurpleButton(
+                text = "ذخیرهٔ امن",
+                icon = Icons.Filled.Key,
+                onClick = { viewModel.saveSettings() },
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        OutlinedButton(onClick = { viewModel.clearStored() }, modifier = Modifier.fillMaxWidth()) {
+            Text("پاک کردن تنظیمات و رمزهای ذخیره‌شده", color = p.danger, fontSize = 12.sp)
+        }
+    }
+}
+
+// ═══════════════════════ مرحله ۳: ورود ویزیتور ═══════════════════════
+
+@Composable
+private fun LoginCard(
+    state: DirectUiState,
+    viewModel: DirectSqlViewModel,
+    onEnterPanel: () -> Unit,
+) {
+    val p = vizitorPalette
+    AccordionCard(
+        title = "ورود ویزیتور",
+        subtitle = if (state.loggedIn) "وارد شده: ${state.loggedInUser}"
+        else "با حساب خودتان در سامانهٔ آتیران",
+        icon = Icons.Filled.Person,
+        expanded = state.loginExpanded || !state.loggedIn,
+        onToggle = viewModel::toggleLogin,
+    ) {
+        Text(
+            "همان نام کاربری و کلمهٔ عبوری که با آن به سامانه وارد می‌شوید (جدول واقعی dbo.sys_users).",
+            style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = state.erpUser,
+            onValueChange = viewModel::onErpUser,
+            label = { Text("نام کاربری شما") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            colors = fieldColors(),
+        )
+        Spacer(Modifier.height(8.dp))
+        var showPass by remember { mutableStateOf(false) }
+        OutlinedTextField(
+            value = state.erpPassword,
+            onValueChange = viewModel::onErpPassword,
+            label = { Text("کلمهٔ عبور شما") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
+            leadingIcon = {
+                IconButton(onClick = { showPass = !showPass }) {
+                    Icon(
+                        if (showPass) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                        contentDescription = "نمایش/پنهان رمز", tint = p.gold,
+                    )
+                }
+            },
+            colors = fieldColors(),
+        )
+        ThemeSwitch("به‌خاطر سپردن (ورود سریع در اجرای بعدی)", state.rememberMe, viewModel::onRememberMe)
+
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NeonPurpleButton(
+                text = if (state.loggedIn) "ورود به پنل" else "ورود و همگام‌سازی",
+                icon = Icons.Filled.Login,
+                onClick = { if (state.loggedIn) onEnterPanel() else viewModel.loginAndLoad() },
+                modifier = Modifier.weight(1f),
+                enabled = !state.busy,
+            )
+            if (state.loggedIn) {
+                OutlinedButton(onClick = { viewModel.logout() }) {
+                    Text("خروج", color = p.danger, fontSize = 12.sp)
+                }
+            } else {
+                OutlinedButton(onClick = { viewModel.connectDatabase() }, enabled = !state.busy) {
+                    Text("اتصال دیتابیس", fontSize = 12.sp, color = p.accentText)
+                }
+            }
+        }
+        if (state.loggedIn) {
+            Spacer(Modifier.height(6.dp))
+            OutlinedButton(onClick = { viewModel.refreshVisitors() }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.Refresh, contentDescription = null, tint = p.gold, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("به‌روزرسانی ویزیتورها و ستون‌ها", fontSize = 12.sp, color = p.accentText)
+            }
+        }
+    }
+}
+
+// ═══════════════════════ جزئیات (ویزیتورها و ستون‌ها) ═══════════════════════
+
+@Composable
+private fun DetailsCard(state: DirectUiState, viewModel: DirectSqlViewModel) {
+    val p = vizitorPalette
+    AccordionCard(
+        title = "جزئیات دادهٔ ویزیتورها",
+        subtitle = "${state.visitorsOfUser} ویزیتور • ${state.columns.size} ستون از dbo.visitors",
+        icon = Icons.Filled.Storage,
+        expanded = state.detailsExpanded,
+        onToggle = viewModel::toggleDetails,
+    ) {
+        if (state.visitors.isNotEmpty()) {
+            state.visitors.take(50).forEach { v ->
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            v.name.ifBlank { "ویزیتور #${v.rdf}" },
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = p.textPrimary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatusChip(
+                            if (v.active.equals("t", true)) "فعال" else "غیرفعال",
+                            if (v.active.equals("t", true)) p.accent else p.danger,
+                        )
+                    }
+                    val line = listOfNotNull(
+                        "کد ${v.rdf}",
+                        v.cell.takeIf { it.isNotBlank() }?.let { "موبایل $it" },
+                        v.credit?.let { "اعتبار ${it.toFaNumber()}" },
+                        v.allowedInvoicesLeft?.let { "فاکتور مجاز $it" },
+                    ).joinToString(" • ")
+                    if (line.isNotBlank()) {
+                        Text(line, style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+                    }
+                    Text(
+                        "دسترسی: ${v.allowedCustomers} مشتری • ${v.allowedProducts} کالا • ${v.allowedWarehouses} انبار",
+                        style = MaterialTheme.typography.labelSmall, color = p.textSecondary,
+                    )
+                }
+            }
+        }
+        if (state.columns.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "ستون‌های جدول dbo.visitors (از sys.columns):",
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                color = p.accentText,
+            )
+            state.columns.forEach { c ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+                    Text(c.name, modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+                    Text(
+                        c.typeName + if (c.maxLength > 0) "(${c.maxLength})" else "",
+                        style = MaterialTheme.typography.labelSmall, color = p.textSecondary.copy(alpha = 0.7f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════ اجزای مشترک ═══════════════════════
+
+/** کارت بازشو (آکاردئون) همرنگ تم — برای مرتب و کوتاه نگه‌داشتن صفحه. */
+@Composable
+private fun AccordionCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val p = vizitorPalette
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { onToggle() },
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(p.primary.copy(alpha = 0.16f))
+                        .border(1.dp, p.primary.copy(alpha = 0.45f), RoundedCornerShape(12.dp)),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(icon, contentDescription = null, tint = p.gold, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+                        color = p.textPrimary,
+                    )
+                    if (subtitle.isNotBlank()) {
+                        Text(subtitle, style = MaterialTheme.typography.labelSmall, color = p.textSecondary)
+                    }
+                }
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = p.gold,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(Modifier.padding(top = 12.dp)) { content() }
+            }
+        }
+    }
+}
+
+/** سطر اطلاعات با آیکن تم‌دار. */
+@Composable
+private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+    val p = vizitorPalette
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Icon(icon, contentDescription = null, tint = p.gold.copy(alpha = 0.9f), modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = p.textSecondary)
+        Spacer(Modifier.weight(1f))
+        Text(
+            value.ifBlank { "—" },
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+            color = p.textPrimary,
+        )
+    }
+}
+
+/** برچسب کوچک شمارشی همرنگ تم. */
+@Composable
+private fun MiniChip(label: String, count: Int) {
+    val p = vizitorPalette
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(p.accent.copy(alpha = 0.12f))
+            .border(1.dp, p.accent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(
+            "$label ${count.toFaNumber()}",
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = p.accentText,
+        )
+    }
+}
+
+/** سطر پیام وضعیت با رنگ معنا (موفق/خطا/اطلاع). */
+@Composable
+private fun MessageLine(message: String, kind: Int) {
+    val p = vizitorPalette
+    val color = when (kind) {
+        1 -> p.accent
+        2 -> p.danger
+        else -> p.accentText
+    }
+    Text(message, style = MaterialTheme.typography.bodySmall, color = color)
+}
+
+/** کلید روشن/خاموش همرنگ تم. */
+@Composable
+private fun ThemeSwitch(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val p = vizitorPalette
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, modifier = Modifier.weight(1f))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = p.onPrimary,
+                checkedTrackColor = p.primary,
+                uncheckedThumbColor = p.textSecondary,
+                uncheckedTrackColor = p.surfaceDeep,
+            ),
+        )
+    }
+}
+
+/** رنگ فیلدهای متنی هم‌رنگ تم (طلایی در فوکوس). */
+@Composable
+private fun fieldColors() = run {
+    val p = vizitorPalette
+    OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = p.gold,
+        unfocusedBorderColor = p.glassBorder,
+        focusedLabelColor = p.gold,
+        unfocusedLabelColor = p.textSecondary,
+        focusedTextColor = p.textPrimary,
+        unfocusedTextColor = p.textPrimary,
+        cursorColor = p.gold,
+    )
+}
+

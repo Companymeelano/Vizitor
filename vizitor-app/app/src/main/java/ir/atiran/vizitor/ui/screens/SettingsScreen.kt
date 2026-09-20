@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
@@ -108,6 +109,8 @@ import ir.atiran.vizitor.util.toFaTime
 fun SettingsScreen(
     viewModel: VizitorViewModel,
     onOpenDirectSql: () -> Unit = {},
+    serverSession: ir.atiran.vizitor.sqldirect.ServerSession = ir.atiran.vizitor.sqldirect.ServerSession(),
+    onSyncNow: () -> Unit = {},
 ) {
     val config by viewModel.config.collectAsState()
     val syncing by viewModel.syncing.collectAsState()
@@ -149,40 +152,91 @@ fun SettingsScreen(
             }
         }
 
-        // ── اتصال مستقیم به SQL Server (پورت ۱۴۳۳) — ساختهٔ نصب‌کنندهٔ ویندوز ──
-        item { SectionTitle(text = "اتصال مستقیم به SQL Server", icon = Icons.Filled.Storage) }
+        // ── اتصال به سرور آتیران (SQL Server / پورت ۱۴۳۳) — یک مسیر واحد ──
+        //  همان صفحه‌ای که از «صفحهٔ اول» هم باز می‌شود؛ این‌جا فقط وضعیت و
+        //  دکمهٔ همگام‌سازی است تا دو مسیر جدا و گیج‌کننده نداشته باشیم.
+        item { SectionTitle(text = "اتصال به سرور آتیران", icon = Icons.Filled.Storage) }
         item {
-            androidx.compose.material3.Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = androidx.compose.material3.CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(Modifier.padding(14.dp)) {
-                    Text(
-                        "نصب‌کنندهٔ ویندوز سرور را برای اتصال مستقیم روی پورت ۱۴۳۳ آماده می‌کند " +
-                            "(کاربر محدود دیتابیس + قاعدهٔ فایروال + کارت اتصال).",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    androidx.compose.material3.Button(
-                        onClick = onOpenDirectSql,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Filled.Storage, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("ورود به صفحهٔ اتصال مستقیم SQL")
+            val okColor = when {
+                serverSession.loggedIn -> palette.accent
+                serverSession.connected -> palette.gold
+                serverSession.configured -> palette.primary
+                else -> palette.danger
+            }
+            val okText = when {
+                serverSession.loggedIn -> "وارد شده"
+                serverSession.connected -> "وصل به دیتابیس"
+                serverSession.configured -> "آمادهٔ اتصال"
+                else -> "تنظیم نشده"
+            }
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(palette.primary.copy(alpha = 0.16f))
+                                .border(1.dp, palette.primary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Filled.Dns, contentDescription = null,
+                                    tint = palette.gold, modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    okText,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = okColor
+                                )
+                            }
+                        }
+                        Spacer(Modifier.weight(1f))
+                        if (serverSession.syncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = palette.gold
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "کارت اتصال نصب‌کننده (android-connect.txt / QR / android-connect.json) را " +
-                            "همان‌جا می‌چسبانید؛ دیتابیس را از فهرست انتخاب یا دستی تایپ می‌کنید و " +
-                            "با نام کاربری/رمز خودتان در dbo.sys_users وارد می‌شوید.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        if (serverSession.serverLabel.isBlank())
+                            "هنوز اتصالی تنظیم نشده — با یک ضربه تنظیمش کنید (کارت اتصال نصب‌کننده یا تایپ دستی)."
+                        else serverSession.serverLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = palette.textPrimary
                     )
+                    if (serverSession.erpUser.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "کاربر سامانه: ${serverSession.erpName.ifBlank { serverSession.erpUser }}",
+                            style = MaterialTheme.typography.bodySmall, color = TextSecondary
+                        )
+                    }
+                    if (serverSession.lastSyncSummary.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            serverSession.lastSyncSummary,
+                            style = MaterialTheme.typography.bodySmall, color = TextSecondary
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NeonPurpleButton(
+                            text = "مدیریت اتصال",
+                            icon = Icons.Filled.Storage,
+                            onClick = onOpenDirectSql,
+                            modifier = Modifier.weight(1f)
+                        )
+                        NeonGreenButton(
+                            text = "همگام‌سازی",
+                            icon = Icons.Filled.Sync,
+                            onClick = onSyncNow,
+                            modifier = Modifier.weight(1f),
+                            enabled = serverSession.loggedIn && !serverSession.syncing
+                        )
+                    }
                 }
             }
         }
@@ -210,218 +264,106 @@ fun SettingsScreen(
         }
 
         // ── پیکربندی سرور ───────────────────────────────────────────────────
-        item { SectionTitle(text = "پیکربندی سرور آتیران", icon = Icons.Filled.Dns) }
-
-        item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = ip, onValueChange = { ip = it },
-                        label = { Text("آدرس IP سرور") },
-                        singleLine = true, colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(
-                            value = httpPort, onValueChange = { httpPort = it.filter(Char::isDigit) },
-                            label = { Text("پورت وب‌سرویس") },
-                            singleLine = true, colors = fieldColors,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = dbPort, onValueChange = { dbPort = it.filter(Char::isDigit) },
-                            label = { Text("پورت SQL Server") },
-                            singleLine = true, colors = fieldColors,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    OutlinedTextField(
-                        value = apiPath, onValueChange = { apiPath = it },
-                        label = { Text("مسیر API (مثال: vizitor)") },
-                        singleLine = true, colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = apiKey, onValueChange = { apiKey = it },
-                        label = { Text("کلید API") },
-                        singleLine = true, colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = workerUrl, onValueChange = { workerUrl = it },
-                        label = { Text("آدرس پراکسی هوش مصنوعی (Cloudflare Worker)") },
-                        singleLine = true, colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    // ── پیش‌نمایش زندهٔ آدرس کامل وب‌سرویس ──────────────────────
-                    val previewUrl = remember(ip, httpPort, apiPath) {
-                        val path = apiPath.trim().trim('/')
-                        "http://${ip.trim().ifBlank { "…" }}:${httpPort.ifBlank { "…" }}/" +
-                                (if (path.isEmpty()) "" else "$path/") + "api.php"
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.Storage, contentDescription = null,
-                            tint = palette.gold, modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            previewUrl,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = palette.textSecondary,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-
-                    Row {
-                        NeonPurpleButton(
-                            text = "ذخیره پیکربندی",
-                            onClick = {
-                                viewModel.saveConfig(
-                                    config.copy(
-                                        serverIp = ip.trim(),
-                                        httpPort = httpPort.toIntOrNull() ?: 8731,
-                                        dbPort = dbPort.toIntOrNull() ?: 1433,
-                                        apiPath = apiPath.trim(),
-                                        apiKey = apiKey.trim(),
-                                        workerUrl = workerUrl.trim()
-                                    )
-                                )
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        NeonGreenButton(
-                            text = if (testing) "در حال تست…" else "تست سلامت اتصال",
-                            icon = Icons.Filled.MonitorHeart,
-                            enabled = !testing,
-                            onClick = { viewModel.testConnection() }
-                        )
-                    }
-
-                    // ── بازگشت یک‌مرحله‌ای به تنظیمات پیش‌فرض سرور میلانو ─────
-                    TextButton(
-                        onClick = {
-                            ip = ServerConfig().serverIp
-                            httpPort = ServerConfig().httpPort.toString()
-                            dbPort = ServerConfig().dbPort.toString()
-                            apiPath = ServerConfig().apiPath
-                            apiKey = ServerConfig().apiKey
-                            viewModel.saveConfig(
-                                config.copy(
-                                    serverIp = ip, httpPort = httpPort.toInt(),
-                                    dbPort = dbPort.toInt(), apiPath = apiPath, apiKey = apiKey
-                                )
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            Icons.Filled.RestartAlt, contentDescription = null,
-                            tint = palette.gold, modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "بازگشت به پیش‌فرض سرور میلانو (37.143.147.19:8731)",
-                            color = palette.gold
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── کارت وضعیت سلامت سرور ───────────────────────────────────────────
-        item { HealthStatusCard(health = health, testing = testing) }
-
-        // ── مدیریت همگام‌سازی ───────────────────────────────────────────────
-        item { SectionTitle(text = "مدیریت همگام‌سازی", icon = Icons.Filled.CloudSync) }
+        // ── همگام‌سازی و سرویس‌های داده (اتصال مستقیم SQL Server) ────────────
+        //  این برنامه داده را مستقیم از SQL Server می‌خواند (بدون وب‌سرویس/IIS)،
+        //  بنابراین تنظیمات «آدرس API/کلید» حذف شد و فقط همین یک بخش باقی است.
+        item { SectionTitle(text = "همگام‌سازی و سرویس‌های داده", icon = Icons.Filled.Sync) }
 
         item {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("همگام‌سازی خودکار", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                "سینک خودکار فاکتورها و کاتالوگ پس از اتصال به شبکه",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                        Switch(
-                            checked = config.autoSync,
-                            onCheckedChange = { viewModel.saveConfig(config.copy(autoSync = it)) },
-                            colors = SwitchDefaults.colors(checkedTrackColor = NeonGreen)
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
                     Text(
-                        if (config.lastSyncAt > 0)
-                            "آخرین همگام‌سازی: ${config.lastSyncAt.toFaDate()} — ${config.lastSyncAt.toFaTime()}"
-                        else "هنوز همگام‌سازی انجام نشده است",
+                        "کالاها، مشتریان و فاکتورهای شما مستقیم از SQL Server خوانده و روی گوشی " +
+                            "ذخیره می‌شوند تا همهٔ بخش‌ها (پیشخوان، ویترین، مشتریان، گزارشات) فعال باشند.",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
-                    Spacer(Modifier.height(10.dp))
-                    NeonGreenButton(
-                        text = if (syncing) "در حال همگام‌سازی…" else "همگام‌سازی اکنون",
-                        icon = Icons.Filled.Sync,
-                        enabled = !syncing,
-                        onClick = { viewModel.syncNow() },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (syncing) {
-                        Spacer(Modifier.height(10.dp))
-                        CircularProgressIndicator(
-                            color = NeonGreen,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
+                    Spacer(Modifier.height(8.dp))
+
+                    if (serverSession.lastSyncSummary.isNotBlank()) {
+                        Text(
+                            serverSession.lastSyncSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.accent
                         )
+                        Spacer(Modifier.height(6.dp))
                     }
 
-                    // ── نتیجهٔ ماندگار آخرین سینک ──────────────────────────────
-                    val lastReport = syncReport
-                    if (lastReport != null && !syncing) {
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                if (lastReport.errors.isEmpty()) Icons.Filled.CloudDone
-                                else Icons.Filled.ErrorOutline,
-                                contentDescription = null,
-                                tint = if (lastReport.errors.isEmpty()) palette.accent else palette.danger,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                lastReport.summary,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (lastReport.errors.isEmpty()) palette.accent else palette.danger
-                            )
-                        }
-                        lastReport.errors.take(3).forEach { err ->
-                            Text(
-                                "• $err",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = palette.danger
-                            )
-                        }
-                        if (lastReport.errors.size > 3) {
-                            Text(
-                                "و ${(lastReport.errors.size - 3).toFaNumber()} خطای دیگر…",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = palette.textSecondary
-                            )
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SyncChip("کالا", serverSession.productsCount)
+                        SyncChip("مشتری", serverSession.customersCount)
+                        SyncChip("فاکتور", serverSession.invoicesCount)
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    NeonGreenButton(
+                        text = if (serverSession.syncing) "در حال همگام‌سازی…" else "همگام‌سازی اکنون",
+                        icon = Icons.Filled.Sync,
+                        enabled = serverSession.loggedIn && !serverSession.syncing,
+                        onClick = onSyncNow,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (!serverSession.loggedIn) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "برای همگام‌سازی، اول در بخش «اتصال به سرور آتیران» وارد شوید.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
                     }
                 }
             }
         }
 
+        item { ServerInvoiceShortcut(serverSession) }
+
+    }
+}
+
+/** میان‌بر شمارش داده‌های همگام‌شده. */
+@Composable
+private fun SyncChip(label: String, count: Int) {
+    val p = vizitorPalette
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(p.accent.copy(alpha = 0.12f))
+            .border(1.dp, p.accent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 9.dp, vertical = 4.dp)
+    ) {
+        Text(
+            "$label ${count.toFaNumber()}",
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = p.accentText
+        )
+    }
+}
+
+/** یادآوری محل دیدن فاکتورهای سامانه (تب گزارشات). */
+@Composable
+private fun ServerInvoiceShortcut(session: ir.atiran.vizitor.sqldirect.ServerSession) {
+    val p = vizitorPalette
+    if (!session.loggedIn) return
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Receipt, contentDescription = null, tint = p.gold, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "گزارش فاکتورهای سامانه",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = p.textPrimary
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "${session.invoicesCount.toFaNumber()} فاکتور/پیش‌فاکتور از سرور خوانده شده و در " +
+                    "تب «گزارشات» نمایش داده می‌شود.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
     }
 }
 

@@ -63,6 +63,9 @@ class VizitorViewModel(app: Application) : AndroidViewModel(app) {
     val commission = repo.todayCommission.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
     val config = repo.config.stateIn(viewModelScope, SharingStarted.Lazily, ServerConfig())
 
+    /** فاکتورهای واقعی سامانه که با اتصال مستقیم از SQL Server خوانده شده‌اند. */
+    val serverInvoices = repo.serverInvoices.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     val dailyTarget: Long get() = repo.dailyTarget
 
     // ── پرفروش‌ترین‌ها (ترکیب فاکتورهای محلی + سال مالی) ─────────────────────

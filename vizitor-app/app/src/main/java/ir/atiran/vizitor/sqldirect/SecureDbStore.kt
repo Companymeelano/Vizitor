@@ -28,6 +28,13 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import android.util.Base64
 
+/** اعتبارنامهٔ ورود ویزیتور که (در صورت درخواست خودش) ذخیره شده است. */
+data class ErpCredentials(
+    val username: String,
+    val password: String,
+    val remember: Boolean,
+)
+
 /** نگهداری امن تنظیمات اتصال SQL Server (رمزنگارش AES-GCM + Keystore). */
 object SecureDbStore {
 
@@ -109,6 +116,41 @@ object SecureDbStore {
         // IV + ciphertext در یک رشته Base64
         val blob = Base64.encodeToString(iv + enc, Base64.NO_WRAP)
         prefs.edit().putString(KEY_BLOB, blob).apply()
+    }
+
+    /**
+     * ذخیرهٔ اعتبارنامهٔ ورود ویزیتور (dbo.sys_users) — فقط وقتی خودِ کاربر
+     * کلید «ورود سریع/به‌خاطر سپردن» را روشن کرده باشد. رمز هم داخل همان بلوک
+     * AES-GCM رمزنگاری می‌شود و هرگز به‌صورت متن نمی‌ماند.
+     */
+    fun saveErp(username: String, password: String, remember: Boolean) {
+        val o = currentJson() ?: JSONObject()
+        o.put("erpUser", username)
+        o.put("erpPassword", if (remember) password else "")
+        o.put("erpRemember", remember)
+        writeJson(o)
+    }
+
+    /** خواندن اعتبارنامهٔ ذخیره‌شدهٔ ویزیتور (یا null). */
+    fun loadErp(): ErpCredentials? {
+        val o = currentJson() ?: return null
+        val user = o.optString("erpUser", "")
+        if (user.isBlank()) return null
+        val remember = o.optBoolean("erpRemember", false)
+        return ErpCredentials(
+            username = user,
+            password = if (remember) o.optString("erpPassword", "") else "",
+            remember = remember,
+        )
+    }
+
+    /** فراموش‌کردن اعتبارنامهٔ ویزیتور (رمز فوراً از حافظهٔ دستگاه پاک می‌شود). */
+    fun clearErp() {
+        val o = currentJson() ?: return
+        o.put("erpUser", "")
+        o.put("erpPassword", "")
+        o.put("erpRemember", false)
+        writeJson(o)
     }
 
     /** خواندن تنظیمات؛ اگر چیزی ذخیره نشده یا خطا بود → null. */

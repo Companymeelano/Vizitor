@@ -23,6 +23,7 @@ import ir.atiran.vizitor.data.local.InvoiceStatus
 import ir.atiran.vizitor.data.local.ProductEntity
 import ir.atiran.vizitor.data.local.SalMaliHistoryEntity
 import ir.atiran.vizitor.data.local.SeedData
+import ir.atiran.vizitor.data.local.ServerInvoiceEntity
 import ir.atiran.vizitor.data.local.TopProduct
 import ir.atiran.vizitor.data.remote.InvoiceHeaderRequest
 import ir.atiran.vizitor.data.remote.InvoiceLineRequest
@@ -45,6 +46,9 @@ class VizitorRepository(private val context: Context) {
     val invoices = db.invoices().observeAll()
     val pendingCount = db.invoices().observePendingCount()
     val chatMessages: Flow<List<ChatMessageEntity>> = db.chat().observeAll()
+
+    /** فاکتور/پیش‌فاکتورهای واقعی خوانده‌شده از SQL Server (بخش گزارش‌ها). */
+    val serverInvoices: Flow<List<ServerInvoiceEntity>> = db.serverInvoices().observeAll()
     val config = settings.config
 
     /** جمع ناخالص سبد. */

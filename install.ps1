@@ -36,7 +36,8 @@ param(
     [switch]$SkipFirewall,            # بخش «فایروال» تیک نخورده
     [switch]$SkipAndroidPrep,         # بخش «اتصال مستقیم اندروید» تیک نخورده
     [switch]$SkipSelfCheck,           # بخش «بازرسی و تعمیر» تیک نخورده
-    [switch]$AndroidPrepOnly          # فقط آماده‌سازی اتصال مستقیم اندروید
+    [switch]$AndroidPrepOnly,         # فقط آماده‌سازی اتصال مستقیم اندروید
+    [switch]$NoSqlRestart             # در اجرای خودکار، سرویس SQL را ری‌استارت نکن
 )
 
 $ErrorActionPreference = "Stop"
@@ -873,9 +874,9 @@ function Enable-SqlTcp {
       فعال‌سازی سریع TCP/IP روی پورت ۱۴۳۳ با تغییر کلیدهای رجیستری همان نسخهٔ SQL Server،
       سپس یک‌بار ری‌استارت سرویس. هیچ تغییری در دیتابیس‌ها داده نمی‌شود.
     #>
-    if (-not $script:SqlInstanceRegPath) { return $false }
+    if (-not $script:SqlInstanceRegKey) { return $false }
     try {
-        $nets = "HKLM:\$($script:SqlInstanceRegPath)\SuperSocketNetLib\Tcp"
+        $nets = "$($script:SqlInstanceRegKey)\SuperSocketNetLib\Tcp"
         if (-not (Test-Path $nets)) { Write-Warn "کلید رجیستری TCP پیدا نشد: $nets"; return $false }
         New-ItemProperty -Path $nets -Name "Enabled" -Value 1 -PropertyType DWord -Force | Out-Null
         New-ItemProperty -Path "$nets\IPAll" -Name "TcpPort" -Value "1433" -PropertyType String -Force | Out-Null
@@ -920,12 +921,15 @@ function Enable-SqlMixedMode {
       رجیستری همان نسخهٔ SQL Server) و سرویس را یک‌بار ری‌استارت می‌کند.
       هیچ تغییری در دیتابیس‌ها و کاربران داده نمی‌شود.
     #>
-    if (-not $script:SqlInstanceRegPath) { return $false }
+    if (-not $script:SqlInstanceRegKey) { return $false }
     try {
-        $key = "HKLM:\$($script:SqlInstanceRegPath)"
+        $key = $script:SqlInstanceRegKey
         if (-not (Test-Path $key)) { Write-Warn "کلید رجیستری سرور پیدا نشد: $key"; return $false }
+        $before = (Get-ItemProperty -Path $key -Name "LoginMode" -ErrorAction SilentlyContinue).LoginMode
         New-ItemProperty -Path $key -Name "LoginMode" -Value 2 -PropertyType DWord -Force | Out-Null
-        Write-Ok "حالت احراز هویت سرور به «SQL Server and Windows» تغییر کرد (LoginMode=2)"
+        $after = (Get-ItemProperty -Path $key -Name "LoginMode" -ErrorAction SilentlyContinue).LoginMode
+        Write-Ok "حالت احراز هویت سرور به «SQL Server and Windows» تغییر کرد (LoginMode: $before → $after)"
+        if ($after -ne 2) { Write-Warn "مقدار ثبت‌شده تأیید نشد ($after) — کلید: $key" }
         $svc = if ($script:SqlServiceName) { $script:SqlServiceName } else { "MSSQLSERVER" }
         Write-Info "ری‌استارت سرویس $svc برای اعمال تغییر ..."
         try { Restart-Service -Name $svc -Force -ErrorAction Stop; Write-Ok "سرویس $svc ری‌استارت شد." }
@@ -945,6 +949,12 @@ function Invoke-AndroidPrep {
     if ($script:DbEngine -ne "sqlserver") {
         Write-Warn "اتصال مستقیم اندروید فقط برای SQL Server معنا دارد (دیتابیس فعلی: $script:DbEngine) — رد شد"
         return $false
+    }
+    # مسیر رجیستری همان نمونهٔ نصب‌شدهٔ SQL Server باید همین‌جا معلوم شود؛
+    # در حالت «فقط آماده‌سازی اندروید» (میان‌بر اتصال مستقیم SQL) این تابع هنوز
+    # اجرا نشده بود و در نتیجه فعال‌سازی TCP/حالت احراز هویت عملاً بی‌اثر می‌شد.
+    if (-not $script:SqlInstanceRegKey) {
+        try { Resolve-SqlInstanceInfo } catch { Write-Warn "شناسایی نمونهٔ SQL Server ممکن نشد: $($_.Exception.Message)" }
     }
     $erp   = $script:ErpDb
     $login = $script:AndroidLogin
@@ -977,6 +987,13 @@ function Invoke-AndroidPrep {
         $answer = "n"
         if (-not $Unattended) {
             $answer = Read-Prompt "حالت احراز هویت را به «SQL + ویندوز» تغییر دهم و سرویس SQL را یک‌بار ری‌استارت کنم؟ (بله/n)" "بله"
+        } else {
+            # اجرای خودکار: این تنها موردی است که بدون آن، اتصال گوشی هرگز کار نمی‌کند
+            # (پورت باز است، اما SQL Server کاربر SQL را رد می‌کند → خطای 18456).
+            # چون آماده‌سازی «اتصال مستقیم اندروید» صریحاً درخواست شده، خودکار اعمال می‌شود.
+            $answer = "بله"
+            Write-Info "اجرای خودکار: این تغییر برای کار کردن اپ لازم است، بنابراین خودکار اعمال می‌شود."
+            Write-Info "برای جلوگیری: نصب را با -NoSqlRestart اجرا کنید (تغییر ثبت می‌شود، ری‌استارت با شما)."
         }
         if ($answer -match "^(بله|yes|y|ب)$") {
             if (Enable-SqlMixedMode) {
@@ -1039,6 +1056,13 @@ function Invoke-AndroidPrep {
             $answer = "n"
             if (-not $Unattended) {
                 $answer = Read-Prompt "همین حالا سرویس SQL را ری‌استارت کنم؟ (بله/n)" "بله"
+            } elseif (-not $NoSqlRestart) {
+                # بدون ری‌استارت، تغییر حالت احراز هویت اعمال نمی‌شود و اپ «رمز اشتباه» می‌گیرد
+                $answer = "بله"
+                Write-Info "اجرای خودکار: سرویس SQL برای اعمال تغییر یک‌بار ری‌استارت می‌شود (چند ثانیه)."
+            } else {
+                Write-Warn "طبق -NoSqlRestart ری‌استارت انجام نشد — تا ری‌استارت دستی، ورود کاربر SQL کار نمی‌کند."
+                Write-Info "دستی:  Restart-Service $($script:SqlServiceName)"
             }
             if ($answer -match "^(بله|yes|y|ب)$") {
                 $svc = if ($script:SqlServiceName) { $script:SqlServiceName } else { "MSSQLSERVER" }
@@ -1121,6 +1145,12 @@ function Invoke-AndroidPrep {
         $answer = "n"
         if (-not $Unattended) {
             $answer = Read-Prompt "همین حالا TCP/IP را فعال کنم و سرویس SQL را یک‌بار ری‌استارت کنم؟ (بله/n)" "بله"
+        } elseif (-not $NoSqlRestart) {
+            # بدون شنوندهٔ ۱۴۳۳ هیچ اتصالی از گوشی ممکن نیست؛ در اجرای خودکار اعمال می‌شود
+            $answer = "بله"
+            Write-Info "اجرای خودکار: TCP/IP روی ۱۴۳۳ فعال می‌شود (ری‌استارت کوتاه سرویس SQL)."
+        } else {
+            Write-Warn "طبق -NoSqlRestart، فعال‌سازی TCP انجام نشد."
         }
         if ($answer -match "^(بله|yes|y|ب)$") {
             if (Enable-SqlTcp) {
@@ -1217,23 +1247,34 @@ function Resolve-SqlInstanceInfo {
         $svc = Get-Service -Name $script:SqlServiceName -ErrorAction SilentlyContinue
         if ($svc) {
             $id = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$($script:SqlServiceName)" -ErrorAction SilentlyContinue).ImagePath
-            if ($id -match "(MSSQL\d+\.MSSQLSERVER|MSSQL\d+)$") {
+            # نمونهٔ پیش‌فرض: MSSQL15.MSSQLSERVER — نمونهٔ نام‌دار: MSSQL15.SQLEXPRESS
+            if ($id -match "(MSSQL\d+\.[A-Za-z0-9_\-]+)") {
                 $script:SqlInstanceRegPath = "$($Matches[1])"
             }
         }
     } catch { }
     if (-not $script:SqlInstanceRegPath) {
-        # مسیر پیش‌فرض نسخهٔ ۱۲ (SQL Server 2014) و ۱۳/۱۴/۱۵ هم بررسی می‌شوند
-        foreach ($v in @("MSSQL12.MSSQLSERVER", "MSSQL13.MSSQLSERVER", "MSSQL14.MSSQLSERVER", "MSSQL15.MSSQLSERVER")) {
-            if (Test-Path "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$v\MSSQLServer\SuperSocketNetLib\Tcp") {
-                $script:SqlInstanceRegPath = "$v\MSSQLServer"
-                break
+        # جست‌وجوی همهٔ نمونه‌های نصب‌شده (پیش‌فرض و نام‌دار) در رجیستری
+        $base = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server"
+        try {
+            foreach ($k in (Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match "^MSSQL\d+\." })) {
+                if (Test-Path "$($k.PSPath)\MSSQLServer\SuperSocketNetLib\Tcp") {
+                    $script:SqlInstanceRegPath = $k.PSChildName
+                    break
+                }
             }
-        }
+        } catch { }
+    }
+    # کلید کامل: ریشهٔ نسخهٔ SQL Server + نام نمونه + پوشهٔ MSSQLServer
+    # (قبلاً پیشوند «SOFTWARE\Microsoft\Microsoft SQL Server» جا افتاده بود؛
+    #  در نتیجه Test-Path همیشه شکست می‌خورد و فعال‌سازی TCP و حالت احراز هویت
+    #  هرگز اجرا نمی‌شد — همان چیزی که اپ اندروید را بی‌دلیل ناتوان می‌کرد.)
+    if ($script:SqlInstanceRegPath) {
+        $script:SqlInstanceRegKey = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$($script:SqlInstanceRegPath)\MSSQLServer"
     }
     $script:ConfigMgrHint = "SQL Server Configuration Manager → SQL Server Network Configuration → Protocols → TCP/IP → Enabled = Yes"
-    if ($script:SqlInstanceRegPath) {
-        $key = "HKLM:\$($script:SqlInstanceRegPath)\SuperSocketNetLib\Tcp"
+    if ($script:SqlInstanceRegKey) {
+        $key = "$($script:SqlInstanceRegKey)\SuperSocketNetLib\Tcp"
         $script:RegEnableHint = "Set-ItemProperty '$key' Enabled 1; New-ItemProperty '$key\IPAll' TcpPort '1433' -Force"
         $script:RegEnableHint = $script:RegEnableHint.Replace("HKLM:\", "HKLM:\")
     } else {

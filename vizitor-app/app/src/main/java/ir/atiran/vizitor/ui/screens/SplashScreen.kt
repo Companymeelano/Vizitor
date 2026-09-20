@@ -33,9 +33,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -53,6 +57,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.atiran.vizitor.R
+import ir.atiran.vizitor.ui.components.NeonGreenButton
+import ir.atiran.vizitor.ui.components.NeonPurpleButton
+import ir.atiran.vizitor.util.toFaDigits
 import ir.atiran.vizitor.ui.theme.Gold
 import ir.atiran.vizitor.ui.theme.TextSecondary
 import ir.atiran.vizitor.ui.theme.vizitorPalette
@@ -76,7 +83,10 @@ private val Roles = listOf(
 @Composable
 fun SplashScreen(
     onEnter: () -> Unit,
-    onSoon: (String) -> Unit
+    onSoon: (String) -> Unit,
+    serverSession: ir.atiran.vizitor.sqldirect.ServerSession = ir.atiran.vizitor.sqldirect.ServerSession(),
+    onOpenServerConfig: () -> Unit = {},
+    onQuickEnter: () -> Unit = {},
 ) {
     val p = vizitorPalette
 
@@ -138,7 +148,20 @@ fun SplashScreen(
                 .offset(y = ((1f - brandA) * 12).dp)
         )
 
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(18.dp))
+
+        // ══════════════════════════════════════════════════════════════════
+        //  پنل اتصال به سرور — گام اول ورود (هم‌رنگ و هم‌زبان با تم برنامه)
+        //  کاربر اول وضعیت سرور را می‌بیند/تنظیم می‌کند، بعد نقش خود را می‌زند
+        // ══════════════════════════════════════════════════════════════════
+        ServerConnectPanel(
+            session = serverSession,
+            onConfigure = onOpenServerConfig,
+            onQuickEnter = onQuickEnter,
+            modifier = Modifier.alpha(segmentAlpha(t, 0.24f, 0.22f)),
+        )
+
+        Spacer(Modifier.height(18.dp))
 
         // ══ عنوان «انتخاب نقش ورود» با دو خط طلایی دو سویینج ══
         Row(
@@ -221,7 +244,7 @@ fun SplashScreen(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                "سامانه هوشمند ویزیت، ویترین و سفارش‌گیری — نسخه ۲٫۱۳٫۵",
+                "سامانه هوشمند ویزیت، ویترین و سفارش‌گیری — نسخه ۲٫۱۳٫۵ (اتصال مستقیم SQL)",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.5.sp, fontWeight = FontWeight.Bold),
                 color = Gold.copy(alpha = 0.9f),
                 textAlign = TextAlign.Center
@@ -325,6 +348,157 @@ private fun RoleCard(
                 Text("ورود", style = MaterialTheme.typography.labelSmall, color = Gold)
             } else {
                 Text("به‌زودی", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            }
+        }
+    }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  پنل «اتصال به سرور آتیران» در صفحهٔ اول (پیش از انتخاب نقش)
+ *  ─────────────────────────────────────────────────────────────────────────
+ *  هوشمندی این پنل:
+ *    • اگر روی سرور وصل نباشیم: وضعیت «تنظیم نشده/تنظیم‌شده» + دکمهٔ تنظیم اتصال
+ *    • اگر تنظیمات و اعتبارنامه ذخیره شده باشد: یک دکمهٔ «ورود سریع» (بدون تایپ)
+ *    • اگر متصل باشیم: چراغ سبز + نام دیتابیس/کاربر + دکمهٔ ورود به پنل
+ *    • تمام رنگ‌ها، آیکن‌ها و قاب شیشه‌ای از تم اصلی برنامه می‌آید
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+@Composable
+private fun ServerConnectPanel(
+    session: ir.atiran.vizitor.sqldirect.ServerSession,
+    onConfigure: () -> Unit,
+    onQuickEnter: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val p = vizitorPalette
+    val stateColor = when {
+        session.loggedIn -> p.accent
+        session.connected -> p.gold
+        session.configured -> p.primary
+        else -> p.danger
+    }
+    val stateText = when {
+        session.loggedIn -> "متصل ✅"
+        session.connected -> "وصل به دیتابیس"
+        session.configured -> "آمادهٔ اتصال"
+        else -> "تنظیم نشده"
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0x14FFFFFF))
+            .border(1.dp, p.primary.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(p.primary.copy(alpha = 0.18f))
+                    .border(1.dp, p.primary.copy(alpha = 0.45f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Dns, contentDescription = null, tint = p.gold, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "اتصال به سرور آتیران",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+                    color = p.textPrimary
+                )
+                Text(
+                    if (session.serverLabel.isBlank()) "ابتدا اتصال را تنظیم کنید، سپس نقش خود را انتخاب کنید"
+                    else session.serverLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(stateColor.copy(alpha = 0.16f))
+                    .border(1.dp, stateColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 9.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    stateText,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = stateColor
+                )
+            }
+        }
+
+        if (session.busy || session.syncing) {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = p.gold
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    session.message.ifBlank { if (session.syncing) "در حال همگام‌سازی…" else "در حال اتصال…" },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = p.accentText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        } else if (session.lastSyncSummary.isNotBlank() && session.loggedIn) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "سرویس‌های داده فعال: ${session.productsCount.toFaDigits()} کالا • " +
+                    "${session.customersCount.toFaDigits()} مشتری • ${session.invoicesCount.toFaDigits()} فاکتور",
+                style = MaterialTheme.typography.labelSmall,
+                color = p.textSecondary
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (session.readyForQuickEnter && !session.loggedIn) {
+                NeonPurpleButton(
+                    text = "ورود سریع",
+                    icon = Icons.Filled.Login,
+                    onClick = onQuickEnter,
+                    modifier = Modifier.weight(1f)
+                )
+            } else if (session.loggedIn) {
+                NeonGreenButton(
+                    text = "ورود به پنل",
+                    icon = Icons.Filled.Login,
+                    onClick = onQuickEnter,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                NeonPurpleButton(
+                    text = if (session.configured) "ورود سریع" else "تنظیم اتصال",
+                    icon = Icons.Filled.Settings,
+                    onClick = if (session.configured) onQuickEnter else onConfigure,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            OutlinedButton(
+                onClick = onConfigure,
+                modifier = Modifier.height(44.dp),
+                shape = RoundedCornerShape(22.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = null,
+                    tint = p.gold,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("تنظیمات اتصال", color = p.accentText, fontSize = 11.sp)
             }
         }
     }

@@ -1,15 +1,14 @@
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Vizitor — آتیران ویزیتور | پل بین صفحهٔ «اتصال مستقیم SQL» و لایهٔ داده
+ *  Vizitor — آتیران ویزیتور | مغزِ اتصال مستقیم به SQL Server (پورت ۱۴۳۳)
  *  Developed by Milad Yaghoobi — Meelano Studio Design
  *  ─────────────────────────────────────────────────────────────────────────
- *  دو مرحلهٔ اعتبارنامه — دقیقاً مثل خودِ ERP و مثل برنامهٔ آزمایش‌شدهٔ Direct:
- *    ۱) اعتبارنامهٔ اتصال دیتابیس: کاربر محدود SQL که نصب‌کننده می‌سازد
- *       (vizitor_android) یا هر کاربر SQL دیگری → فقط برای باز کردن کانکشن.
- *    ۲) ورود ویزیتور: نام کاربری و کلمهٔ عبور خودِ ویزیتور در جدول واقعی
- *       dbo.sys_users → تعیین نقش، دسترسی و ویزیتور زیرمجموعه.
- *  هیچ‌کدام از این دو، هرگز در متن/گزارش چاپ نمی‌شوند؛ رمز مرحلهٔ ۱ فقط
- *  رمزنگاری‌شده (AES-GCM + Android Keystore) روی گوشی ذخیره می‌شود.
+ *  سه کار را با کمترین کلیک انجام می‌دهد:
+ *    ۱) «اتصال سریع»: با تنظیمات ذخیره‌شده یک‌ضربه‌ای وصل می‌شود (کارت/تایپ لازم نیست)
+ *    ۲) «ورود و همگام‌سازی»: ورود با dbo.sys_users + پر شدن کالا/مشتری/فاکتور
+ *    ۳) «به‌خاطر سپردن»: نام کاربری و رمز ویزیتور با AES-GCM + Keystore ذخیره می‌شود
+ *       تا اجرای بعدی فقط با یک ضربه روی نقش، به پنل برسد.
+ *  همهٔ عملیات روی Dispatchers.IO است و رمزی هرگز چاپ/لاگ/نمایش داده نمی‌شود.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.sqldirect
@@ -17,16 +16,18 @@ package ir.atiran.vizitor.sqldirect
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import ir.atiran.vizitor.data.local.AppDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** وضعیت کامل صفحهٔ «اتصال مستقیم SQL». */
+/** وضعیت فرم صفحهٔ «اتصال به سرور». */
 data class DirectUiState(
     // کارت اتصال نصب‌کننده
     val cardText: String = "",
+    val cardExpanded: Boolean = false,
     // سرور و دیتابیس
     val host: String = "",
     val publicHost: String = "",
@@ -34,16 +35,20 @@ data class DirectUiState(
     val database: String = "",
     val usePublicHost: Boolean = false,
     val useEncryption: Boolean = true,
-    // اعتبارنامهٔ اتصال (کاربر محدود SQL)
+    // اعتبارنامهٔ کاربر محدود دیتابیس
     val dbUser: String = "",
     val dbPassword: String = "",
     // ورود ویزیتور (dbo.sys_users)
     val erpUser: String = "",
     val erpPassword: String = "",
+    val rememberMe: Boolean = false,
     // وضعیت
     val busy: Boolean = false,
     val connected: Boolean = false,
     val loggedIn: Boolean = false,
+    val settingsExpanded: Boolean = false,
+    val loginExpanded: Boolean = false,
+    val detailsExpanded: Boolean = false,
     val status: String = "",
     val statusKind: Int = 0,          // ۰=اطلاع، ۱=موفق، ۲=خطا
     val databases: List<String> = emptyList(),
@@ -60,10 +65,6 @@ data class DirectUiState(
     val allowedProducts: Int = 0,
     val allowedWarehouses: Int = 0,
     val visitorsOfUser: Int = 0,
-    // عیب‌یابی
-    val diag: List<DiagRow> = emptyList(),
-    val diagText: String = "",
-    val driverLabel: String = "",
 )
 
 class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
@@ -72,29 +73,44 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<DirectUiState> = _state.asStateFlow()
 
     private val data get() = MeelanoDataSource(SqlConnectionManager)
+    private val db: AppDatabase get() = AppDatabase.getInstance(getApplication())
 
     init {
         SecureDbStore.init(app)
-        // اگر اجرای قبلی (یا نصب‌کننده) چیزی ذخیره کرده باشد، فرم پیش‌پر می‌شود
+        VizitorSession.refreshFromStore()
+        restoreSaved()
+    }
+
+    /** خواندن تنظیمات ذخیره‌شده (اتصال + اعتبارنامهٔ ویزیتور) و پر کردن فرم. */
+    fun restoreSaved() {
         val saved = SecureDbStore.load()
-        if (saved != null) {
-            val (external, local, useExternal) = SecureDbStore.loadAddresses()
-            _state.update {
-                it.copy(
-                    host = local.ifBlank { saved.host },
-                    publicHost = external,
-                    usePublicHost = useExternal && external.isNotBlank(),
-                    port = saved.port.toString(),
-                    database = saved.database,
-                    dbUser = saved.username,
-                    dbPassword = saved.password,
-                    useEncryption = saved.useEncryption,
-                    status = "تنظیمات ذخیره‌شدهٔ قبلی بارگذاری شد (${saved.masked()}) — " +
-                        "برای دیدن ویزیتورها، نام کاربری و کلمهٔ عبور خود را وارد کنید.",
-                    statusKind = 1,
-                )
-            }
+        val erp = SecureDbStore.loadErp()
+        if (saved == null && erp == null) return
+        val (external, local, useExternal) = SecureDbStore.loadAddresses()
+        _state.update {
+            it.copy(
+                host = local.ifBlank { saved?.host.orEmpty() }.ifBlank { it.host },
+                publicHost = external.ifBlank { it.publicHost },
+                usePublicHost = if (external.isNotBlank()) useExternal else it.usePublicHost,
+                port = (saved?.port ?: 1433).toString(),
+                database = saved?.database.orEmpty().ifBlank { it.database },
+                dbUser = saved?.username.orEmpty().ifBlank { it.dbUser },
+                dbPassword = saved?.password.orEmpty(),
+                useEncryption = saved?.useEncryption ?: it.useEncryption,
+                erpUser = erp?.username.orEmpty().ifBlank { it.erpUser },
+                erpPassword = erp?.password.orEmpty(),
+                rememberMe = erp?.remember == true,
+                // اگر تنظیمات از قبل هست، بخش‌های فنی بسته می‌مانند (صفحه شلوغ نمی‌شود)
+                settingsExpanded = saved == null,
+                loginExpanded = erp?.remember != true,
+                status = if (it.status.isBlank() && saved != null)
+                    "اتصال روی این گوشی ذخیره شده است — «اتصال سریع» را بزنید یا نام کاربری/رمز خود را وارد کنید."
+                else it.status,
+                statusKind = if (it.status.isBlank() && saved != null) 1 else it.statusKind,
+            )
         }
+        // سرور و دیتابیس را به آیکن‌ها/وضعیت مشترک هم بدهیم
+        publishSession()
     }
 
     // ── فرم ────────────────────────────────────────────────────────────────
@@ -107,20 +123,20 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
     fun onDbPassword(v: String) = _state.update { it.copy(dbPassword = v) }
     fun onErpUser(v: String) = _state.update { it.copy(erpUser = v.trim()) }
     fun onErpPassword(v: String) = _state.update { it.copy(erpPassword = v) }
+    fun onRememberMe(v: Boolean) = _state.update { it.copy(rememberMe = v) }
     fun onUsePublicHost(v: Boolean) = _state.update { it.copy(usePublicHost = v) }
     fun onUseEncryption(v: Boolean) = _state.update { it.copy(useEncryption = v) }
+    fun toggleCard() = _state.update { it.copy(cardExpanded = !it.cardExpanded) }
+    fun toggleSettings() = _state.update { it.copy(settingsExpanded = !it.settingsExpanded) }
+    fun toggleLogin() = _state.update { it.copy(loginExpanded = !it.loginExpanded) }
+    fun toggleDetails() = _state.update { it.copy(detailsExpanded = !it.detailsExpanded) }
 
     /** خواندن کارت اتصال نصب‌کننده (متن، QR یا android-connect.json). */
     fun applyCard() {
         val card = ConnectCards.parse(_state.value.cardText)
         if (card == null) {
-            _state.update {
-                it.copy(
-                    status = "کارت خوانده نشد. متن کارت را کامل بچسبانید (باید با vizitor:// شروع شود) " +
-                        "یا محتوای فایل android-connect.json را بچسبانید.",
-                    statusKind = 2,
-                )
-            }
+            fail("کارت خوانده نشد. متن کارت را کامل بچسبانید (باید با vizitor:// شروع شود) " +
+                "یا محتوای فایل android-connect.json را بچسبانید.")
             return
         }
         _state.update {
@@ -131,9 +147,10 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
                 port = card.port.toString(),
                 database = card.database.ifBlank { it.database },
                 dbUser = card.login.ifBlank { it.dbUser },
+                cardExpanded = false,
+                settingsExpanded = true,
                 status = "کارت اتصال خوانده شد (${card.source}) ✅ — " +
-                    "اگر کارت آی‌پی اختصاصی دارد و بیرون از شبکه هستید، کلید «اتصال از بیرون» را روشن کنید، " +
-                    "سپس رمز کاربر محدود دیتابیس را وارد کنید و «تست اتصال» را بزنید.",
+                    "اگر بیرون از شبکه هستید کلید «اتصال از بیرون» را روشن کنید، سپس رمز کاربر دیتابیس را بزنید.",
                 statusKind = 1,
             )
         }
@@ -143,25 +160,6 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
     private fun activeHost(): String =
         if (_state.value.usePublicHost && _state.value.publicHost.isNotBlank()) _state.value.publicHost
         else _state.value.host
-
-    /**
-     * اگر نشانی فعال از این شبکه در دسترس نباشد ولی نشانی دیگر (داخلی/اختصاصی) باز باشد،
-     * خودکار همان انتخاب می‌شود. علت: کاربر بیرون از فروشگاه، آی‌پی داخلی را در فرم دارد و
-     * پورت هم از بیرون «سبز» است، ولی اتصال از آی‌پی داخلی هرگز برقرار نمی‌شود.
-     * خروجی: توضیح فارسی برای نمایش (یا رشتهٔ خالی اگر تغییری لازم نبود).
-     */
-    private fun preferReachableHost(): String {
-        val st = _state.value
-        val port = st.port.toIntOrNull() ?: 1433
-        val current = sanitizeHost(if (st.usePublicHost) st.publicHost else st.host)
-        val otherIsPublic = !st.usePublicHost
-        val other = sanitizeHost(if (otherIsPublic) st.publicHost else st.host)
-        if (current.isBlank() || other.isBlank() || other == current) return ""
-        if (SqlDiagnostics.tcpReachable(current, port)) return ""      // نشانی فعلی سالم است
-        if (!SqlDiagnostics.tcpReachable(other, port)) return ""       // هیچ‌کدام باز نیست؛ پیام خطا خودش گویاست
-        _state.update { it.copy(usePublicHost = otherIsPublic) }
-        return "نشانی «$current» از این شبکه در دسترس نبود؛ به‌طور خودکار از «$other» استفاده شد."
-    }
 
     private fun settings(database: String? = null): DbSettings {
         val s = _state.value
@@ -176,300 +174,399 @@ class DirectSqlViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    /** گام نصب‌کننده: تست اتصال + فهرست دیتابیس‌ها (برای انتخاب یا تایپ دستی). */
+    private fun fail(message: String) {
+        _state.update { it.copy(busy = false, status = message, statusKind = 2) }
+        VizitorSession.endBusy()
+        VizitorSession.setStatus(message, 2)
+    }
+
+    private fun publishSession() {
+        val s = _state.value
+        VizitorSession.update {
+            it.copy(
+                configured = s.host.isNotBlank() && s.database.isNotBlank() && s.dbUser.isNotBlank(),
+                connected = s.connected,
+                loggedIn = s.loggedIn,
+                credentialsSaved = s.rememberMe && s.erpUser.isNotBlank(),
+                host = s.host, publicHost = s.publicHost, usePublicHost = s.usePublicHost,
+                port = s.port.toIntOrNull() ?: 1433, database = s.database,
+                erpUser = s.loggedInUser.ifBlank { s.erpUser },
+                erpName = s.loggedInName,
+                erpUserId = s.loggedInUserId, companyId = s.loggedInCompanyId,
+                serverInfo = s.serverInfo,
+                visitorsCount = s.visitorsOfUser,
+            )
+        }
+    }
+
+    /** گام نصب‌کننده: تست اتصال + فهرست دیتابیس‌ها (انتخاب یا تایپ دستی). */
     fun fetchDatabases() {
         val s = _state.value
         if (activeHost().isBlank() || s.dbUser.isBlank() || s.dbPassword.isBlank()) {
-            _state.update {
-                it.copy(
-                    status = "آدرس سرور، نام کاربری و رمز کاربر دیتابیس لازم است " +
-                        "(کارت اتصال نام کاربری را پر می‌کند؛ رمز در کارت نیست).",
-                    statusKind = 2,
-                )
-            }
+            fail("آدرس سرور، نام کاربری و رمز کاربر دیتابیس لازم است (کارت اتصال نام کاربری را پر می‌کند).")
             return
         }
         viewModelScope.launch {
-            _state.update {
-                it.copy(busy = true, status = "در حال اتصال به ${activeHost()}:${s.port} …", statusKind = 0)
-            }
-            val probe = settings(database = "master")
-            SqlConnectionManager.listDatabases(probe).fold(
+            _state.update { it.copy(busy = true, status = "در حال اتصال به ${activeHost()}:${s.port} …", statusKind = 0) }
+            VizitorSession.beginBusy("در حال اتصال به سرور…")
+            SqlConnectionManager.listDatabases(settings(database = "master")).fold(
                 onSuccess = { list ->
                     _state.update {
                         it.copy(
-                            busy = false,
-                            databases = list,
+                            busy = false, databases = list,
                             status = "اتصال برقرار است ✅ — ${list.size} دیتابیس پیدا شد. " +
-                                "دیتابیس حسابداری را انتخاب کنید یا نامش را دستی تایپ کنید.",
+                                "دیتابیس حسابداری را از فهرست انتخاب یا دستی تایپ کنید.",
                             statusKind = 1,
                         )
                     }
+                    VizitorSession.endBusy()
+                    VizitorSession.setStatus("سرور پاسخ داد ✅ — ${list.size} دیتابیس", 1)
                 },
                 onFailure = { e ->
-                    _state.update {
-                        it.copy(
-                            busy = false,
-                            status = "اتصال ناموفق ❌ — ${e.message ?: e.javaClass.simpleName}\n" +
-                                "بررسی کنید SQL Server روشن است، سرویس روی پورت ${s.port} گوش می‌دهد " +
-                                "و فایروال اجازه می‌دهد (نصب‌کننده این‌ها را آماده می‌کند). " +
-                                "اگر سرور قدیمی است و پیام مربوط به TLS بود، کلید «رمزنگاری TLS» را خاموش کنید.",
-                            statusKind = 2,
-                        )
-                    }
+                    fail(
+                        "اتصال ناموفق ❌ — ${e.message ?: e.javaClass.simpleName}\n" +
+                            "بررسی کنید SQL Server روشن است، سرویس روی پورت ${s.port} گوش می‌دهد و فایروال اجازه می‌دهد " +
+                            "(نصب‌کننده این‌ها را آماده می‌کند). اگر سرور قدیمی است و پیام مربوط به TLS بود، " +
+                            "کلید «رمزنگاری TLS» را خاموش کنید."
+                    )
                 },
             )
         }
     }
 
-    /** اتصال به دیتابیس + ذخیرهٔ رمزنگاری‌شدهٔ تنظیمات. */
-    fun connectDatabase() {
-        val s = _state.value
-        if (activeHost().isBlank() || s.database.isBlank() || s.dbUser.isBlank() || s.dbPassword.isBlank()) {
-            _state.update {
-                it.copy(
-                    status = "آدرس سرور، نام دیتابیس، نام کاربری و رمز کاربر دیتابیس لازم است.",
-                    statusKind = 2,
-                )
-            }
-            return
-        }
-        viewModelScope.launch {
-            _state.update {
-                it.copy(busy = true, status = "در حال بررسی دسترسی و اتصال به دیتابیس ${s.database} …", statusKind = 0)
-            }
-            val hostNote = preferReachableHost()
-            val cfg = settings()
-            if (!SqlConnectionManager.connect(cfg)) {
-                val message = (SqlConnectionManager.state.value as? ConnectionState.Error)?.message
-                _state.update {
-                    it.copy(
-                        busy = false,
-                        connected = false,
-                        status = "اتصال برقرار نشد ❌ — ${message ?: "خطای نامشخص"}\n" +
-                            "نام دیتابیس را دقیق بنویسید (قابل تایپ دستی است) و دسترسی کاربر را بررسی کنید.",
-                        statusKind = 2,
-                    )
-                }
-                return@launch
-            }
-            saveSettings()
-            val info = runCatching { data.databaseInfo() }.getOrNull()
-            val health = runCatching { data.preInvoiceHealth() }.getOrElse { emptyMap() }
-            _state.update {
-                it.copy(
-                    busy = false,
-                    connected = true,
-                    driverLabel = DirectSql.displayName(SqlConnectionManager.activeDriver),
-                    serverInfo = info?.let { t ->
-                        "دیتابیس ${t.first} — نسخهٔ SQL Server ${t.second} — ${t.third} مشتری"
-                    }.orEmpty(),
-                    health = health,
-                    status = (if (hostNote.isNotBlank()) hostNote + "\n" else "") +
-                        "اتصال برقرار و تنظیمات ذخیره شد ✅ — " +
-                        "حالا نام کاربری و کلمهٔ عبور خودتان را وارد کنید و «ورود و بارگذاری ویزیتورها» را بزنید.",
-                    statusKind = 1,
-                )
-            }
-        }
-    }
-
-    /** ذخیرهٔ رمزنگاری‌شده (رمز هرگز به‌صورت متن ذخیره نمی‌شود). */
+    /** ذخیرهٔ رمزنگاری‌شدهٔ تنظیمات اتصال (بدون نیاز به اتصال). */
     fun saveSettings() {
         val s = _state.value
-        if (activeHost().isBlank() || s.database.isBlank() || s.dbUser.isBlank()) return
+        if (activeHost().isBlank() || s.database.isBlank() || s.dbUser.isBlank()) {
+            fail("برای ذخیره، آدرس سرور، نام دیتابیس و نام کاربر دیتابیس لازم است.")
+            return
+        }
         SecureDbStore.save(settings())
         SecureDbStore.saveAddresses(
             hostExternal = s.publicHost,
             hostLocal = s.host,
             useExternal = s.usePublicHost && s.publicHost.isNotBlank(),
         )
+        SecureDbStore.saveErp(s.erpUser, s.erpPassword, s.rememberMe && s.erpUser.isNotBlank())
+        publishSession()
+        _state.update {
+            it.copy(
+                status = "تنظیمات با AES-GCM + Android Keystore ذخیره شد ✅ " +
+                    "(" + it.dbUser + "@" + it.host + ":" + it.port + "/" + it.database + ")" +
+                    if (it.rememberMe) " — ورود سریع برای اجرای بعدی فعال شد." else "",
+                statusKind = 1,
+            )
+        }
     }
 
-    /** گام نهایی: ورود از dbo.sys_users و خواندن جدول/ستون‌های ویزیتورها. */
-    fun loginAndLoad() {
+    /**
+     * اتصال به دیتابیس. اگر موفق بود: تنظیمات ذخیره می‌شود، سلامت مسیر پیش‌فاکتور
+     * خوانده می‌شود و در صورت وجود اعتبارنامهٔ ذخیره‌شده، ورود هم خودکار انجام می‌گیرد.
+     */
+    fun connectDatabase(autoLoginAfter: Boolean = false) {
         val s = _state.value
-        if (s.erpUser.isBlank() || s.erpPassword.isBlank()) {
-            _state.update {
-                it.copy(status = "نام کاربری و کلمهٔ عبور خود را (حساب ویزیتور در سامانه) وارد کنید.", statusKind = 2)
+        if (activeHost().isBlank() || s.database.isBlank() || s.dbUser.isBlank() || s.dbPassword.isBlank()) {
+            fail("آدرس سرور، نام دیتابیس، نام کاربری و رمز کاربر دیتابیس لازم است.")
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, status = "در حال اتصال به دیتابیس ${s.database} …", statusKind = 0) }
+            VizitorSession.beginBusy("در حال اتصال به دیتابیس ${s.database}…")
+            val cfg = settings()
+            if (!SqlConnectionManager.connect(cfg)) {
+                val message = (SqlConnectionManager.state.value as? ConnectionState.Error)?.message
+                fail(
+                    "اتصال برقرار نشد ❌ — ${message ?: "خطای نامشخص"}\n" +
+                        "نام دیتابیس را دقیق بنویسید (قابل تایپ دستی است) و دسترسی کاربر را بررسی کنید."
+                )
+                return@launch
             }
+            SecureDbStore.save(settings())
+            SecureDbStore.saveAddresses(
+                hostExternal = s.publicHost, hostLocal = s.host,
+                useExternal = s.usePublicHost && s.publicHost.isNotBlank(),
+            )
+            val info = runCatching { data.databaseInfo() }.getOrNull()
+            val health = runCatching { data.preInvoiceHealth() }.getOrElse { emptyMap() }
+            _state.update {
+                it.copy(
+                    busy = false, connected = true,
+                    serverInfo = info?.let { t -> "${t.first} • SQL Server ${t.second} • ${t.third} مشتری" }.orEmpty(),
+                    health = health,
+                    status = "اتصال برقرار و تنظیمات ذخیره شد ✅ — حالا ورود ویزیتور را کامل کنید.",
+                    statusKind = 1,
+                )
+            }
+            publishSession()
+            VizitorSession.endBusy()
+            VizitorSession.setStatus("اتصال برقرار شد ✅ — ${cfg.database}", 1)
+
+            val savedErp = SecureDbStore.loadErp()
+            if (autoLoginAfter && savedErp != null && savedErp.remember && savedErp.password.isNotBlank()) {
+                loginAndSync(savedErp.username, savedErp.password)
+            }
+        }
+    }
+
+    /** ورود سریع: اتصال با تنظیمات ذخیره‌شده + ورود با اعتبارنامهٔ ذخیره‌شده + همگام‌سازی. */
+    fun quickEnter() {
+        val saved = SecureDbStore.load()
+        val erp = SecureDbStore.loadErp()
+        if (saved == null || saved.host.isBlank() || saved.database.isBlank()) {
+            fail("هنوز اتصالی ذخیره نشده است — «تنظیم اتصال» را کامل کنید.")
+            return
+        }
+        if (erp == null || !erp.remember || erp.password.isBlank() || erp.username.isBlank()) {
+            // تنظیمات هست ولی اعتبارنامهٔ ذخیره‌شده نداریم → ورود دستی
+            val (external, local, useExternal) = SecureDbStore.loadAddresses()
+            _state.update {
+                it.copy(
+                    host = local.ifBlank { saved.host }, publicHost = external,
+                    usePublicHost = useExternal && external.isNotBlank(),
+                    port = saved.port.toString(), database = saved.database,
+                    dbUser = saved.username, dbPassword = saved.password,
+                    useEncryption = saved.useEncryption,
+                    settingsExpanded = false, loginExpanded = true,
+                    status = "اتصال آماده است — نام کاربری و رمز خود را بزنید و «ورود و همگام‌سازی» را انتخاب کنید.",
+                    statusKind = 0,
+                )
+            }
+            return
+        }
+        val (external, local, useExternal) = SecureDbStore.loadAddresses()
+        _state.update {
+            it.copy(
+                host = local.ifBlank { saved.host }, publicHost = external,
+                usePublicHost = useExternal && external.isNotBlank(),
+                port = saved.port.toString(), database = saved.database,
+                dbUser = saved.username, dbPassword = saved.password,
+                useEncryption = saved.useEncryption,
+                erpUser = erp.username, erpPassword = erp.password, rememberMe = true,
+                loginExpanded = false, settingsExpanded = false,
+            )
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, status = "اتصال سریع به ${saved.database} …", statusKind = 0) }
+            VizitorSession.beginBusy("ورود سریع به سامانه…")
+            if (!SqlConnectionManager.connect(settings())) {
+                val message = (SqlConnectionManager.state.value as? ConnectionState.Error)?.message
+                fail("اتصال سریع ناموفق بود ❌ — ${message ?: "خطای نامشخص"}")
+                return@launch
+            }
+            _state.update { it.copy(connected = true) }
+            val info = runCatching { data.databaseInfo() }.getOrNull()
+            val health = runCatching { data.preInvoiceHealth() }.getOrElse { emptyMap() }
+            _state.update {
+                it.copy(
+                    serverInfo = info?.let { t -> "${t.first} • SQL Server ${t.second} • ${t.third} مشتری" }.orEmpty(),
+                    health = health,
+                )
+            }
+            loginAndSync(erp.username, erp.password)
+        }
+    }
+
+    /** ورود با فرم (دکمهٔ صفحه). */
+    fun loginAndLoad() = loginAndSync(_state.value.erpUser, _state.value.erpPassword)
+
+    /**
+     * ورود با جدول واقعی dbo.sys_users + همگام‌سازی همهٔ سرویس‌های داده.
+     * اگر اعتبارنامه از حافظهٔ امن آمده باشد (اتصال سریع) هم همین مسیر اجرا می‌شود.
+     */
+    private fun loginAndSync(user: String, password: String) {
+        if (user.isBlank() || password.isBlank()) {
+            fail("نام کاربری و کلمهٔ عبور خود را (حساب ویزیتور در سامانه) وارد کنید.")
             return
         }
         viewModelScope.launch {
             _state.update { it.copy(busy = true, status = "در حال ورود به سامانه …", statusKind = 0) }
+            VizitorSession.beginBusy("در حال ورود به سامانه…")
 
-            // اگر هنوز کانکشن باز نشده، اول وصل شو (بعد از بستن اپ، همان‌جا وصل می‌شود)
             if (!_state.value.connected) {
-                preferReachableHost()
-                val cfg = settings()
-                if (!SqlConnectionManager.connect(cfg)) {
+                if (!SqlConnectionManager.connect(settings())) {
                     val message = (SqlConnectionManager.state.value as? ConnectionState.Error)?.message
-                    _state.update {
-                        it.copy(
-                            busy = false,
-                            status = "اتصال به دیتابیس برقرار نشد ❌ — ${message ?: "خطای نامشخص"}\n" +
-                                "بخش «سرور و دیتابیس» را کامل کنید.",
-                            statusKind = 2,
-                        )
-                    }
+                    fail("اتصال به دیتابیس برقرار نشد ❌ — ${message ?: "خطای نامشخص"}")
                     return@launch
                 }
-                saveSettings()
+                SecureDbStore.save(settings())
                 _state.update { it.copy(connected = true) }
             }
 
-            val row = runCatching { data.login(s.erpUser, s.erpPassword) }.getOrNull()
+            val row = runCatching { data.login(user, password) }.getOrNull()
             if (row == null) {
-                _state.update {
-                    it.copy(
-                        busy = false,
-                        loggedIn = false,
-                        status = "نام کاربری یا کلمهٔ عبور درست نیست ❌ — " +
-                            "ورود فقط با جدول واقعی کاربران سامانه (dbo.sys_users) انجام می‌شود.",
-                        statusKind = 2,
-                    )
-                }
+                fail("نام کاربری یا کلمهٔ عبور درست نیست ❌ — ورود فقط با جدول واقعی کاربران سامانه (dbo.sys_users) انجام می‌شود.")
                 return@launch
             }
             if (!row.active) {
-                _state.update {
-                    it.copy(
-                        busy = false,
-                        loggedIn = false,
-                        status = "حساب «${row.username}» در سامانه غیرفعال است (sys_users.active = 0).",
-                        statusKind = 2,
-                    )
-                }
+                fail("حساب «${row.username}» در سامانه غیرفعال است (sys_users.active = 0).")
                 return@launch
             }
             if (row.locked) {
-                _state.update {
-                    it.copy(
-                        busy = false,
-                        loggedIn = false,
-                        status = "حساب «${row.username}» قفل است 🔒 — از سامانه بازش کنید.",
-                        statusKind = 2,
-                    )
-                }
+                fail("حساب «${row.username}» قفل است 🔒 — از سامانه بازش کنید.")
                 return@launch
             }
 
-            // ویزیتورهای همین کاربر + ستون‌های واقعی جدول + دامنهٔ دسترسی
+            val identity = runCatching { data.visitorIdentity(row.userId, row.companyId) }.getOrNull()
             val visitors = runCatching { VisitorRepository.visitorsForUser(row.userId, row.companyId) }
                 .getOrElse { emptyList() }
-            val identity = runCatching { data.visitorIdentity(row.userId, row.companyId) }.getOrNull()
             val columns = runCatching { VisitorRepository.visitorsColumns() }.getOrElse { emptyList() }
             val total = runCatching { VisitorRepository.visitorCount() }.getOrDefault(0)
 
             _state.update { st ->
                 st.copy(
-                    busy = false,
                     loggedIn = true,
-                    loggedInUser = row.username,
-                    loggedInName = row.fullName,
-                    loggedInUserId = row.userId,
-                    loggedInCompanyId = row.companyId,
-                    visitors = visitors,
-                    visitorsOfUser = visitors.size,
-                    columns = columns,
-                    visitorCount = total,
+                    loggedInUser = row.username, loggedInName = row.fullName,
+                    loggedInUserId = row.userId, loggedInCompanyId = row.companyId,
+                    erpUser = row.username, erpPassword = password,
+                    visitors = visitors, visitorsOfUser = visitors.size,
+                    columns = columns, visitorCount = total,
                     allowedCustomers = identity?.allowedCustomers ?: 0,
                     allowedProducts = identity?.allowedProducts ?: 0,
                     allowedWarehouses = identity?.allowedWarehouses ?: 0,
-                    status = "ورود موفق ✅ ${row.fullName.ifBlank { row.username }} — " +
-                        "${visitors.size} ویزیتور زیرمجموعهٔ شما، ${columns.size} ستون از جدول dbo.visitors، " +
-                        "$total ویزیتور در کل سامانه.",
+                    status = "ورود موفق ✅ ${row.fullName.ifBlank { row.username }} — در حال همگام‌سازی داده‌ها…",
                     statusKind = 1,
                 )
             }
+            // «به‌خاطر سپردن» → ذخیرهٔ رمزنگاری‌شدهٔ اعتبارنامه برای ورود سریع بعدی
+            SecureDbStore.saveErp(row.username, password, _state.value.rememberMe)
+            publishSession()
+
+            // ── همگام‌سازی: کالا، مشتری، فاکتور (سرویس‌های داده فعال می‌شوند) ──
+            VizitorSession.beginSync()
+            val report = runCatching {
+                SqldirectSync.run(
+                    db = db,
+                    userId = row.userId,
+                    companyId = row.companyId,
+                    visitorRdf = identity?.visitorRdf ?: visitors.firstOrNull()?.rdf,
+                )
+            }
+            report.fold(
+                onSuccess = { r ->
+                    _state.update {
+                        it.copy(
+                            busy = false,
+                            status = "ورود موفق ✅ ${row.fullName.ifBlank { row.username }} — " + r.summary,
+                            statusKind = 1,
+                        )
+                    }
+                    VizitorSession.update {
+                        it.copy(
+                            loggedIn = true, connected = true,
+                            erpUser = row.username, erpName = row.fullName,
+                            erpUserId = row.userId, companyId = row.companyId,
+                            visitorRdf = identity?.visitorRdf ?: visitors.firstOrNull()?.rdf,
+                            productsCount = r.products, customersCount = r.customers,
+                            invoicesCount = r.invoices, visitorsCount = visitors.size,
+                            credentialsSaved = _state.value.rememberMe,
+                        )
+                    }
+                    VizitorSession.endSync(r.summary)
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(
+                            busy = false,
+                            status = "ورود انجام شد ✅ ولی همگام‌سازی ناتمام ماند — " +
+                                (e.message ?: e.javaClass.simpleName) + "\nاز دکمهٔ «همگام‌سازی» دوباره امتحان کنید.",
+                            statusKind = 2,
+                        )
+                    }
+                    VizitorSession.endSync("همگام‌سازی ناتمام: " + (e.message ?: "خطای نامشخص"), 2)
+                },
+            )
         }
     }
 
-    /** فقط ویزیتورها را دوباره بخوان (همیشه از سرور؛ بدون نمایش دادهٔ کهنه). */
+    /** همگام‌سازی دستی (از صفحهٔ اتصال، تنظیمات یا صفحهٔ گزارش‌ها). */
+    fun syncNow() {
+        val s = _state.value
+        val uid = s.loggedInUserId ?: VizitorSession.current.erpUserId
+        if (uid == null) {
+            fail("برای همگام‌سازی اول وارد شوید.")
+            return
+        }
+        val vRdf = VizitorSession.current.visitorRdf ?: s.visitors.firstOrNull()?.rdf
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true, status = "در حال همگام‌سازی با سرور …", statusKind = 0) }
+            VizitorSession.beginSync()
+            if (!_state.value.connected && !SqlConnectionManager.connect(settings())) {
+                val message = (SqlConnectionManager.state.value as? ConnectionState.Error)?.message
+                fail("اتصال به سرور برقرار نشد ❌ — ${message ?: "خطای نامشخص"}")
+                return@launch
+            }
+            val report = runCatching {
+                SqldirectSync.run(db, uid, s.loggedInCompanyId ?: VizitorSession.current.companyId, vRdf)
+            }
+            report.fold(
+                onSuccess = { r ->
+                    _state.update { it.copy(busy = false, status = r.summary, statusKind = 1) }
+                    VizitorSession.update {
+                        it.copy(productsCount = r.products, customersCount = r.customers, invoicesCount = r.invoices)
+                    }
+                    VizitorSession.endSync(r.summary)
+                },
+                onFailure = { e -> fail("همگام‌سازی ناموفق ❌ — ${e.message ?: e.javaClass.simpleName}") },
+            )
+        }
+    }
+
+    /** خواندن دوبارهٔ ویزیتورها + مشخصات سرور (بدون ورود مجدد). */
     fun refreshVisitors() {
         val uid = _state.value.loggedInUserId ?: return
         val company = _state.value.loggedInCompanyId
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
             val visitors = runCatching { VisitorRepository.visitorsForUser(uid, company) }.getOrElse { emptyList() }
+            val columns = runCatching { VisitorRepository.visitorsColumns() }.getOrElse { emptyList() }
+            val total = runCatching { VisitorRepository.visitorCount() }.getOrDefault(0)
             _state.update {
                 it.copy(
-                    busy = false,
-                    visitors = visitors,
-                    visitorsOfUser = visitors.size,
-                    status = "فهرست ویزیتورها به‌روز شد (${visitors.size} رکورد)",
-                    statusKind = 1,
+                    busy = false, visitors = visitors, visitorsOfUser = visitors.size,
+                    columns = columns, visitorCount = total,
+                    status = "اطلاعات ویزیتورها به‌روز شد (${visitors.size} رکورد)", statusKind = 1,
                 )
             }
+            publishSession()
         }
     }
 
-    /**
-     * عیب‌یابی گام‌به‌گام: نشانی → پورت (هر دو نشانی) → درایورها → ورود واقعی →
-     * دسترسی به دیتابیس حسابداری. نتیجه هم به‌صورت سطرهای ✔/✖ در UI می‌آید و هم
-     * به‌صورت متن قابل‌کپی (بدون رمز) تا برای پشتیبانی فرستاده شود.
-     */
-    fun runDiagnostics() {
-        val s = _state.value
-        viewModelScope.launch {
-            _state.update { it.copy(busy = true, status = "در حال عیب‌یابی اتصال …", statusKind = 0) }
-            val cfg = settings()
-            val rows = ArrayList<DiagRow>()
-            try {
-                rows += SqlDiagnostics.run(cfg)
-            } catch (t: Throwable) {
-                rows += DiagRow("عیب‌یابی", false, SqlConnectionManager.describeThrowable(t))
-            }
-
-            // هر دو نشانی (داخلی و اختصاصی) از همین گوشی آزمایش می‌شوند تا معلوم شود
-            // الان کدام‌یک در دسترس است — همان چیزی که «ping.eu سبز» نمی‌گوید.
-            val hosts = ArrayList<String>()
-            if (s.host.isNotBlank()) hosts += s.host
-            if (s.publicHost.isNotBlank() && sanitizeHost(s.publicHost) != sanitizeHost(s.host)) hosts += s.publicHost
-            hosts.forEach { h ->
-                rows += SqlDiagnostics.tcpCheck("دسترسی به نشانی $h", sanitizeHost(h), s.port.toIntOrNull() ?: 1433)
-            }
-
-            val report = SqlDiagnostics.buildReport(cfg, rows)
-            val failed = rows.count { !it.ok }
-            _state.update {
-                it.copy(
-                    busy = false,
-                    diag = rows,
-                    diagText = report,
-                    status = if (failed == 0)
-                        "عیب‌یابی تمام شد ✅ — همهٔ ${rows.size} بررسی موفق بودند. اگر باز هم ورود نشد، دکمهٔ «ورود و بارگذاری ویزیتورها» را بزنید."
-                    else
-                        "عیب‌یابی تمام شد — $failed مورد از ${rows.size} بررسی ناموفق بود. متن قرمز/زرد پایین دقیقاً می‌گوید کجا گیر کرده است.",
-                    statusKind = if (failed == 0) 1 else 2,
-                )
-            }
+    /** خروج از حساب (تنظیمات اتصال می‌ماند، وضعیت ورود پاک می‌شود). */
+    fun logout() {
+        SqlConnectionManager.disconnect()
+        SecureDbStore.clearErp()
+        _state.update {
+            it.copy(
+                connected = false, loggedIn = false, rememberMe = false,
+                erpPassword = "", visitors = emptyList(), columns = emptyList(),
+                loggedInUser = "", loggedInName = "", loggedInUserId = null, loggedInCompanyId = null,
+                status = "از حساب خارج شدید. (اطلاعات اتصال سرور محفوظ ماند)", statusKind = 0,
+            )
         }
-    }
-
-    /** پیام کوچک پس از کپی گزارش عیب‌یابی در کلیپ‌بورد. */
-    fun noteCopied() = _state.update {
-        it.copy(status = "گزارش عیب‌یابی کپی شد — می‌توانید آن را برای پشتیبانی بفرستید (هیچ رمزی داخل آن نیست).", statusKind = 1)
+        VizitorSession.reset()
+        publishSession()
     }
 
     fun disconnect() {
         SqlConnectionManager.disconnect()
         _state.update {
             it.copy(
-                status = "اتصال قطع شد. (تنظیمات ذخیره‌شده دست‌نخورده مانده است)",
-                statusKind = 0,
-                connected = false, loggedIn = false,
-                visitors = emptyList(), columns = emptyList(),
+                connected = false, loggedIn = false, status = "اتصال قطع شد. (تنظیمات ذخیره‌شده دست‌نخورده مانده است)",
+                statusKind = 0, visitors = emptyList(), columns = emptyList(),
                 loggedInUser = "", loggedInName = "", loggedInUserId = null, loggedInCompanyId = null,
                 serverInfo = "", health = emptyMap(),
             )
         }
+        publishSession()
     }
 
-    /** پاک کردن کامل تنظیمات/رمز ذخیره‌شده روی همین گوشی. */
+    /** پاک کردن کامل تنظیمات و رمزهای ذخیره‌شده روی همین گوشی. */
     fun clearStored() {
         SecureDbStore.clear()
         SqlConnectionManager.disconnect()
-        _state.value = DirectUiState(status = "تنظیمات و رمز ذخیره‌شده پاک شد.", statusKind = 0)
+        _state.value = DirectUiState(status = "همهٔ تنظیمات و رمزهای ذخیره‌شده پاک شد.", statusKind = 0)
+        VizitorSession.update {
+            ServerSession(message = "تنظیمات اتصال پاک شد.", messageKind = 0)
+        }
     }
 }

@@ -128,6 +128,27 @@ data class ChatMessageEntity(
 
 enum class ChatMessageType { TEXT, VOICE, STICKER, VIDEO }
 
+/**
+ * فاکتور/پیش‌فاکتور **واقعی سامانهٔ آتیران** که با اتصال مستقیم از SQL Server
+ * خوانده شده است (جدول‌های dbo.sailfact و dbo.sailfact_pish).
+ *
+ * چرا جدول جدا از InvoiceEntity؟ چون InvoiceEntity کارهای **صادرشده از خود گوشی**
+ * است (وضعیت PENDING/SYNCED و اقلام سبد). اگر فاکتورهای سرور در همان جدول ریخته
+ * می‌شد، شمارش «فاکتورهای در انتظار ارسال» و جمع فروش امروز اشتباه می‌شد.
+ */
+@Entity(tableName = "server_invoices")
+data class ServerInvoiceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val number: String,            // shfacfo — شمارهٔ فاکتور/پیش‌فاکتور
+    val kind: String,              // «پیش‌فاکتور» یا «فاکتور»
+    val dateText: String,          // date — همان‌طور که در ERP ذخیره است
+    val customerCode: String,      // shmo
+    val customerName: String = "", // از مشتریان همگام‌شده تکمیل می‌شود
+    val total: Long = 0,           // all
+    val discount: Long = 0,        // tafif
+    val fetchedAt: Long = System.currentTimeMillis()
+)
+
 /** خروجی غیرموجودیتی: پرفروش‌ترین‌ها (پروجکشن کوئری). */
 data class TopProduct(
     val productName: String,

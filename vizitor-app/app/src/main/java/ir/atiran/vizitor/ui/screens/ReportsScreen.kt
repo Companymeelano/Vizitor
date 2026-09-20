@@ -73,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import ir.atiran.vizitor.HealthUiState
@@ -99,6 +100,7 @@ import ir.atiran.vizitor.ui.theme.ThemeManager
 import ir.atiran.vizitor.ui.theme.VizitorPalette
 import ir.atiran.vizitor.ui.theme.vizitorPalette
 import ir.atiran.vizitor.util.toFaDate
+import ir.atiran.vizitor.util.toFaDigits
 import ir.atiran.vizitor.util.toFaNumber
 import ir.atiran.vizitor.util.toFaPrice
 import ir.atiran.vizitor.util.toFaTime
@@ -106,6 +108,7 @@ import ir.atiran.vizitor.util.toFaTime
 @Composable
 fun ReportsScreen(viewModel: VizitorViewModel) {
     val invoices by viewModel.invoices.collectAsState()
+    val serverInvoices by viewModel.serverInvoices.collectAsState()
     val palette = vizitorPalette
     val context = LocalContext.current
     var shareTarget by remember { mutableStateOf<InvoiceEntity?>(null) }
@@ -147,6 +150,73 @@ fun ReportsScreen(viewModel: VizitorViewModel) {
             InvoiceHistoryRow(invoice) { shareTarget = invoice }
         }
 
+
+        // ── فاکتورهای واقعی سامانه (خوانده‌شده با اتصال مستقیم به SQL Server) ──
+        item { SectionTitle(text = "فاکتورهای سامانه (از سرور آتیران)", icon = Icons.Filled.Dns) }
+
+        if (serverInvoices.isEmpty()) {
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "هنوز فاکتوری از سرور خوانده نشده است. در «تنظیمات → اتصال به سرور آتیران» " +
+                            "یا در صفحهٔ اول، دکمهٔ «همگام‌سازی» را بزنید تا فاکتورهای واقعی شما " +
+                            "(dbo.sailfact و dbo.sailfact_pish) همین‌جا نمایش داده شود.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+
+        items(serverInvoices.take(40), key = { "srv-${it.id}" }) { row ->
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "شماره ${row.number.toFaDigits()}",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = palette.textPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    (if (row.kind.contains("پیش")) palette.gold else palette.accent).copy(alpha = 0.15f)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                row.kind,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (row.kind.contains("پیش")) palette.gold else palette.accent
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        (if (row.customerName.isNotBlank()) row.customerName else "کد مشتری ${row.customerCode}") +
+                            " • تاریخ ${row.dateText.toFaDigits()}",
+                        style = MaterialTheme.typography.bodySmall, color = TextSecondary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row {
+                        Text(
+                            "مبلغ: ${row.total.toFaPrice()}",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = palette.accentText
+                        )
+                        if (row.discount > 0) {
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                "تخفیف: ${row.discount.toFaPrice()}",
+                                style = MaterialTheme.typography.bodySmall, color = TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         // ── درباره ما ───────────────────────────────────────────────────────
         item { SectionTitle(text = "درباره ما", icon = Icons.Filled.Info) }

@@ -62,6 +62,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -143,7 +145,12 @@ private val leftTabs = listOf(
 )
 
 @Composable
-fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
+fun VizitorRoot(
+    viewModel: VizitorViewModel = viewModel(),
+    // یک نمونهٔ واحد برای کل برنامه: صفحهٔ اول (انتخاب نقش) و صفحهٔ تنظیمات و
+    // صفحهٔ اتصال، همه همین وضعیت را می‌بینند تا دو روایت متناقض نداشته باشیم.
+    sqlViewModel: ir.atiran.vizitor.sqldirect.DirectSqlViewModel = viewModel(),
+) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -170,6 +177,26 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
 
     val navBackStack by navController.currentBackStackEntryAsState()
     val isSplash = navBackStack?.destination?.route == Routes.SPLASH
+
+    // وضعیت اتصال/ورود (منبع واحد) — صفحهٔ اول و تنظیمات از همین می‌خوانند
+    val serverSession by ir.atiran.vizitor.sqldirect.VizitorSession.state.collectAsState()
+
+    // ورود به پنل: از هر جای برنامه (صفحهٔ اول، تنظیمات، …)
+    val enterPanel: () -> Unit = {
+        navController.navigate(Routes.DASHBOARD) {
+            popUpTo(Routes.SPLASH) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
+    // اگر «ورود سریع» از صفحهٔ اول انجام شد و ورود کامل شد → خودکار به پنل
+    var pendingQuickEnter by remember { mutableStateOf(false) }
+    LaunchedEffect(serverSession.loggedIn, pendingQuickEnter) {
+        if (pendingQuickEnter && serverSession.loggedIn) {
+            pendingQuickEnter = false
+            enterPanel()
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -206,11 +233,30 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
             composable(Routes.SPLASH) {
                 SplashScreen(
                     onEnter = {
-                        navController.navigate(Routes.DASHBOARD) {
-                            popUpTo(Routes.SPLASH) { inclusive = true }
+                        // اگر اتصال تنظیم شده و اعتبارنامه ذخیره است: ورود سریع،
+                        // بعد از ورود خودکار به پنل می‌رویم. در غیر این صورت،
+                        // کاربر را مستقیم به صفحهٔ تنظیم اتصال می‌بریم.
+                        if (serverSession.configured && serverSession.credentialsSaved) {
+                            pendingQuickEnter = true
+                            sqlViewModel.quickEnter()
+                        } else if (!serverSession.configured) {
+                            viewModel.showToast("اول اتصال به سرور آتیران را تنظیم کنید ⚙️")
+                            navController.navigate(Routes.DIRECT_SQL)
+                        } else {
+                            enterPanel()
                         }
                     },
-                    onSoon = { viewModel.showToast(it) }
+                    onSoon = { viewModel.showToast(it) },
+                    serverSession = serverSession,
+                    onOpenServerConfig = { navController.navigate(Routes.DIRECT_SQL) },
+                    onQuickEnter = {
+                        if (serverSession.loggedIn) {
+                            enterPanel()
+                        } else {
+                            pendingQuickEnter = true
+                            sqlViewModel.quickEnter()
+                        }
+                    },
                 )
             }
             composable(Routes.DASHBOARD) { DashboardScreen(viewModel) }
@@ -232,11 +278,20 @@ fun VizitorRoot(viewModel: VizitorViewModel = viewModel()) {
                 SettingsScreen(
                     viewModel = viewModel,
                     onOpenDirectSql = { navController.navigate(Routes.DIRECT_SQL) },
+                    serverSession = serverSession,
+                    onSyncNow = { sqlViewModel.syncNow() },
                 )
             }
             // اتصال مستقیم به SQL Server روی پورت ۱۴۳۳ (بدون API/IIS)
             composable(Routes.DIRECT_SQL) {
-                DirectSqlScreen(onBack = { navController.popBackStack() })
+                DirectSqlScreen(
+                    viewModel = sqlViewModel,
+                    onBack = {
+                        if (navController.previousBackStackEntry != null) navController.popBackStack()
+                        else enterPanel()
+                    },
+                    onEnterPanel = enterPanel,
+                )
             }
             composable(Routes.SCANNER) {
                 ScannerScreen(

@@ -146,6 +146,24 @@ interface CartDao {
 }
 
 @Dao
+interface ServerInvoiceDao {
+    @Query("SELECT * FROM server_invoices ORDER BY id DESC")
+    fun observeAll(): kotlinx.coroutines.flow.Flow<List<ServerInvoiceEntity>>
+
+    @Query("SELECT COUNT(*) FROM server_invoices")
+    fun observeCount(): kotlinx.coroutines.flow.Flow<Int>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(rows: List<ServerInvoiceEntity>)
+
+    @Query("SELECT COUNT(*) FROM server_invoices")
+    suspend fun count(): Int
+
+    @Query("DELETE FROM server_invoices")
+    suspend fun clear()
+}
+
+@Dao
 interface ChatDao {
     @Query("SELECT * FROM chat_messages ORDER BY timeLong ASC")
     fun observeAll(): kotlinx.coroutines.flow.Flow<List<ChatMessageEntity>>
