@@ -14,6 +14,7 @@ What it does (and ONLY this):
      db_datareader (read-only view of the ERP objects the app reads)
   5. grants EXECUTE / INSERT only on the objects the audit confirmed, and only
      when they exist (checked with OBJECT_ID / sys.tables)
+     — including INSERT on dbo.Visit so the app (v2.14.0+) can register visits
   6. writes a small JSON summary (WITHOUT the password) for the installer
 
 It never DROPs, truncates, renames or ALTERs an existing object, never changes
@@ -54,6 +55,7 @@ EXECUTE_OBJECTS = [
 INSERT_OBJECTS = [
     "dbo.subsailtemp_pish",   # pre-invoice lines (trigger writes the real lines)
     "dbo.subsailtemp",        # invoice lines (trigger writes subsailfact + ka_act)
+    "dbo.Visit",              # visit registration from the Android app (v2.14.0)
 ]
 
 

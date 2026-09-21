@@ -77,6 +77,7 @@ import ir.atiran.vizitor.util.toFaNumber
 // ═══════════════════════ قاب‌ها و تزئین‌های شیشه‌ای ═══════════════════════
 
 /** قاب گرادیانی طلایی دور هر سطح (به‌جای حاشیهٔ تخت). */
+@Composable
 fun Modifier.luxFrame(
     shape: RoundedCornerShape = RoundedCornerShape(22.dp),
     accent: Color = vizitorPalette.gold,
@@ -123,6 +124,7 @@ fun Modifier.glassRelief(
  * تزئین چهار گوشه — دو خط نازک با یک نگین کوچک در نوک هر گوشه.
  * (همان زبان تصویری «نجیب‌زادگی» که در سرصفحه و کارت هیرو دیده می‌شود.)
  */
+@Composable
 fun Modifier.ornaments(
     color: Color = vizitorPalette.gold,
     alpha: Float = 0.45f,
@@ -249,6 +251,9 @@ fun GoldFlourish(
     height: Dp = 18.dp,
     color: Color = vizitorPalette.gold
 ) {
+    // رنگ‌های پالت باید «قبل» از بلوک رسم (DrawScope) خوانده شوند؛
+    // خواندن CompositionLocal داخل لامبای Canvas مجاز نیست.
+    val goldDark = vizitorPalette.goldDark
     Canvas(modifier.fillMaxWidth().height(height)) {
         val midY = size.height / 2f
         val cx = size.width / 2f
@@ -293,7 +298,7 @@ fun GoldFlourish(
         drawPath(
             diamond,
             brush = Brush.linearGradient(
-                listOf(Color.White, color, vizitorPalette.goldDark),
+                listOf(Color.White, color, goldDark),
                 start = Offset(cx - gemR, midY - gemR),
                 end = Offset(cx + gemR, midY + gemR)
             )

@@ -105,7 +105,8 @@ private val DebtBarColors = listOf(Color(0xFFFF4D6D), Color(0xFFFF8FA3))
 @Composable
 fun DashboardScreen(
     viewModel: VizitorViewModel,
-    onOpenChat: () -> Unit = {}
+    onOpenChat: () -> Unit = {},
+    onOpenVisits: () -> Unit = {}
 ) {
     val todaySales by viewModel.todaySales.collectAsState()
     val followUp by viewModel.followUpCustomers.collectAsState()
@@ -151,6 +152,14 @@ fun DashboardScreen(
                 Spacer(Modifier.width(10.dp))
                 ThemeDotsSwitch()
             }
+        }
+
+        // ── دسترسی سریع (v2.14.0) — ثبت ویزیت + گفتگوی ویزیتورها ───────────
+        item {
+            QuickAccessCard(
+                onVisit = onOpenVisits,
+                onChat = onOpenChat
+            )
         }
 
         // ── ۱) نبض امروز — دونات دوحلقه (تارگت بیرونی + سینک داخلی) ────────
@@ -251,6 +260,92 @@ private fun ThemeDotsSwitch() {
                 }
             }
         }
+    }
+}
+
+/**
+ * کارت «دسترسی سریع» (v2.14.0) — دو کاشی بزرگ:
+ *   «ثبت ویزیت» (تب ویزیت — جدول dbo.Visit) و «گفتگوی ویزیتورها».
+ */
+@Composable
+private fun QuickAccessCard(
+    onVisit: () -> Unit,
+    onChat: () -> Unit
+) {
+    val p = vizitorPalette
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(p.surface.copy(alpha = 0.85f))
+            .border(1.dp, p.glassBorder, RoundedCornerShape(18.dp))
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        QuickTile(
+            title = "ثبت ویزیت",
+            subtitle = "مراجعه به مشتری + GPS",
+            icon = Icons.Filled.Flag,
+            modifier = Modifier.weight(1f),
+            onClick = onVisit
+        )
+        QuickTile(
+            title = "گفتگو",
+            subtitle = "اتاق ویزیتورها",
+            icon = Icons.Filled.Message,
+            modifier = Modifier.weight(1f),
+            onClick = onChat
+        )
+    }
+}
+
+@Composable
+private fun QuickTile(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val p = vizitorPalette
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(p.btnPrimaryTop.copy(alpha = 0.55f), p.surfaceDeep.copy(alpha = 0.8f))
+                )
+            )
+            .border(1.dp, p.gold.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(p.btnPrimaryTop, p.btnPrimaryBottom))),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = title, tint = Color.White, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.height(7.dp))
+        Text(
+            title,
+            fontSize = 12.5.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            subtitle,
+            fontSize = 9.5.sp,
+            color = TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

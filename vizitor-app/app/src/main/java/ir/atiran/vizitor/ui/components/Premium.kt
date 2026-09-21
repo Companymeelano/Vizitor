@@ -123,15 +123,16 @@ class ScreenFit(val width: Dp, val height: Dp) {
     /** گوشی خیلی کوچک یا صفحهٔ کوتاه — لمس‌پذیر ولی جمع‌وجور. */
     val tiny: Boolean = width < 360.dp || height < 640.dp
 
+    /** صفحهٔ کوتاه (کمتر از ۷۰۰dp) — فاصله‌های عمودی جمع‌وجور می‌شوند. */
+    val short: Boolean = height < 700.dp
+    /** صفحهٔ بلند — فضا بازتر می‌شود تا وسط صفحه خالی نماند. */
+    val tall: Boolean = height >= 860.dp
+
     /** حالت فشرده: کوتاه، کوچک یا خوابیده — همهٔ فاصله‌های عمودی جمع می‌شوند. */
     val dense: Boolean = short || tiny || landscape
 
     /** گوشی باریک (مثل ۳۲۰dp) — متن‌ها یک پله کوچک‌تر می‌شوند. */
     val narrow: Boolean = width < 360.dp
-    /** صفحهٔ کوتاه (کمتر از ۷۰۰dp) — فاصله‌های عمودی جمع‌وجور می‌شوند. */
-    val short: Boolean = height < 700.dp
-    /** صفحهٔ بلند — فضا بازتر می‌شود تا وسط صفحه خالی نماند. */
-    val tall: Boolean = height >= 860.dp
     /** صفحهٔ پهن (تبلت/گوشی بزرگ) — محتوا وسط‌چین و محدود می‌شود. */
     val wide: Boolean = width >= 480.dp
 

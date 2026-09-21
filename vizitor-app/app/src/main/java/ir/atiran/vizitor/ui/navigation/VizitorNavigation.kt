@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -112,6 +113,7 @@ import ir.atiran.vizitor.ui.screens.ReportsScreen
 import ir.atiran.vizitor.ui.screens.ScannerScreen
 import ir.atiran.vizitor.ui.screens.SettingsScreen
 import ir.atiran.vizitor.ui.screens.SplashScreen
+import ir.atiran.vizitor.ui.screens.VisitScreen
 import ir.atiran.vizitor.ui.theme.DarkSlateElevated
 import ir.atiran.vizitor.ui.theme.GlassBorder
 import ir.atiran.vizitor.ui.theme.Gold
@@ -131,6 +133,8 @@ object Routes {
     const val CHAT = "chat"
     const val SPLASH = "splash"
     const val SCANNER = "scanner"
+    // تب «ثبت ویزیت» — ثبت مراجعه به مشتری در جدول واقعی dbo.Visit (v2.14.0)
+    const val VISITS = "visits"
     // صفحهٔ اتصال مستقیم به SQL Server (پورت ۱۴۳۳) — همان چیزی که نصب‌کننده آماده می‌کند
     const val DIRECT_SQL = "directsql"
     // صفحهٔ «تنظیمات ورود» — همان صفحهٔ اتصال در حالت تمام‌صفحه با بازگشت هوشمند
@@ -143,7 +147,8 @@ data class TabItem(val route: String, val label: String, val icon: ImageVector, 
 private val rightTabs = listOf(
     TabItem(Routes.DASHBOARD, "پیشخوان", Icons.Filled.Dashboard, R.drawable.tab_dashboard),
     TabItem(Routes.CATALOG, "ویترین", Icons.Filled.Storefront, R.drawable.tab_showcase),
-    TabItem(Routes.CHAT, "گفتگو", Icons.Filled.Message, R.drawable.tab_chat)
+    // v2.14.0 — تب «ویزیت»: ثبت مراجعه به مشتری در dbo.Visit
+    TabItem(Routes.VISITS, "ویزیت", Icons.Filled.Route, R.drawable.tab_visit)
 )
 
 private val leftTabs = listOf(
@@ -158,6 +163,8 @@ fun VizitorRoot(
     // یک نمونهٔ واحد برای کل برنامه: صفحهٔ اول (انتخاب نقش) و صفحهٔ تنظیمات و
     // صفحهٔ اتصال، همه همین وضعیت را می‌بینند تا دو روایت متناقض نداشته باشیم.
     sqlViewModel: ir.atiran.vizitor.sqldirect.DirectSqlViewModel = viewModel(),
+    // نمونهٔ واحد تب «ثبت ویزیت» — وضعیت فرم/ویزیت‌های اخیر بین جابه‌جایی تب‌ها حفظ می‌شود
+    visitViewModel: ir.atiran.vizitor.sqldirect.VisitViewModel = viewModel(),
 ) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -293,7 +300,21 @@ fun VizitorRoot(
                     },
                 )
             }
-            composable(Routes.DASHBOARD) { DashboardScreen(viewModel) }
+            composable(Routes.DASHBOARD) {
+                DashboardScreen(
+                    viewModel = viewModel,
+                    onOpenChat = { navController.navigate(Routes.CHAT) },
+                    onOpenVisits = {
+                        navController.navigate(Routes.VISITS) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+            // ── تب «ثبت ویزیت» — ثبت مراجعه در جدول واقعی dbo.Visit (v2.14.0) ──
+            composable(Routes.VISITS) { VisitScreen(viewModel = visitViewModel) }
             // ── اتاق گفتگوی ویزیتورها (v2.3.0) ─────────────────────────────
             composable(Routes.CHAT) { ChatScreen(viewModel) }
             composable(Routes.CATALOG) {
