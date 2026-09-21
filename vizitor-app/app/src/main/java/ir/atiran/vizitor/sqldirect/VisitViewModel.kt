@@ -281,7 +281,3 @@ class VisitViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
-
-/** عدد → ارقام فارسی (بدون جداکنندهٔ هزارگان؛ برای شمارهٔ ثبت). */
-private fun String.toFaDigitsSafe(): String =
-    replace(Regex("[0-9]")) { d -> "۰۱۲۳۴۵۶۷۸۹"[d.value[0] - '0'] }
