@@ -1,11 +1,15 @@
-لاگ شکست بیلد برنامهٔ ویزیتور — 2026-09-20 15:13:40 UTC
+لاگ شکست بیلد برنامهٔ ویزیتور — 2026-09-21 10:57:10 UTC
 ==================================================================
-e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury2.kt:80:14 Functions which invoke @Composable functions must be marked with the @Composable annotation
-e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury2.kt:82:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury2.kt:126:14 Functions which invoke @Composable functions must be marked with the @Composable annotation
-e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury2.kt:127:20 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/ui/components/Luxury2.kt:296:44 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/ui/components/Premium.kt:127:26 Variable 'short' must be initialized.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitDate.kt:35:44 Unresolved reference 'PersianCalendar'.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitDate.kt:37:50 Unresolved reference 'PersianCalendar'.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitDate.kt:38:50 Unresolved reference 'PersianCalendar'.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitDate.kt:38:73 Unresolved reference 'plus' for operator '+'.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitDate.kt:39:50 Unresolved reference 'PersianCalendar'.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitLocation.kt:70:13 'onProviderReset' overrides nothing.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitViewModel.kt:127:33 Argument type mismatch: actual type is 'kotlin.Float', but 'kotlin.Double?' was expected.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitViewModel.kt:154:33 Argument type mismatch: actual type is 'kotlin.Float', but 'kotlin.Double?' was expected.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitViewModel.kt:286:36 Argument type mismatch: actual type is 'kotlin.Char', but 'kotlin.CharSequence' was expected.
+e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitViewModel.kt:286:36 Type mismatch: inferred type is 'kotlin.Char', but 'kotlin.CharSequence' was expected.
 > Task :app:compileDebugKotlin FAILED
 FAILURE: Build failed with an exception.
 * What went wrong:
@@ -133,5 +137,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 4m 40s
+BUILD FAILED in 4m 41s
 59 actionable tasks: 55 executed, 4 from cache
