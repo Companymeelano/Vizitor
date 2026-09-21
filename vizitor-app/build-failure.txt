@@ -1,4 +1,4 @@
-لاگ شکست بیلد برنامهٔ ویزیتور — 2026-09-21 11:06:28 UTC
+لاگ شکست بیلد برنامهٔ ویزیتور — 2026-09-21 11:47:33 UTC
 ==================================================================
 e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitViewModel.kt:286:36 Argument type mismatch: actual type is 'kotlin.Char', but 'kotlin.CharSequence' was expected.
 e: file:///home/runner/work/Vizitor/Vizitor/vizitor-app/app/src/main/java/ir/atiran/vizitor/sqldirect/VisitViewModel.kt:286:36 Type mismatch: inferred type is 'kotlin.Char', but 'kotlin.CharSequence' was expected.
@@ -129,5 +129,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 4m 37s
-58 actionable tasks: 54 executed, 4 from cache
+BUILD FAILED in 3m 56s
+59 actionable tasks: 55 executed, 4 from cache
