@@ -5,17 +5,16 @@
  *  ─────────────────────────────────────────────────────────────────────────
  *  ستون‌های DateCreated/TimeCreated جدول Visit در خودِ ERP به‌صورت رشتهٔ
  *  شمسی نگه داشته می‌شوند (قالب هم‌سان تاریخ‌های فاکتور: 1405/06/27).
- *  اینجا با تقویم رسمیِ خودِ پلتفرم اندروید (ICU / PersianCalendar) تاریخ
- *  شمسی می‌سازیم — الگوریتم دست‌نویس نداریم و از خطای تبدیل جلوگیری می‌شود.
+ *  تبدیل میلادی←شمسی با همان الگوریتمی است که بقیهٔ برنامه (toFaDate)
+ *  استفاده می‌کند — یک منبع واحد برای همهٔ تاریخ‌های شمسی اپ.
  *  ساعت به قالب ۲۴ ساعتهٔ HH:mm:ss است.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 package ir.atiran.vizitor.sqldirect
 
-import java.text.SimpleDateFormat
-import java.util.Date
+import ir.atiran.vizitor.util.gregorianToJalali
+import java.util.Calendar
 import java.util.Locale
-import java.util.TimeZone
 
 /**
  * تاریخ و ساعت جاری به دو رشتهٔ قابل درج در dbo.Visit:
@@ -30,27 +29,18 @@ object VisitDate {
     )
 
     fun now(): Now {
-        return try {
-            val greg = java.util.GregorianCalendar.getInstance()
-            val persian = android.icu.util.PersianCalendar.getInstance()
-            persian.set(greg.time)
-            val y = persian.get(android.icu.util.PersianCalendar.YEAR)
-            val m = persian.get(android.icu.util.PersianCalendar.MONTH) + 1
-            val d = persian.get(android.icu.util.PersianCalendar.DAY_OF_MONTH)
-            val hh = greg.get(java.util.GregorianCalendar.HOUR_OF_DAY)
-            val mi = greg.get(java.util.GregorianCalendar.MINUTE)
-            val ss = greg.get(java.util.GregorianCalendar.SECOND)
-            Now(
-                dateText = String.format(Locale.US, "%04d/%02d/%02d", y, m, d),
-                timeText = String.format(Locale.US, "%02d:%02d:%02d", hh, mi, ss),
-            )
-        } catch (_: Throwable) {
-            // جایگزین امن (هرگز نباید رخ دهد): قالب میلادی همان ستون‌ها
-            val fmt = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.US)
-            fmt.timeZone = TimeZone.getDefault()
-            val s = fmt.format(Date())
-            Now(dateText = s.take(10), timeText = s.substring(11))
-        }
+        val cal = Calendar.getInstance()
+        val gy = cal.get(Calendar.YEAR)
+        val gm = cal.get(Calendar.MONTH) + 1
+        val gd = cal.get(Calendar.DAY_OF_MONTH)
+        val hh = cal.get(Calendar.HOUR_OF_DAY)
+        val mi = cal.get(Calendar.MINUTE)
+        val ss = cal.get(Calendar.SECOND)
+        val (jy, jm, jd) = gregorianToJalali(gy, gm, gd)
+        return Now(
+            dateText = String.format(Locale.US, "%04d/%02d/%02d", jy, jm, jd),
+            timeText = String.format(Locale.US, "%02d:%02d:%02d", hh, mi, ss),
+        )
     }
 
     /** فقط تاریخ شمسی امروز (برای شمارش «تعداد ویزیت امروز»). */

@@ -124,7 +124,7 @@ class VisitViewModel(app: Application) : AndroidViewModel(app) {
                     locating = false,
                     latitude = location.latitude,
                     longitude = location.longitude,
-                    accuracyM = location.accuracy,
+                    accuracyM = location.accuracy.toDouble(),
                 )
             }
         } else {
@@ -151,7 +151,7 @@ class VisitViewModel(app: Application) : AndroidViewModel(app) {
                 it.copy(
                     latitude = location.latitude,
                     longitude = location.longitude,
-                    accuracyM = location.accuracy,
+                    accuracyM = location.accuracy.toDouble(),
                 )
             }
         }

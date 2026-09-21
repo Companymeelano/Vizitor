@@ -56,7 +56,8 @@ fun Long.toFaTime(): String {
     return "%02d:%02d".format(h, m).toFaDigits()
 }
 
-private fun gregorianToJalali(gy: Int, gm: Int, gd: Int): Triple<Int, Int, Int> {
+/** تبدیل میلادی به شمسی — داخلی تا VisitDate (ثبت ویزیت) هم از همین الگوریتم استفاده کند. */
+internal fun gregorianToJalali(gy: Int, gm: Int, gd: Int): Triple<Int, Int, Int> {
     val gdm = intArrayOf(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
     val gy2 = if (gm > 2) gy + 1 else gy
     var days = 355666 + (365 * gy) + ((gy2 + 3) / 4) - ((gy2 + 99) / 100) +

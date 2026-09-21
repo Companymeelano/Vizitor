@@ -65,9 +65,6 @@ class VisitLocationHelper(private val context: Context) {
 
             @Deprecated("Deprecated in Java")
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-
-            @Deprecated("Deprecated in Java")
-            override fun onProviderReset() {}
         }
         try {
             lm.requestSingleUpdate(LocationManager.GPS_PROVIDER, listener, context.mainLooper)
