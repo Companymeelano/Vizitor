@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ir.atiran.vizitor.util.toFaDigits
 
 /** یک مشتری مجاز برای انتخاب در فرم ثبت ویزیت. */
 data class VisitCustomerOption(
@@ -265,7 +266,7 @@ class VisitViewModel(app: Application) : AndroidViewModel(app) {
                             description = "",
                             duration = 30,
                             status = "ویزیت «${cust.name}» در سامانه ثبت شد ✅ " +
-                                "(شمارهٔ ثبت: ${id.toLong().toString().toFaDigitsSafe()}, تاریخ ${now.dateText})",
+                                "(شمارهٔ ثبت: ${id.toString().toFaDigits()}, تاریخ ${now.dateText})",
                             statusKind = 1,
                         )
                     }
