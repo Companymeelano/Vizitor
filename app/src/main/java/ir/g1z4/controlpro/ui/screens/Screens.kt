@@ -184,7 +184,8 @@ fun DashboardScreen(model: AppModel, nav: NavHostController, action: String?) {
                         Medallion(icon, "وضعیت سیستم", pulse = snap.siren == SirenState.SOUNDING)
                         Column {
                             StatusDot(colorOf(snap.arm, snap.siren), labelOf(snap.arm, snap.siren))
-                            Body(if (snap.armAt == null) "هنوز گزارش تأییدشده‌ای نرسیده است." else "آخرین گزارش: ${FaFormat.dateTime(snap.armAt)}", muted = true)
+                            val reportedAt = snap.armAt
+                            Body(if (reportedAt == null) "هنوز گزارش تأییدشده‌ای نرسیده است." else "آخرین گزارش: ${FaFormat.dateTime(reportedAt)}", muted = true)
                         }
                     }
                 }
@@ -676,7 +677,7 @@ private fun Page(title: String, nav: NavHostController, showBack: Boolean = true
 }
 
 @Composable
-private fun Field(value: String, onChange: (String) -> Unit, secret: Boolean = false) {
+private fun Field(value: String, secret: Boolean = false, onChange: (String) -> Unit) {
     val p = LocalPalette.current
     BasicTextField(
         value,

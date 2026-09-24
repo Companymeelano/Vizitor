@@ -118,25 +118,22 @@ class PanelRepository @Inject constructor(
         armOutput: Int,
         disarmOutput: Int
     ) {
-        val zones = buildList {
-            fun add(kind: ZoneKind, number: Int, defaultName: String) {
-                val key = "${kind.name}-$number"
-                val old = db.zones().one(id, key)
-                add(
-                    ZoneEntity(
-                        id, key, number, kind.name,
-                        old?.localName ?: defaultName,
-                        old?.typeNote.orEmpty(),
-                        old?.state ?: "UNKNOWN",
-                        old?.lastTriggerAt,
-                        old?.lastRaw
-                    )
-                )
-            }
-            repeat(wired) { add(ZoneKind.WIRED, it + 1, "زون ${it + 1}") }
-            repeat(wireless) { add(ZoneKind.WIRELESS, it + 1, "بی‌سیم ${it + 1}") }
-            repeat(expander) { add(ZoneKind.EXPANDER, it + 1, "اکسپندر ${it + 1}") }
+        val zones = mutableListOf<ZoneEntity>()
+        suspend fun add(kind: ZoneKind, number: Int, defaultName: String) {
+            val key = "${kind.name}-$number"
+            val old = db.zones().one(id, key)
+            zones += ZoneEntity(
+                id, key, number, kind.name,
+                old?.localName ?: defaultName,
+                old?.typeNote.orEmpty(),
+                old?.state ?: "UNKNOWN",
+                old?.lastTriggerAt,
+                old?.lastRaw
+            )
         }
+        repeat(wired) { add(ZoneKind.WIRED, it + 1, "زون ${it + 1}") }
+        repeat(wireless) { add(ZoneKind.WIRELESS, it + 1, "بی‌سیم ${it + 1}") }
+        repeat(expander) { add(ZoneKind.EXPANDER, it + 1, "اکسپندر ${it + 1}") }
         db.zones().clear(id)
         db.zones().upsert(zones)
 
