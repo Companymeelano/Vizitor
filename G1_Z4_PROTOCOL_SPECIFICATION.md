@@ -62,7 +62,7 @@ Bodies are ASCII. There is no trailing star unless the optional `*22*` switch is
 | ARM | `*PPPP*21` on the standard map | Output ON of `armOutput`. Not a panel-status command. |
 | DISARM | `*PPPP*31` on the standard map | Output ON of `disarmOutput`. Also the only path offered to stop an alarm, and it disarms. |
 | Credit query | `*PPPP*80` | |
-| Store balance formula | `*PPPP*81*{formula}` | Formula is `*`, `#`, and digits. Irancell sample `*141*1#`. MCI sample `*140*11#`. |
+| Store balance formula | `*PPPP*81` plus the formula | Formula is `*`, `#`, and digits. A leading `*` is not doubled, so `*141*1#` becomes `*PPPP*81*141*1#`. MCI sample `*140*11#`. |
 | Top-up | one of the four templates | See below. |
 | Optional panel query | `*PPPP*22` or `*PPPP*22*` | Off by default. Not the status command. |
 

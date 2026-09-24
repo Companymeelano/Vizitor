@@ -52,7 +52,8 @@ object CommandBuilder {
         if (formula.isEmpty() || !ascii.matches(formula) || formula.any { it !in "*#0123456789" }) {
             return BuildResult.Err("فرمول شارژ باید فقط با نویسه‌های انگلیسی * # و رقم نوشته شود.")
         }
-        return ok("*$pwd*81*$formula", "ذخیره فرمول موجودی")
+        val body = if (formula.startsWith("*")) "*$pwd*81$formula" else "*$pwd*81*$formula"
+        return ok(body, "ذخیره فرمول موجودی")
     }
 
     private fun recharge(pwd: String, code: String?, variant: String): BuildResult {

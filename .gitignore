@@ -15,3 +15,4 @@ build/
 design/
 node_modules/
 keystore/
+build-logs/
