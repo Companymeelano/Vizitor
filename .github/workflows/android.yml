@@ -55,26 +55,17 @@ jobs:
           ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --stacktrace > build-logs/gradle.txt 2>&1
           code=$?
           set -e
-          if [ "$code" -ne 0 ]; then
-            python3 - << 'PY'
-            from pathlib import Path
-            text = Path("build-logs/gradle.txt").read_text(errors="replace").splitlines()
-            keep = []
-            for line in text:
-                if any(s in line for s in ("e: ", "error:", "FAILED", "What went wrong", "Execution failed", "FAILURE:", "> Task")):
-                    keep.append(line)
-            Path("build-logs/errors.txt").write_text("\n".join(keep[-250:]) + "\n")
-            Path("build-logs/tail.txt").write_text("\n".join(text[-180:]) + "\n")
-            PY
-            exit "$code"
-          fi
+          python3 -c 'from pathlib import Path; p=Path("build-logs/gradle.txt"); t=p.read_text(errors="replace").splitlines() if p.exists() else ["missing gradle log"]; keys=("e: ","error:","FAILED","What went wrong","Execution failed","FAILURE:"); Path("build-logs/errors.txt").write_text("\n".join([l for l in t if any(k in l for k in keys)][-300:])); Path("build-logs/tail.txt").write_text("\n".join(t[-220:]))'
+          exit "$code"
 
       - name: Publish the failure excerpt
         if: failure()
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add build-logs/errors.txt build-logs/tail.txt
+          git add -f build-logs/errors.txt build-logs/tail.txt
+          git diff --cached --quiet && echo "no excerpt" && exit 1
           git commit -m "Record CI failure excerpt"
           git push
 
