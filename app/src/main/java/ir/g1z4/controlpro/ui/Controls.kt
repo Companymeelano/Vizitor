@@ -64,8 +64,10 @@ fun CommandDeck(
 ) {
     val p = LocalPalette.current
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val wide = maxWidth >= 560.dp
-        val roomy = maxWidth >= 400.dp
+        val deckWidth = maxWidth
+        val wide = deckWidth >= 560.dp
+        val roomy = deckWidth >= 400.dp
+        val tileColumns = if (deckWidth >= 720.dp) 4 else 2
         Column(verticalArrangement = Arrangement.spacedBy(if (roomy) 12.dp else 8.dp)) {
             if (wide) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(132.dp)) {
@@ -85,20 +87,18 @@ fun CommandDeck(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-            val width = maxWidth
             val tiles = listOf(
                 Triple("استعلام", Icons3d.signal, onQuery),
                 Triple("خروجی‌ها", Icons3d.output, onOutputs),
                 Triple("هشدارها", Icons3d.bell, onAlerts),
                 Triple("آژیر", Icons3d.siren, onSiren)
             )
-            val columns = if (width >= 720.dp) 4 else 2
-            tiles.chunked(columns).forEach { row ->
+            tiles.chunked(tileColumns).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().height(if (roomy) 92.dp else 84.dp)) {
                     row.forEach { (label, icon, action) ->
                         ActionTile(Modifier.weight(1f).fillMaxHeight(), label, icon, action)
                     }
-                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(tileColumns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
