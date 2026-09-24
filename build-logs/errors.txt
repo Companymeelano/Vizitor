@@ -1,0 +1,26 @@
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so.
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so.
+> Task :app:compileDebugKotlin FAILED
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/data/repo/PanelRepository.kt:124:38 Suspension functions can only be called within coroutine body.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:187:134 Smart cast to 'kotlin.Long' is impossible, because 'armAt' is a delegated property.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:313:23 No value passed for parameter 'onChange'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:313:29 Argument type mismatch: actual type is 'kotlin.Function0<kotlin.Unit>', but 'kotlin.Boolean' was expected.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:313:38 Unresolved reference 'it'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:425:15 No value passed for parameter 'onChange'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:425:21 Argument type mismatch: actual type is 'kotlin.Function0<kotlin.Unit>', but 'kotlin.Boolean' was expected.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:425:30 Unresolved reference 'it'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:427:15 No value passed for parameter 'onChange'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:427:22 Argument type mismatch: actual type is 'kotlin.Function0<kotlin.Unit>', but 'kotlin.Boolean' was expected.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:427:32 Unresolved reference 'it'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:429:25 No value passed for parameter 'onChange'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:429:40 Too many arguments for 'fun Field(value: String, onChange: (String) -> Unit, secret: Boolean = ...): Unit'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:429:53 Unresolved reference 'it'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:585:15 No value passed for parameter 'onChange'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:585:21 Argument type mismatch: actual type is 'kotlin.Function0<kotlin.Unit>', but 'kotlin.Boolean' was expected.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:585:30 Unresolved reference 'it'.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/screens/Screens.kt:585:42 Cannot infer type for this parameter. Please specify it explicitly.
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
+BUILD FAILED in 2m 31s
