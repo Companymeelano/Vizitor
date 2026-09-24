@@ -676,7 +676,6 @@ private fun Page(title: String, nav: NavHostController, showBack: Boolean = true
 }
 
 @Composable
-@Composable
 private fun Field(value: String, onChange: (String) -> Unit, secret: Boolean = false) {
     val p = LocalPalette.current
     BasicTextField(
