@@ -1,14 +1,9 @@
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so.
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so.
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/Controls.kt:94:31 'val maxWidth: Dp' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-> Task :app:compileReleaseKotlin FAILED
-e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/Controls.kt:94:31 'val maxWidth: Dp' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-FAILURE: Build completed with 2 failures.
+e: file:///home/runner/work/Vizitor/Vizitor/app/src/main/java/ir/g1z4/controlpro/ui/Controls.kt:88:25 'val maxWidth: Dp' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+FAILURE: Build failed with an exception.
 * What went wrong:
 Execution failed for task ':app:compileDebugKotlin'.
 org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
-* What went wrong:
-Execution failed for task ':app:compileReleaseKotlin'.
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileReleaseKotlin'.
-BUILD FAILED in 2m 31s
+BUILD FAILED in 2m 57s
