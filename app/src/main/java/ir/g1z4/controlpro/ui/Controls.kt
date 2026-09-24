@@ -85,13 +85,14 @@ fun CommandDeck(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+            val width = maxWidth
             val tiles = listOf(
                 Triple("استعلام", Icons3d.signal, onQuery),
                 Triple("خروجی‌ها", Icons3d.output, onOutputs),
                 Triple("هشدارها", Icons3d.bell, onAlerts),
                 Triple("آژیر", Icons3d.siren, onSiren)
             )
-            val columns = if (maxWidth >= 720.dp) 4 else 2
+            val columns = if (width >= 720.dp) 4 else 2
             tiles.chunked(columns).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().height(if (roomy) 92.dp else 84.dp)) {
                     row.forEach { (label, icon, action) ->
