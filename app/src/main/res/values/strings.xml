@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">G1 Z4 Control Pro</string>
+    <string name="widget_name">وضعیت دزدگیر</string>
+    <string name="shortcut_arm">فعال‌سازی</string>
+    <string name="shortcut_disarm">غیرفعال‌سازی</string>
+    <string name="shortcut_status">استعلام وضعیت</string>
+    <string name="channel_alarm">آلارم</string>
+    <string name="channel_zone">زون</string>
+    <string name="channel_power">برق</string>
+    <string name="channel_battery">باتری</string>
+    <string name="channel_connection">ارتباط</string>
+    <string name="channel_arm">فعال و غیرفعال</string>
+</resources>

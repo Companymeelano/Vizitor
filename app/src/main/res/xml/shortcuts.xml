@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="arm"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/shortcut_arm"
+        android:shortcutLongLabel="@string/shortcut_arm">
+        <intent
+            android:action="ir.g1z4.controlpro.OPEN"
+            android:targetPackage="ir.g1z4.controlpro"
+            android:targetClass="ir.g1z4.controlpro.MainActivity">
+            <extra android:name="route" android:value="confirm_arm" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="disarm"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/shortcut_disarm"
+        android:shortcutLongLabel="@string/shortcut_disarm">
+        <intent
+            android:action="ir.g1z4.controlpro.OPEN"
+            android:targetPackage="ir.g1z4.controlpro"
+            android:targetClass="ir.g1z4.controlpro.MainActivity">
+            <extra android:name="route" android:value="confirm_disarm" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="status"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/shortcut_status"
+        android:shortcutLongLabel="@string/shortcut_status">
+        <intent
+            android:action="ir.g1z4.controlpro.OPEN"
+            android:targetPackage="ir.g1z4.controlpro"
+            android:targetClass="ir.g1z4.controlpro.MainActivity">
+            <extra android:name="route" android:value="confirm_status" />
+        </intent>
+    </shortcut>
+</shortcuts>

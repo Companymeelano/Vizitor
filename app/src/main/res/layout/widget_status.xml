@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:layoutDirection="rtl">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/gold"
+        android:textSize="12sp"
+        android:text="G1 Z4" />
+
+    <TextView
+        android:id="@+id/widget_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/widget_text"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:text="دستگاهی انتخاب نشده" />
+
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/widget_text"
+        android:textSize="14sp"
+        android:text="وضعیت: نامشخص" />
+
+    <TextView
+        android:id="@+id/widget_alert"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#C4BEB2"
+        android:textSize="12sp"
+        android:text="آخرین هشدار: ندارد" />
+</LinearLayout>

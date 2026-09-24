@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.G1Z4" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">#070B12</item>
+    </style>
+    <style name="Theme.G1Z4.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#070B12</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.G1Z4</item>
+    </style>
+</resources>
