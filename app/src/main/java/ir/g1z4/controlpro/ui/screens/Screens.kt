@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -208,13 +210,14 @@ fun DashboardScreen(model: AppModel, nav: NavHostController, action: String?) {
                 }
             }
             item {
-                PremiumButton("فعال‌سازی", "فعال‌سازی سیستم", { confirm = CommandKind.ARM }, Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                PremiumButton("غیرفعال‌سازی", "غیرفعال‌سازی سیستم", { confirm = CommandKind.DISARM }, Modifier.fillMaxWidth(), danger = true)
-                Spacer(Modifier.height(8.dp))
-                GlassCard {
-                    Unsupported("نیمه‌فعال فقط با دکمه C ریموت انجام می‌شود. پیامک و اپلیکیشن این حالت را پشتیبانی نمی‌کنند.")
-                }
+                ir.g1z4.controlpro.ui.CommandDeck(
+                    onArm = { confirm = CommandKind.ARM },
+                    onDisarm = { confirm = CommandKind.DISARM },
+                    onQuery = { confirm = CommandKind.QUERY_IO },
+                    onOutputs = { nav.navigate("outputs") },
+                    onAlerts = { nav.navigate("alerts") },
+                    onSiren = { nav.navigate("siren") }
+                )
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -247,12 +250,7 @@ fun DashboardScreen(model: AppModel, nav: NavHostController, action: String?) {
                     Body("${FaFormat.clock(e.at)}  ${e.title}")
                 }
                 Spacer(Modifier.height(8.dp))
-                PremiumButton("استعلام ورودی و خروجی", "استعلام", { confirm = CommandKind.QUERY_IO }, Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                PremiumButton("خروجی‌ها", "خروجی‌ها", { nav.navigate("outputs") }, Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                PremiumButton("مرکز هشدار", "مرکز هشدار", { nav.navigate("alerts") }, Modifier.fillMaxWidth())
-                Spacer(Modifier.height(88.dp))
+                Spacer(Modifier.height(16.dp))
             }
         }
         confirm?.let { kind ->
@@ -285,12 +283,16 @@ fun DashboardScreen(model: AppModel, nav: NavHostController, action: String?) {
 
 @Composable
 private fun Mini(modifier: Modifier, icon: Int, title: String, value: String, onClick: (() -> Unit)? = null) {
-    GlassCard(modifier.then(if (onClick != null) Modifier else Modifier)) {
+    GlassCard(
+        modifier
+            .heightIn(min = 148.dp)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+    ) {
         Medallion(icon, title, 44.dp)
         Spacer(Modifier.height(8.dp))
         SectionTitle(title)
         Body(value, muted = true)
-        if (onClick != null) PremiumButton("جزئیات", title, onClick, Modifier.fillMaxWidth())
+        if (onClick != null) Text("جزئیات", color = LocalPalette.current.gold, fontFamily = ir.g1z4.controlpro.ui.theme.Vazir, fontSize = 12.sp)
     }
 }
 

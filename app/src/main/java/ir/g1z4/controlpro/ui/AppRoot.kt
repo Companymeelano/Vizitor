@@ -3,7 +3,11 @@ package ir.g1z4.controlpro.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -16,8 +20,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -94,7 +102,12 @@ private fun MainShell(startRoute: String?, model: AppModel, developer: Boolean) 
     val main = route in setOf("dashboard", "zones", "events", "devices", "settings")
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        bottomBar = { if (main) BottomNav(route) { dest -> nav.navigate(dest) { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true } } }
+        bottomBar = {
+            Column(Modifier.navigationBarsPadding()) {
+                AuthorFooter()
+                if (main) BottomNav(route) { dest -> nav.navigate(dest) { popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true } }
+            }
+        }
     ) { padding ->
         androidx.compose.foundation.layout.Box(Modifier.padding(padding)) {
             if (developer) {
@@ -128,28 +141,50 @@ private fun Host(nav: NavHostController, model: AppModel, modifier: Modifier) {
 @Composable
 private fun BottomNav(current: String, onPick: (String) -> Unit) {
     val p = LocalPalette.current
-    val items = listOf("dashboard" to "خانه", "zones" to "زون‌ها", "events" to "رویدادها", "devices" to "دستگاه‌ها", "settings" to "تنظیمات")
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(p.surface)
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        items.forEach { (id, label) ->
-            Text(
-                label,
-                color = if (current == id) p.gold else p.muted,
-                fontFamily = Vazir,
-                fontSize = 13.sp,
-                modifier = Modifier
-                    .semantics { contentDescription = label }
-                    .clickable { onPick(id) }
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-            )
+    val items = listOf(
+        Triple("dashboard", "خانه", Icons3d.home),
+        Triple("zones", "زون‌ها", Icons3d.zone),
+        Triple("events", "رویدادها", Icons3d.reports),
+        Triple("devices", "دستگاه‌ها", Icons3d.device),
+        Triple("settings", "تنظیمات", Icons3d.settings)
+    )
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
+        val compact = maxWidth < 360.dp
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(p.surface)
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            items.forEach { (id, label, icon) ->
+                val selected = current == id
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = 52.dp)
+                        .semantics { contentDescription = label }
+                        .clickable { onPick(id) }
+                        .padding(vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    androidx.compose.foundation.Image(
+                        painterResource(icon),
+                        label,
+                        Modifier.size(if (compact) 22.dp else 26.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Text(
+                        label,
+                        color = if (selected) p.gold else p.muted,
+                        fontFamily = Vazir,
+                        fontSize = if (compact) 10.sp else 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }

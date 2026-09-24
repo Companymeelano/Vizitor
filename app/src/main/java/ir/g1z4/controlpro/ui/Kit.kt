@@ -38,6 +38,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -125,16 +129,29 @@ fun PremiumButton(text: String, desc: String, onClick: () -> Unit, modifier: Mod
         else -> p.gold
     }
     val fg = if (danger) Color.White else if (p.dark) Color(0xFF1A1408) else Color.White
+    val shape = RoundedCornerShape(18.dp)
     Box(
         modifier
-            .height(56.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .heightIn(min = 52.dp)
+            .widthIn(min = 72.dp)
+            .clip(shape)
             .background(bg)
+            .border(1.dp, Color.White.copy(alpha = if (enabled) 0.18f else 0f), shape)
             .semantics { contentDescription = desc }
-            .clickable(enabled = enabled, interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() },
+            .clickable(enabled = enabled, interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = fg, fontFamily = Vazir, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+        Text(
+            text,
+            color = fg,
+            fontFamily = Vazir,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
