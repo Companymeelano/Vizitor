@@ -50,7 +50,33 @@ jobs:
       - name: Test and assemble
         run: |
           chmod +x gradlew
-          ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --stacktrace
+          mkdir -p build-logs
+          set +e
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --stacktrace > build-logs/gradle.txt 2>&1
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            python3 - << 'PY'
+            from pathlib import Path
+            text = Path("build-logs/gradle.txt").read_text(errors="replace").splitlines()
+            keep = []
+            for line in text:
+                if any(s in line for s in ("e: ", "error:", "FAILED", "What went wrong", "Execution failed", "FAILURE:", "> Task")):
+                    keep.append(line)
+            Path("build-logs/errors.txt").write_text("\n".join(keep[-250:]) + "\n")
+            Path("build-logs/tail.txt").write_text("\n".join(text[-180:]) + "\n")
+            PY
+            exit "$code"
+          fi
+
+      - name: Publish the failure excerpt
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build-logs/errors.txt build-logs/tail.txt
+          git commit -m "Record CI failure excerpt"
+          git push
 
       - uses: actions/upload-artifact@v4
         with:
